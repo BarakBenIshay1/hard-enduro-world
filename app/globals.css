@@ -3,19 +3,31 @@
 @tailwind utilities;
 
 :root {
-  --surface: 0 0% 100%;
-  --surface-muted: 210 24% 96%;
-  --foreground: 220 24% 12%;
-  --border: 214 18% 88%;
-  --accent: 152 72% 35%;
+  --surface: 42 18% 96%;
+  --surface-muted: 38 12% 90%;
+  --card: 0 0% 100%;
+  --foreground: 220 18% 9%;
+  --border: 36 10% 78%;
+  --accent: 24 92% 50%;
+  --accent-hot: 5 82% 49%;
+  --accent-foreground: 0 0% 100%;
+  --gold: 42 82% 55%;
+  --redline: 4 78% 48%;
+  --hero: 0 0% 4%;
 }
 
 .dark {
-  --surface: 216 28% 7%;
-  --surface-muted: 218 24% 12%;
-  --foreground: 210 20% 96%;
-  --border: 217 18% 24%;
-  --accent: 152 70% 46%;
+  --surface: 220 15% 6%;
+  --surface-muted: 220 12% 12%;
+  --card: 220 12% 9%;
+  --foreground: 40 18% 94%;
+  --border: 220 9% 22%;
+  --accent: 24 92% 52%;
+  --accent-hot: 5 82% 52%;
+  --accent-foreground: 0 0% 100%;
+  --gold: 42 82% 58%;
+  --redline: 4 78% 50%;
+  --hero: 0 0% 3%;
 }
 
 * {
@@ -31,6 +43,12 @@ html {
 body {
   min-height: 100%;
   margin: 0;
+  background:
+    linear-gradient(180deg, hsl(var(--surface)), hsl(var(--surface-muted) / 0.34)),
+    hsl(var(--surface));
+  color: hsl(var(--foreground));
+  text-rendering: geometricPrecision;
+  -webkit-font-smoothing: antialiased;
 }
 
 a {
@@ -40,4 +58,19 @@ a {
 
 ::selection {
   background: hsl(var(--accent) / 0.24);
+}
+
+:focus-visible {
+  outline-color: hsl(var(--accent));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }

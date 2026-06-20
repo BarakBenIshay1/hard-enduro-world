@@ -3,9 +3,12 @@ import { expect, test } from "@playwright/test";
 test("loads the real-data homepage", async ({ page }) => {
   await page.goto("/");
 
-  await expect(page.getByRole("heading", { name: /hard enduro data/i })).toBeVisible();
-  await expect(page.getByRole("link", { name: "View events" })).toBeVisible();
-  await expect(page.getByText("Stage timing rows")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: /global home of hard enduro/i }),
+  ).toBeVisible();
+  await expect(page.getByRole("link", { name: "Explore Championship" })).toBeVisible();
+  await expect(page.getByText("Next Event")).toBeVisible();
+  await expect(page.getByText("Latest News")).toBeVisible();
 });
 
 test("loads the seeded event detail with stage timing", async ({ page }) => {
