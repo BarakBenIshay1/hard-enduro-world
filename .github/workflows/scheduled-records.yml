@@ -1,0 +1,13 @@
+name: Scheduled Derived Stats Placeholder
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "30 2 * * *"
+
+jobs:
+  placeholder:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Placeholder
+        run: echo "Derived statistics recalculation jobs will be added in a later step."

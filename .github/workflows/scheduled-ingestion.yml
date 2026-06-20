@@ -1,0 +1,13 @@
+name: Scheduled Ingestion Placeholder
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 */12 * * *"
+
+jobs:
+  placeholder:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Placeholder
+        run: echo "Official data ingestion jobs will be added in a later step."

@@ -1,0 +1,815 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Country {
+  id           String   @id @default(cuid())
+  name         String
+  isoCode      String   @unique
+  slug         String   @unique
+  continent    String?
+  flagImageUrl String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  riders        Rider[]
+  teams         Team[]
+  events        Event[]
+  manufacturers Manufacturer[]
+
+  @@index([name])
+}
+
+model Season {
+  id        String       @id @default(cuid())
+  year      Int          @unique
+  name      String
+  status    SeasonStatus @default(UPCOMING)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  events                  Event[]
+  standings               Standing[]
+  riderCareerSeasons      RiderCareerSeason[]
+  motorcycleSeasonStats   MotorcycleSeasonStat[]
+  manufacturerSeasonStats ManufacturerSeasonStat[]
+}
+
+model Event {
+  id          String      @id @default(cuid())
+  seasonId    String
+  countryId   String?
+  name        String
+  slug        String      @unique
+  roundNumber Int?
+  city        String?
+  venue       String?
+  startDate   DateTime
+  endDate     DateTime?
+  status      EventStatus @default(SCHEDULED)
+  liveStatus  LiveStatus  @default(UPCOMING)
+  latitude    Decimal?
+  longitude   Decimal?
+  officialUrl String?
+  description String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  season           Season              @relation(fields: [seasonId], references: [id])
+  country          Country?            @relation(fields: [countryId], references: [id])
+  stages           RaceStage[]
+  timelineItems    EventTimelineItem[]
+  results          Result[]
+  weatherSnapshots WeatherSnapshot[]
+  mediaItems       MediaItem[]
+
+  @@index([seasonId])
+  @@index([countryId])
+  @@index([startDate])
+}
+
+model RaceStage {
+  id          String     @id @default(cuid())
+  eventId     String
+  name        String
+  slug        String
+  stageType   StageType
+  stageOrder  Int
+  status      LiveStatus @default(UPCOMING)
+  startDate   DateTime?
+  endDate     DateTime?
+  distanceKm  Decimal?
+  officialUrl String?
+  notes       String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  event        Event         @relation(fields: [eventId], references: [id])
+  stageResults StageResult[]
+
+  @@index([eventId])
+  @@unique([eventId, slug])
+  @@unique([eventId, stageOrder])
+}
+
+model EventTimelineItem {
+  id          String            @id @default(cuid())
+  eventId     String
+  type        EventTimelineType
+  title       String
+  description String?
+  occurredAt  DateTime?
+  url         String?
+  metadata    Json?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  event Event @relation(fields: [eventId], references: [id])
+
+  @@index([eventId])
+  @@index([occurredAt])
+  @@index([type])
+}
+
+model Rider {
+  id                  String   @id @default(cuid())
+  countryId           String?
+  currentMotorcycleId String?
+  firstName           String
+  lastName            String
+  slug                String   @unique
+  birthDate           DateTime?
+  profileImageUrl     String?
+  officialUrl         String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  country           Country?            @relation(fields: [countryId], references: [id])
+  currentMotorcycle Motorcycle?         @relation("CurrentRiderMotorcycle", fields: [currentMotorcycleId], references: [id])
+  results           Result[]
+  stageResults      StageResult[]
+  standings         Standing[]
+  careerSeasons     RiderCareerSeason[]
+  teamMemberships   TeamMembership[]
+
+  @@index([countryId])
+  @@index([lastName, firstName])
+}
+
+model Team {
+  id          String   @id @default(cuid())
+  countryId   String?
+  name        String
+  slug        String   @unique
+  officialUrl String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  country       Country?            @relation(fields: [countryId], references: [id])
+  memberships   TeamMembership[]
+  careerSeasons RiderCareerSeason[]
+
+  @@index([countryId])
+}
+
+model Manufacturer {
+  id        String   @id @default(cuid())
+  countryId String?
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  country             Country?                 @relation(fields: [countryId], references: [id])
+  motorcycles         Motorcycle[]
+  results             Result[]
+  stageResults        StageResult[]
+  riderCareerSeasons  RiderCareerSeason[]
+  seasonStats         ManufacturerSeasonStat[]
+
+  @@index([countryId])
+}
+
+model Motorcycle {
+  id              String      @id @default(cuid())
+  manufacturerId  String
+  model           String
+  slug            String      @unique
+  year            Int?
+  engineCc        Int?
+  strokeType      StrokeType?
+  weightKg        Decimal?
+  suspensionFront String?
+  suspensionRear  String?
+  horsepower      Decimal?
+  torqueNm        Decimal?
+  fuelCapacityL   Decimal?
+  description     String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  manufacturer       Manufacturer            @relation(fields: [manufacturerId], references: [id])
+  currentRiders      Rider[]                 @relation("CurrentRiderMotorcycle")
+  results            Result[]
+  stageResults       StageResult[]
+  riderCareerSeasons RiderCareerSeason[]
+  seasonStats        MotorcycleSeasonStat[]
+
+  @@index([manufacturerId])
+  @@unique([manufacturerId, model, year])
+}
+
+model TeamMembership {
+  id        String   @id @default(cuid())
+  riderId   String
+  teamId    String
+  seasonId  String?
+  startDate DateTime?
+  endDate   DateTime?
+
+  rider Rider @relation(fields: [riderId], references: [id])
+  team  Team  @relation(fields: [teamId], references: [id])
+
+  @@index([riderId])
+  @@index([teamId])
+}
+
+model RiderCareerSeason {
+  id                    String   @id @default(cuid())
+  riderId               String
+  seasonId              String
+  teamId                String?
+  manufacturerId        String?
+  motorcycleId          String?
+  className             String?
+  championshipPosition  Int?
+  points                Int      @default(0)
+  wins                  Int      @default(0)
+  podiums               Int      @default(0)
+  starts                Int      @default(0)
+  dnfs                  Int      @default(0)
+  stageWins             Int      @default(0)
+  averageFinishPosition Decimal?
+  statistics            Json?
+  calculatedAt          DateTime @default(now())
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  rider        Rider         @relation(fields: [riderId], references: [id])
+  season       Season        @relation(fields: [seasonId], references: [id])
+  team         Team?         @relation(fields: [teamId], references: [id])
+  manufacturer Manufacturer? @relation(fields: [manufacturerId], references: [id])
+  motorcycle   Motorcycle?   @relation(fields: [motorcycleId], references: [id])
+
+  @@index([riderId])
+  @@index([seasonId])
+  @@index([teamId])
+  @@index([motorcycleId])
+  @@unique([riderId, seasonId, className])
+}
+
+model MotorcycleSeasonStat {
+  id               String   @id @default(cuid())
+  motorcycleId     String
+  seasonId         String
+  className        String?
+  eventsEntered    Int      @default(0)
+  ridersCount      Int      @default(0)
+  wins             Int      @default(0)
+  podiums          Int      @default(0)
+  dnfs             Int      @default(0)
+  championshipsWon Int      @default(0)
+  winPercentage    Decimal?
+  statistics       Json?
+  calculatedAt     DateTime @default(now())
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  motorcycle Motorcycle @relation(fields: [motorcycleId], references: [id])
+  season     Season     @relation(fields: [seasonId], references: [id])
+
+  @@index([motorcycleId])
+  @@index([seasonId])
+  @@unique([motorcycleId, seasonId, className])
+}
+
+model ManufacturerSeasonStat {
+  id               String   @id @default(cuid())
+  manufacturerId   String
+  seasonId         String
+  className        String?
+  championshipsWon Int      @default(0)
+  wins             Int      @default(0)
+  podiums          Int      @default(0)
+  starts           Int      @default(0)
+  dnfs             Int      @default(0)
+  winPercentage    Decimal?
+  winsByRider      Json?
+  winsByMotorcycle Json?
+  statistics       Json?
+  calculatedAt     DateTime @default(now())
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  manufacturer Manufacturer @relation(fields: [manufacturerId], references: [id])
+  season       Season       @relation(fields: [seasonId], references: [id])
+
+  @@index([manufacturerId])
+  @@index([seasonId])
+  @@unique([manufacturerId, seasonId, className])
+}
+
+model RiderComparisonSnapshot {
+  id                String   @id @default(cuid())
+  riderAId          String
+  riderBId          String
+  className         String?
+  winsA             Int      @default(0)
+  winsB             Int      @default(0)
+  podiumsA          Int      @default(0)
+  podiumsB          Int      @default(0)
+  championshipsA    Int      @default(0)
+  championshipsB    Int      @default(0)
+  dnfsA             Int      @default(0)
+  dnfsB             Int      @default(0)
+  averageFinishA    Decimal?
+  averageFinishB    Decimal?
+  commonEvents      Int      @default(0)
+  stageWinsA        Int      @default(0)
+  stageWinsB        Int      @default(0)
+  headToHead        Json?
+  timeGapStatistics Json?
+  chartData         Json?
+  calculatedAt      DateTime @default(now())
+
+  @@index([riderAId, riderBId])
+  @@unique([riderAId, riderBId, className])
+}
+
+model StageResult {
+  id                   String       @id @default(cuid())
+  stageId              String
+  riderId              String
+  motorcycleId         String?
+  manufacturerId       String?
+  className            String?
+  overallPosition      Int?
+  classPosition        Int?
+  totalTimeMs          Int?
+  totalTimeText        String?
+  gapToLeaderMs        Int?
+  gapToLeaderText      String?
+  gapToPreviousMs      Int?
+  gapToPreviousText    String?
+  checkpointsCompleted Int?
+  penaltiesMs          Int?
+  penaltiesText        String?
+  bonusTimeMs          Int?
+  bonusTimeText        String?
+  averageSpeedKmh      Decimal?
+  status               ResultStatus @default(FINISHED)
+  notes                String?
+  officialRawRow       Json?
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+
+  stage        RaceStage     @relation(fields: [stageId], references: [id])
+  rider        Rider         @relation(fields: [riderId], references: [id])
+  motorcycle   Motorcycle?   @relation(fields: [motorcycleId], references: [id])
+  manufacturer Manufacturer? @relation(fields: [manufacturerId], references: [id])
+
+  @@index([stageId])
+  @@index([riderId])
+  @@index([motorcycleId])
+  @@unique([stageId, riderId, className])
+}
+
+model Result {
+  id                   String       @id @default(cuid())
+  eventId              String
+  riderId              String
+  motorcycleId         String?
+  manufacturerId       String?
+  className            String?
+  overallPosition      Int?
+  classPosition        Int?
+  points               Int?
+  totalTimeMs          Int?
+  totalTimeText        String?
+  gapToLeaderMs        Int?
+  gapToLeaderText      String?
+  gapToPreviousMs      Int?
+  gapToPreviousText    String?
+  penaltiesMs          Int?
+  bonusTimeMs          Int?
+  checkpointsCompleted Int?
+  averageSpeedKmh      Decimal?
+  status               ResultStatus @default(FINISHED)
+  notes                String?
+  officialRawRow       Json?
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+
+  event        Event         @relation(fields: [eventId], references: [id])
+  rider        Rider         @relation(fields: [riderId], references: [id])
+  motorcycle   Motorcycle?   @relation(fields: [motorcycleId], references: [id])
+  manufacturer Manufacturer? @relation(fields: [manufacturerId], references: [id])
+
+  @@index([eventId])
+  @@index([riderId])
+  @@index([motorcycleId])
+  @@unique([eventId, riderId, className])
+}
+
+model Standing {
+  id        String   @id @default(cuid())
+  seasonId  String
+  riderId   String
+  className String?
+  position  Int?
+  points    Int
+  wins      Int      @default(0)
+  podiums   Int      @default(0)
+  starts    Int      @default(0)
+  dnfs      Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  season Season @relation(fields: [seasonId], references: [id])
+  rider  Rider  @relation(fields: [riderId], references: [id])
+
+  @@index([seasonId])
+  @@index([riderId])
+  @@unique([seasonId, riderId, className])
+}
+
+model ChampionshipRecord {
+  id           String     @id @default(cuid())
+  type         RecordType
+  title        String
+  description  String?
+  entityType   String?
+  entityId     String?
+  seasonId     String?
+  className    String?
+  valueNumber  Decimal?
+  valueText    String?
+  calculatedAt DateTime   @default(now())
+  metadata     Json?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([type])
+  @@index([entityType, entityId])
+  @@index([seasonId])
+}
+
+model HallOfFameEntry {
+  id          String         @id @default(cuid())
+  type        HallOfFameType
+  title       String
+  slug        String         @unique
+  entityType  String?
+  entityId    String?
+  rank        Int?
+  summary     String?
+  recordId    String?
+  metadata    Json?
+  generatedAt DateTime       @default(now())
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([type])
+  @@index([entityType, entityId])
+}
+
+model WeatherSnapshot {
+  id                 String   @id @default(cuid())
+  eventId            String
+  temperatureC       Decimal?
+  humidityPercent    Decimal?
+  rainMm             Decimal?
+  windSpeedKmh       Decimal?
+  weatherDescription String?
+  fetchedAt          DateTime @default(now())
+  provider           String?
+  rawPayload         Json?
+
+  event Event @relation(fields: [eventId], references: [id])
+
+  @@index([eventId])
+  @@index([fetchedAt])
+}
+
+model MediaItem {
+  id             String    @id @default(cuid())
+  eventId        String?
+  type           MediaType
+  title          String?
+  description    String?
+  url            String
+  thumbnailUrl   String?
+  photographer   String?
+  copyrightOwner String?
+  license        String?
+  source         String?
+  provider       String?
+  providerId     String?
+  dateTaken      DateTime?
+  publishedAt    DateTime?
+  uploadedAt     DateTime  @default(now())
+  tags           String[]  @default([])
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  event       Event?            @relation(fields: [eventId], references: [id])
+  entityLinks MediaEntityLink[]
+
+  @@index([eventId])
+  @@index([provider, providerId])
+}
+
+model MediaEntityLink {
+  id          String   @id @default(cuid())
+  mediaItemId String
+  entityType  String
+  entityId    String
+  createdAt   DateTime @default(now())
+
+  mediaItem MediaItem @relation(fields: [mediaItemId], references: [id])
+
+  @@index([mediaItemId])
+  @@index([entityType, entityId])
+}
+
+model NewsArticle {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  summary     String?
+  body        String?
+  sourceUrl   String?
+  publishedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model DataSource {
+  id          String            @id @default(cuid())
+  name        String
+  type        SourceType
+  baseUrl     String?
+  reliability SourceReliability @default(OFFICIAL)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  snapshots SourceSnapshot[]
+  links     SourceLink[]
+}
+
+model SourceSnapshot {
+  id           String   @id @default(cuid())
+  dataSourceId String
+  url          String
+  contentHash  String
+  rawContent   String?
+  fetchedAt    DateTime @default(now())
+  statusCode   Int?
+  errorMessage String?
+
+  dataSource DataSource @relation(fields: [dataSourceId], references: [id])
+  importRuns ImportRun[]
+
+  @@index([dataSourceId])
+  @@index([contentHash])
+}
+
+model SourceLink {
+  id           String   @id @default(cuid())
+  dataSourceId String
+  url          String
+  entityType   String
+  entityId     String
+  note         String?
+  createdAt    DateTime @default(now())
+
+  dataSource DataSource @relation(fields: [dataSourceId], references: [id])
+
+  @@index([entityType, entityId])
+  @@index([dataSourceId])
+}
+
+model ImportRun {
+  id               String       @id @default(cuid())
+  sourceSnapshotId String?
+  jobName          String
+  status           ImportStatus @default(PENDING)
+  startedAt        DateTime     @default(now())
+  finishedAt       DateTime?
+  recordsFound     Int          @default(0)
+  recordsCreated   Int          @default(0)
+  recordsUpdated   Int          @default(0)
+  recordsSkipped   Int          @default(0)
+  errorMessage     String?
+  metadata         Json?
+
+  sourceSnapshot SourceSnapshot? @relation(fields: [sourceSnapshotId], references: [id])
+  changes        DataVersion[]
+}
+
+model DataVersion {
+  id          String        @id @default(cuid())
+  entityType  String
+  entityId    String
+  importRunId String?
+  action      VersionAction
+  previous    Json?
+  next        Json?
+  sourceUrl   String?
+  createdBy   String?
+  createdAt   DateTime      @default(now())
+
+  importRun ImportRun? @relation(fields: [importRunId], references: [id])
+
+  @@index([entityType, entityId])
+  @@index([importRunId])
+}
+
+model UserProfile {
+  id          String   @id
+  email       String?  @unique
+  displayName String?
+  role        UserRole @default(USER)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  favorites              UserFavorite[]
+  notificationPreference NotificationPreference?
+}
+
+model UserFavorite {
+  id         String       @id @default(cuid())
+  userId     String
+  entityType FavoriteType
+  entityId   String
+  notify     Boolean      @default(true)
+  createdAt  DateTime     @default(now())
+
+  user UserProfile @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@unique([userId, entityType, entityId])
+}
+
+model NotificationPreference {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  upcomingRaces    Boolean  @default(true)
+  publishedResults Boolean  @default(true)
+  newVideos        Boolean  @default(true)
+  newsArticles     Boolean  @default(true)
+  riderUpdates     Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user UserProfile @relation(fields: [userId], references: [id])
+}
+
+model SlugRedirect {
+  id         String   @id @default(cuid())
+  entityType String
+  entityId   String
+  oldSlug    String
+  newSlug    String
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@unique([entityType, oldSlug])
+}
+
+enum SeasonStatus {
+  UPCOMING
+  ACTIVE
+  COMPLETED
+}
+
+enum EventStatus {
+  SCHEDULED
+  LIVE
+  SUSPENDED
+  COMPLETED
+  CANCELLED
+}
+
+enum LiveStatus {
+  UPCOMING
+  LIVE
+  SUSPENDED
+  FINISHED
+  CANCELLED
+  UNKNOWN
+}
+
+enum EventTimelineType {
+  REGISTRATION_OPEN
+  ENTRY_LIST_PUBLISHED
+  START_LIST_PUBLISHED
+  STAGE_STARTED
+  STAGE_FINISHED
+  FINAL_CLASSIFICATION
+  OFFICIAL_DOCUMENT
+  GALLERY
+  VIDEO
+  NEWS
+  POINTS_UPDATED
+  OTHER
+}
+
+enum StageType {
+  PROLOGUE
+  DAY
+  FINAL
+  QUALIFYING
+  OTHER
+}
+
+enum StrokeType {
+  TWO_STROKE
+  FOUR_STROKE
+}
+
+enum ResultStatus {
+  FINISHED
+  DNF
+  DNS
+  DSQ
+  UNKNOWN
+}
+
+enum RecordType {
+  MOST_WINS
+  MOST_CHAMPIONSHIPS
+  MOST_PODIUMS
+  LONGEST_WINNING_STREAK
+  YOUNGEST_WINNER
+  OLDEST_WINNER
+  MOST_STARTS
+  MOST_DNFS
+  CUSTOM
+}
+
+enum HallOfFameType {
+  WORLD_CHAMPION
+  LEGEND
+  MOST_WINS
+  MOST_PODIUMS
+  MOST_CHAMPIONSHIPS
+  HISTORIC_RECORD
+  LEGENDARY_EVENT
+  ICONIC_MOTORCYCLE
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+  YOUTUBE
+  DOCUMENT
+}
+
+enum SourceType {
+  OFFICIAL_WEBSITE
+  TIMING_SYSTEM
+  YOUTUBE
+  NEWS
+  MAPS
+  WEATHER
+  MANUAL
+}
+
+enum SourceReliability {
+  OFFICIAL
+  TRUSTED
+  COMMUNITY
+  UNKNOWN
+}
+
+enum ImportStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  NEEDS_REVIEW
+}
+
+enum UserRole {
+  USER
+  ANALYST
+  EDITOR
+  ADMIN
+  OWNER
+}
+
+enum FavoriteType {
+  RIDER
+  EVENT
+  TEAM
+  MANUFACTURER
+  MOTORCYCLE
+  COUNTRY
+}
+
+enum VersionAction {
+  CREATE
+  UPDATE
+  DELETE
+  IMPORT
+  MANUAL_EDIT
+  ROLLBACK
+  RECALCULATE
+}
