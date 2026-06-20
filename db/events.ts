@@ -59,6 +59,11 @@ export async function getEventsList() {
           rider: true,
         },
       },
+      _count: {
+        select: {
+          results: true,
+        },
+      },
     },
   });
 }
@@ -85,6 +90,12 @@ export async function getEventDetail(slug: string) {
               rider: {
                 include: {
                   country: true,
+                  teamMemberships: {
+                    take: 1,
+                    include: {
+                      team: true,
+                    },
+                  },
                 },
               },
               motorcycle: {

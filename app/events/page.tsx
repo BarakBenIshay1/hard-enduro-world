@@ -1,8 +1,7 @@
-import Link from "next/link";
-import { CalendarDays, MapPin } from "lucide-react";
-import { Card } from "@/components/ui/card";
+import { EventsBrowser, type EventCardData } from "@/components/events/events-browser";
 import { Container } from "@/components/ui/container";
 import { PageHero } from "@/components/ui/page-hero";
+import { SectionTitle } from "@/components/ui/section-title";
 import { getEventsList } from "@/db/events";
 import { formatDateRange } from "@/lib/format";
 
@@ -10,68 +9,55 @@ export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Events",
-  description: "Hard Enduro World Championship event calendar and seeded results.",
+  description:
+    "Premium Hard Enduro World Championship event calendar with stage, country, winner, and timing previews.",
 };
 
 export default async function EventsPage() {
   const events = await getEventsList();
+  const eventCards: EventCardData[] = events.map((event) => {
+    const winner = event.results[0]?.rider;
+    const finisherCount = event.results.filter(
+      (result) => result.status === "FINISHED",
+    ).length;
+
+    return {
+      id: event.id,
+      slug: event.slug,
+      name: event.name,
+      country: event.country?.name ?? "Location TBC",
+      countryCode: event.country?.isoCode ?? "TBC",
+      season: event.season.name,
+      year: event.season.year,
+      dateLabel: formatDateRange(event.startDate, event.endDate),
+      startTimestamp: event.startDate.getTime(),
+      status: event.liveStatus,
+      elevation: "1,466 m profile",
+      previousWinner: winner ? `${winner.firstName} ${winner.lastName}` : "Pending",
+      stageCount: event.stages.length,
+      riderCount: event._count.results,
+      finisherCount,
+    };
+  });
 
   return (
     <main className="min-h-screen bg-surface text-foreground">
       <PageHero
         compact
         eyebrow="Events"
-        title="Championship event data"
-        description="The first events listing reads directly from seeded PostgreSQL data through Prisma."
+        title="The championship calendar, built like a race control room."
+        description="Explore each event through country, season, status, stage count, winner context, and the first timing statistics."
       />
 
       <Container className="py-12">
-        <div className="grid gap-4">
-          {events.map((event) => {
-            const winner = event.results[0]?.rider;
-
-            return (
-              <Link key={event.id} href={`/events/${event.slug}`}>
-                <Card className="p-5">
-                  <div className="grid gap-5 lg:grid-cols-[1fr_220px_180px] lg:items-center">
-                    <div>
-                      <p className="text-sm text-foreground/64">
-                        Round {event.roundNumber ?? "TBC"} • {event.season.name}
-                      </p>
-                      <h2 className="mt-1 text-2xl font-semibold">{event.name}</h2>
-                      <div className="mt-3 flex flex-wrap gap-3 text-sm text-foreground/68">
-                        <span className="inline-flex items-center gap-2">
-                          <CalendarDays className="h-4 w-4" aria-hidden="true" />
-                          {formatDateRange(event.startDate, event.endDate)}
-                        </span>
-                        <span className="inline-flex items-center gap-2">
-                          <MapPin className="h-4 w-4" aria-hidden="true" />
-                          {event.country?.name ?? "Location TBC"}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="rounded-md border border-border bg-surface px-4 py-3">
-                      <p className="text-xs uppercase tracking-wide text-foreground/52">
-                        Stages
-                      </p>
-                      <p className="mt-1 text-xl font-semibold">{event.stages.length}</p>
-                    </div>
-
-                    <div className="rounded-md border border-border bg-surface px-4 py-3">
-                      <p className="text-xs uppercase tracking-wide text-foreground/52">
-                        Leader
-                      </p>
-                      <p className="mt-1 font-semibold">
-                        {winner ? `${winner.firstName} ${winner.lastName}` : "Pending"}
-                      </p>
-                    </div>
-                  </div>
-                </Card>
-              </Link>
-            );
-          })}
+        <div className="mb-8">
+          <SectionTitle
+            eyebrow="Event Index"
+            title="Filter the calendar"
+            description="This module is prepared for many seasons while currently using the seeded event dataset."
+          />
         </div>
+        <EventsBrowser events={eventCards} />
       </Container>
     </main>
   );
