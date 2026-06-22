@@ -1,42 +1,85 @@
 # YouTube Connector
 
-Step 17 adds a safe foundation for importing video metadata. It does not call the
-real YouTube API, does not require a real API key, and does not publish media
-without review.
+Step 26 upgrades the YouTube connector foundation to support the real YouTube Data API v3 while preserving review-first publishing.
 
-## Future Flow
+The connector can fetch:
 
-YouTube API
--> fetch videos
--> save snapshot
--> normalize video metadata
--> create pending review
--> admin approval
--> publish to `/videos`
+- Channel metadata
+- Latest videos
+- Playlists
+- Thumbnails
+- Publish dates
+- Video URLs
+- Video IDs
+
+No real secrets are committed. No video is auto-published.
+
+## Environment Variables
+
+Use placeholders in `.env.example`:
+
+- `YOUTUBE_API_KEY=`
+- `YOUTUBE_CHANNEL_ID=`
+
+Local `.env` may contain real values, but real values must never be committed.
+
+If either value is missing, the connector uses safe demo fallback data and marks the API status as `demo-fallback` / `missing-config`.
+
+## Setup Later
+
+1. Create or select a Google Cloud project.
+2. Enable YouTube Data API v3.
+3. Create an API key with suitable restrictions.
+4. Find the official channel id.
+5. Set `YOUTUBE_API_KEY` and `YOUTUBE_CHANNEL_ID` in the target environment.
+6. Test in staging before production.
+
+## API Endpoints
+
+The connector is prepared to call:
+
+- `channels`
+  - Used for channel lookup and uploads playlist metadata.
+- `search`
+  - Used for latest videos by channel.
+- `playlists`
+  - Used for playlist metadata.
+
+## Quotas
+
+YouTube Data API uses quota units. Production jobs should:
+
+- Limit `maxResults`.
+- Avoid unnecessary repeated fetches.
+- Cache or snapshot fetched payloads.
+- Prefer scheduled runs over frequent polling.
+- Track failures and quota-related errors in `ImportRun`.
 
 ## Source Tracking
 
-No external data should bypass source tracking. A real connector run should create
-or reuse:
+Every fetch must prepare source tracking:
 
 - `DataSource`
 - `SourceSnapshot`
 - `ImportRun`
 - `SourceLink`
-- `DataVersion`
+- `DataVersion` preview
 
-## Current Scope
+Current Step 26 behavior builds source-tracking preview objects for review. Future approval actions can persist these records through the admin review flow.
 
-- `jobs/connectors/youtube/` contains typed connector placeholders.
-- The demo fetcher returns mock video metadata.
-- The normalizer prepares MediaItem-shaped payloads.
-- The automation registry links the `youtube-videos` job to the connector path.
-- `/admin/jobs/youtube-videos` shows configuration, source tracking, sample videos,
-  and a diff preview.
-- `/videos` displays demo/import-ready videos.
+## Review Workflow
+
+YouTube API
+-> fetch channel/videos/playlists
+-> create source snapshot preview
+-> normalize video metadata
+-> create pending review items
+-> admin review
+-> approval later
+-> publish to `/videos`
 
 ## Safety Rule
 
-YouTube metadata can create pending media review items only. It must not update
-championship results, standings, points, records, riders, teams, manufacturers,
-or motorcycles.
+YouTube metadata can create pending media review items only. It must not update championship results, standings, points, records, riders, teams, manufacturers, or motorcycles.
+
+The public `/videos` page only reads approved/import-ready media records. Fresh fetched API results stay inside `/admin/jobs/youtube-videos` until the future approval system publishes them.

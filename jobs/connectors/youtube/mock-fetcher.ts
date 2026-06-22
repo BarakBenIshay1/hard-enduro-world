@@ -1,4 +1,7 @@
-import type { YouTubeRawVideo } from "@/jobs/connectors/youtube/types";
+import type {
+  YouTubeFetchResult,
+  YouTubeRawVideo,
+} from "@/jobs/connectors/youtube/types";
 
 export async function fetchYouTubeVideosDemo(): Promise<YouTubeRawVideo[]> {
   return [
@@ -33,4 +36,36 @@ export async function fetchYouTubeVideosDemo(): Promise<YouTubeRawVideo[]> {
       watchUrl: "https://www.youtube.com/watch?v=demo-rider-focus-lettenbichler",
     },
   ];
+}
+
+export async function fetchYouTubeDemoResult(
+  sourceUrl: string,
+): Promise<YouTubeFetchResult> {
+  return {
+    mode: "demo",
+    apiStatus: "demo-fallback",
+    channelStatus: "not-configured",
+    sourceUrl,
+    fetchedAt: new Date(),
+    channel: {
+      id: "demo-hard-enduro-channel",
+      title: "Hard Enduro World Championship",
+      description: "Demo channel metadata for review-only connector previews.",
+      thumbnailUrl: "https://www.youtube.com/img/desktop/yt_1200.png",
+      publishedAt: "2026-01-01T00:00:00.000Z",
+      videoCount: "3",
+      uploadsPlaylistId: "demo-uploads-playlist",
+    },
+    playlists: [
+      {
+        id: "demo-highlights-playlist",
+        title: "Hard Enduro Highlights",
+        description: "Demo playlist metadata.",
+        thumbnailUrl: "https://www.youtube.com/img/desktop/yt_1200.png",
+        publishedAt: "2026-01-01T00:00:00.000Z",
+        itemCount: 3,
+      },
+    ],
+    videos: await fetchYouTubeVideosDemo(),
+  };
 }

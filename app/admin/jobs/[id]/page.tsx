@@ -128,22 +128,49 @@ function YouTubePreview({ preview }: { preview: YouTubeImportPreview }) {
   return (
     <Card className="overflow-hidden">
       <div className="border-b border-border p-5">
-        <h2 className="text-xl font-black">Sample fetched videos</h2>
+        <h2 className="text-xl font-black">Fetched videos</h2>
         <p className="mt-2 text-sm text-foreground/[0.62]">
-          Demo fetcher output. No real YouTube API request is made.
+          YouTube Data API v3 integration with safe demo fallback when `YOUTUBE_API_KEY`
+          or `YOUTUBE_CHANNEL_ID` is missing. All videos enter review before publishing.
         </p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+          <PreviewMetric label="API status" value={preview.apiStatus} />
+          <PreviewMetric label="Channel" value={preview.channelStatus} />
+          <PreviewMetric label="Fetched" value={formatDate(preview.fetchedAt)} />
+          <PreviewMetric label="Playlists" value={preview.playlists.length} />
+          <PreviewMetric label="Pending review" value={preview.reviewItems.length} />
+        </div>
+        {preview.channel ? (
+          <div className="mt-4 rounded-md border border-border bg-surface-muted p-4 text-sm">
+            <p className="font-semibold">{preview.channel.title}</p>
+            <p className="mt-2 text-foreground/[0.62]">
+              Videos: {preview.channel.videoCount ?? "Unknown"} / Uploads playlist:{" "}
+              {preview.channel.uploadsPlaylistId ?? "Unknown"}
+            </p>
+          </div>
+        ) : null}
+        {preview.errorMessage ? (
+          <div className="mt-4 rounded-md border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-300">
+            {preview.errorMessage}
+          </div>
+        ) : null}
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[920px] text-left text-sm">
+        <table className="w-full min-w-[1120px] text-left text-sm">
           <thead className="bg-black text-xs uppercase tracking-[0.18em] text-white/[0.64]">
             <tr>
-              {["Title", "Channel", "Published", "Provider ID", "Would create"].map(
-                (heading) => (
-                  <th key={heading} className="px-5 py-4 font-semibold">
-                    {heading}
-                  </th>
-                ),
-              )}
+              {[
+                "Title",
+                "Channel",
+                "Published",
+                "Video ID",
+                "Video URL",
+                "Would create",
+              ].map((heading) => (
+                <th key={heading} className="px-5 py-4 font-semibold">
+                  {heading}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
@@ -153,6 +180,7 @@ function YouTubePreview({ preview }: { preview: YouTubeImportPreview }) {
                 <td className="px-5 py-4">{video.channelTitle}</td>
                 <td className="px-5 py-4">{formatDate(video.publishedAt)}</td>
                 <td className="px-5 py-4 font-mono text-xs">{video.providerId}</td>
+                <td className="px-5 py-4 text-foreground/[0.62]">{video.watchUrl}</td>
                 <td className="px-5 py-4">
                   <span className="inline-flex items-center gap-2 text-accent">
                     <Check className="h-4 w-4" aria-hidden="true" />
@@ -163,6 +191,26 @@ function YouTubePreview({ preview }: { preview: YouTubeImportPreview }) {
             ))}
           </tbody>
         </table>
+      </div>
+      <div className="border-t border-border p-5">
+        <h3 className="text-sm font-black uppercase tracking-[0.18em] text-foreground/[0.48]">
+          Source tracking preview
+        </h3>
+        <div className="mt-4 grid gap-3 text-sm md:grid-cols-2 xl:grid-cols-4">
+          <ConfigRow
+            label="Snapshot"
+            value={preview.sourceTracking.sourceSnapshot.status}
+          />
+          <ConfigRow label="Import run" value={preview.sourceTracking.importRun.status} />
+          <ConfigRow
+            label="Source links"
+            value={String(preview.sourceTracking.sourceLinks.length)}
+          />
+          <ConfigRow
+            label="Data versions"
+            value={String(preview.sourceTracking.dataVersions.length)}
+          />
+        </div>
       </div>
     </Card>
   );
@@ -303,7 +351,7 @@ function ResultsPreview({ preview }: { preview: ResultsImportPreview }) {
   );
 }
 
-function PreviewMetric({ label, value }: { label: string; value: number }) {
+function PreviewMetric({ label, value }: { label: string; value: number | string }) {
   return (
     <div className="rounded-md border border-border bg-surface-muted p-3">
       <p className="text-xs uppercase tracking-[0.18em] text-foreground/[0.48]">

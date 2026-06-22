@@ -9,6 +9,7 @@ const envSchema = z.object({
   UPSTASH_REDIS_REST_URL: z.string().optional(),
   UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
   YOUTUBE_API_KEY: z.string().optional(),
+  YOUTUBE_CHANNEL_ID: z.string().optional(),
   MAPS_API_KEY: z.string().optional(),
   WEATHER_API_KEY: z.string().optional(),
   CRON_SECRET: z.string().optional(),
