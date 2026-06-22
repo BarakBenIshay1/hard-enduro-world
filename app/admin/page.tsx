@@ -6,11 +6,13 @@ import {
   Factory,
   Gauge,
   ListChecks,
+  MapPinned,
   PlayCircle,
   ShieldCheck,
   Trophy,
   Users,
 } from "lucide-react";
+import Link from "next/link";
 import { AdminStatCard } from "@/components/admin/admin-stat-card";
 import { AdminStatusBadge } from "@/components/admin/admin-status-badge";
 import { AdminTableShell } from "@/components/admin/admin-table-shell";
@@ -147,29 +149,46 @@ export default async function AdminDashboardPage() {
           </div>
         </Card>
 
-        <AdminTableShell
-          title="Data management roadmap"
-          description="Structured placeholders for the first operational workflows."
-          createLabel="Create placeholder"
-          rows={[
-            {
-              label: "Create event",
-              detail:
-                "Future event creation with country, season, stage, and source links.",
-              status: "placeholder",
-            },
-            {
-              label: "Review imported result",
-              detail: "Approve automation changes before they reach public pages.",
-              status: "review",
-            },
-            {
-              label: "Inspect source link",
-              detail: "Trace public records back to official timing PDFs and sources.",
-              status: "placeholder",
-            },
-          ]}
-        />
+        <div className="grid gap-6">
+          <Link
+            href="/admin/sources-map"
+            className="block rounded-md border border-border bg-card p-6 transition hover:border-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+          >
+            <MapPinned className="h-5 w-5 text-accent" aria-hidden="true" />
+            <p className="mt-6 text-xs uppercase tracking-[0.18em] text-foreground/[0.48]">
+              Source Map
+            </p>
+            <h2 className="mt-2 text-2xl font-black">Source of truth rules</h2>
+            <p className="mt-3 text-sm leading-6 text-foreground/[0.62]">
+              Review primary sources, conflict rules, risk levels, and which data must be
+              derived instead of directly imported.
+            </p>
+          </Link>
+
+          <AdminTableShell
+            title="Data management roadmap"
+            description="Structured placeholders for the first operational workflows."
+            createLabel="Create placeholder"
+            rows={[
+              {
+                label: "Create event",
+                detail:
+                  "Future event creation with country, season, stage, and source links.",
+                status: "placeholder",
+              },
+              {
+                label: "Review imported result",
+                detail: "Approve automation changes before they reach public pages.",
+                status: "review",
+              },
+              {
+                label: "Inspect source link",
+                detail: "Trace public records back to official timing PDFs and sources.",
+                status: "placeholder",
+              },
+            ]}
+          />
+        </div>
       </section>
     </div>
   );

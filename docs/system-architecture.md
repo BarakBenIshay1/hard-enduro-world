@@ -431,3 +431,53 @@ Current expected blockers:
 Related doc:
 
 - `docs/deployment-readiness.md`
+
+## 15. Source of Truth Layer
+
+Step 25 adds a typed source map that defines where each data category should come from before real integrations begin.
+
+```text
+Data Type
+  |
+  v
+Source Map Rule
+  |
+  +-- Primary source
+  +-- Secondary source
+  +-- Connector or calculation engine
+  +-- Risk level
+  +-- Review requirement
+  |
+  v
+Admin Source Map
+  |
+  v
+Future Connector / Review / Calculation Flow
+```
+
+Important rules:
+
+- Events calendar comes from official championship/FIM calendar sources.
+- Results come from official timing/FIM results and never auto-publish.
+- Standings, statistics, and records are derived from approved results.
+- Videos come from official YouTube channels.
+- Weather comes from provider snapshots.
+- Riders, teams, manufacturers, and motorcycles use manual/admin records plus reviewed official sources.
+- Documents/PDFs preserve official source links and attribution.
+
+Conflict handling:
+
+- Official source beats unofficial source.
+- Manual corrections require audit notes.
+- High-risk data always requires review.
+- Derived data should not be directly imported.
+
+Current implementation:
+
+- `lib/sources/source-map.ts`
+- `db/source-map.ts`
+- `/admin/sources-map`
+
+Related doc:
+
+- `docs/source-of-truth.md`

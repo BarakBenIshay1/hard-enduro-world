@@ -12,6 +12,7 @@ import {
   GitPullRequest,
   LayoutDashboard,
   ListChecks,
+  MapPinned,
   PlayCircle,
   ServerCog,
   Settings,
@@ -95,6 +96,12 @@ export const adminNavItems: AdminNavItem[] = [
     href: "/admin/sources",
     description: "Official links",
     icon: Database,
+  },
+  {
+    label: "Source Map",
+    href: "/admin/sources-map",
+    description: "Truth rules",
+    icon: MapPinned,
   },
   {
     label: "Audit Log",
