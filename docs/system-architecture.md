@@ -319,3 +319,25 @@ Where to look:
 - Architecture docs: `docs/`
 
 The platform is being built in controlled steps. Each step should preserve existing public modules and add only the approved layer or vertical slice.
+
+## 12. Production Deployment Foundation
+
+The future production target is Vercel + Supabase + Upstash:
+
+- Vercel hosts the Next.js application, public pages, and protected admin surfaces.
+- Supabase PostgreSQL stores the Prisma-managed data model.
+- Upstash Redis provides the future production cache and lightweight job state support.
+- GitHub Actions and/or Vercel Cron can trigger future dry-run automation jobs.
+
+Environment separation:
+
+- Local: Docker PostgreSQL + Docker Redis + local `.env`.
+- Staging: Vercel preview/staging + Supabase staging + Upstash staging.
+- Production: Vercel production + Supabase production + Upstash production.
+
+Deployment is not automated yet. Before launch, admin authentication, production backups, migration review, cron protection, and secret handling must be completed.
+
+Related docs:
+
+- `docs/production-checklist.md`
+- `docs/deployment-guide.md`

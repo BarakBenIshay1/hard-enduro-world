@@ -12,6 +12,7 @@ import {
   LayoutDashboard,
   ListChecks,
   PlayCircle,
+  ServerCog,
   Settings,
   ShieldCheck,
   Trophy,
@@ -122,6 +123,12 @@ export const adminNavItems: AdminNavItem[] = [
     href: "/admin/imports",
     description: "Run history",
     icon: GitPullRequest,
+  },
+  {
+    label: "System",
+    href: "/admin/system",
+    description: "Deployment status",
+    icon: ServerCog,
   },
   {
     label: "Settings",
