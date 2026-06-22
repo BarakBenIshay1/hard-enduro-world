@@ -1,23 +1,29 @@
-# Official Results Connector Foundation
+# Official Results Connector
 
-Step 19 adds the high-risk connector foundation for official race results. It uses mock/demo data only and does not call real external websites.
+Step 28 upgrades the official results connector foundation to support real source fetches while keeping all imported result data review-only.
 
-This connector must never auto-publish. Results, stage timing, points, standings, statistics, records, and history must not change until an authorized admin review flow approves the proposed changes.
+This connector is high risk. It must never auto-publish and must never update standings, statistics, records, history, riders, teams, manufacturers, or motorcycles.
 
-## Future Flow
+## Environment Configuration
 
-Official results source
--> fetch results
--> save snapshot
--> parse result rows
--> normalize timing/classification
--> validate
--> diff
--> admin review
--> approval
--> update results
--> recalculate standings/statistics/records later
--> audit log
+Use the placeholder in `.env.example`:
+
+- `OFFICIAL_RESULTS_URL=`
+
+No real secrets are required. The URL should point to an official timing, FIM results, event results, timing export, or official PDF URL when configured later.
+
+If `OFFICIAL_RESULTS_URL` is missing, the connector uses safe demo fallback data and marks the connector status as `demo-fallback` / `missing-config`.
+
+## Supported Payloads
+
+The connector is prepared for:
+
+- HTML pages
+- JSON payloads
+- CSV/timing exports
+- Official PDFs as metadata only
+
+PDF parsing is intentionally not implemented in Step 28. PDF sources can be detected and represented as metadata-only snapshots for future parser work.
 
 ## Supported Preview Fields
 
@@ -41,40 +47,51 @@ The normalized preview supports:
 
 ## Source Tracking
 
-No result data should bypass source tracking. A future production import should create or reuse:
+Every fetch must prepare:
 
 - `DataSource` for the official timing/results provider
-- `SourceSnapshot` for the raw fetched result payload
+- `SourceSnapshot` for the raw fetched result payload or PDF metadata
 - `ImportRun` for the connector execution
 - `SourceLink` for relationships between internal result rows and official URLs
-- `DataVersion` placeholders for every proposed create or update
+- `DataVersion` preview entries for every proposed create or update
+
+Current Step 28 behavior builds source-tracking preview objects for review. Future approval actions can persist these records through the admin review flow.
+
+## Review Workflow
+
+Official results source
+-> fetch results
+-> save snapshot preview
+-> parse result rows
+-> normalize timing/classification
+-> create diff preview
+-> create pending review items
+-> admin review
+-> approval later
+-> update results later
+-> recalculate standings/statistics/records later
+-> audit log
 
 ## Review Scenarios
 
-The review queue should be prepared to show:
+Imported result rows must become review items for:
 
-- New result row found
-- Position changed
-- Time changed
-- Gap changed
+- New rider result
+- Position change
+- Time correction
+- Gap correction
 - Penalty added
-- Rider status changed to `DNF`, `DNS`, or `DSQ`
+- Status changed to `DNF`, `DNS`, or `DSQ`
 - Points changed
-
-## Current Step 19 Behavior
-
-- `jobs/connectors/results/` contains typed connector placeholders.
-- The demo fetcher returns sample official result rows.
-- The parser and normalizer prepare timing/classification preview payloads.
-- The automation registry links `official-results` to the connector path.
-- `/admin/jobs/official-results` shows source tracking, sample results, normalized rows, and diff preview.
-- Seed data includes demo import runs and `DataVersion` review scenarios.
 
 ## Safety Rules
 
 - No auto publish.
 - No direct database update from the connector.
-- No standings recalculation yet.
-- No statistics or records recalculation yet.
-- Every proposed change requires admin review.
-- Every proposed change must preserve source tracking and audit history.
+- No standings update.
+- No statistics update.
+- No records update.
+- No history update.
+- No rider, team, manufacturer, or motorcycle update.
+- Every proposed result change requires admin review.
+- Public results continue to read approved database records only.

@@ -14,6 +14,7 @@ const envSchema = z.object({
   WEATHER_API_KEY: z.string().optional(),
   CRON_SECRET: z.string().optional(),
   OFFICIAL_EVENTS_URL: z.string().optional(),
+  OFFICIAL_RESULTS_URL: z.string().optional(),
 });
 
 export const env = envSchema.parse(process.env);

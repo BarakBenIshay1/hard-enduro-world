@@ -314,16 +314,29 @@ function ResultsPreview({ preview }: { preview: ResultsImportPreview }) {
   return (
     <Card className="overflow-hidden">
       <div className="border-b border-border p-5">
-        <h2 className="text-xl font-black">Sample fetched results</h2>
+        <h2 className="text-xl font-black">Imported result rows</h2>
         <p className="mt-2 text-sm text-foreground/[0.62]">
-          Demo timing/classification output only. No official results website is fetched,
-          and no public result row is updated in Step 19.
+          Official results connector output is review-only. It must never publish directly
+          or update standings, statistics, records, history, riders, teams, manufacturers,
+          or motorcycles.
         </p>
-        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
+          <PreviewMetric label="Connector" value={preview.connectorStatus} />
+          <PreviewMetric label="Source" value={preview.sourceStatus} />
+          <PreviewMetric label="Payload" value={preview.payloadType} />
+          <PreviewMetric label="Fetched" value={formatDate(preview.fetchedAt)} />
           <PreviewMetric label="Would create" value={creates} />
-          <PreviewMetric label="Would update" value={updates} />
           <PreviewMetric label="Requires review" value={preview.reviewItems.length} />
         </div>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <PreviewMetric label="Would update" value={updates} />
+          <PreviewMetric label="Imported rows" value={preview.normalizedResults.length} />
+        </div>
+        {preview.errorMessage ? (
+          <div className="mt-4 rounded-md border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-300">
+            {preview.errorMessage}
+          </div>
+        ) : null}
       </div>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[1360px] text-left text-sm">
@@ -379,6 +392,30 @@ function ResultsPreview({ preview }: { preview: ResultsImportPreview }) {
             ))}
           </tbody>
         </table>
+      </div>
+      <div className="border-t border-border p-5">
+        <h3 className="text-sm font-black uppercase tracking-[0.18em] text-foreground/[0.48]">
+          Source tracking preview
+        </h3>
+        <div className="mt-4 grid gap-3 text-sm md:grid-cols-2 xl:grid-cols-5">
+          <ConfigRow
+            label="Snapshot"
+            value={preview.sourceTracking.sourceSnapshot.status}
+          />
+          <ConfigRow
+            label="Payload"
+            value={preview.sourceTracking.sourceSnapshot.payloadType}
+          />
+          <ConfigRow label="Import run" value={preview.sourceTracking.importRun.status} />
+          <ConfigRow
+            label="Source links"
+            value={String(preview.sourceTracking.sourceLinks.length)}
+          />
+          <ConfigRow
+            label="Data versions"
+            value={String(preview.sourceTracking.dataVersions.length)}
+          />
+        </div>
       </div>
     </Card>
   );

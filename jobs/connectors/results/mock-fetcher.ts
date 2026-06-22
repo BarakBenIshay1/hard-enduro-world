@@ -1,4 +1,7 @@
-import type { RawOfficialResult } from "@/jobs/connectors/results/types";
+import type {
+  OfficialResultsFetchResult,
+  RawOfficialResult,
+} from "@/jobs/connectors/results/types";
 
 export async function fetchOfficialResultsDemo(): Promise<RawOfficialResult[]> {
   return [
@@ -78,4 +81,21 @@ export async function fetchOfficialResultsDemo(): Promise<RawOfficialResult[]> {
       officialSourceUrl: "https://www.fim-moto.com/sample-hard-enduro-results",
     },
   ];
+}
+
+export async function fetchOfficialResultsDemoResult(
+  sourceUrl: string,
+): Promise<OfficialResultsFetchResult> {
+  const results = await fetchOfficialResultsDemo();
+
+  return {
+    mode: "demo",
+    connectorStatus: "demo-fallback",
+    sourceStatus: "not-configured",
+    payloadType: "json",
+    sourceUrl,
+    fetchedAt: new Date(),
+    rawContent: JSON.stringify({ results }, null, 2),
+    results,
+  };
 }
