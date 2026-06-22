@@ -386,11 +386,15 @@ Prepared protected areas:
 - Calculation review
 - Settings and future user management
 
-Current implementation uses `lib/auth/` for typed roles, permissions, mock sessions, and guard helpers. Future Supabase Auth should replace the mock session provider while keeping the permission checks stable.
+Current implementation uses `lib/auth/` and `lib/supabase/` for typed roles,
+permissions, Supabase session lookup, user-profile role mapping, local development
+fallback access, and guard helpers. Once Supabase environment variables are configured,
+unauthenticated admin requests are redirected away from the admin shell.
 
 Related doc:
 
 - `docs/authentication.md`
+- `docs/supabase-auth.md`
 
 ## 14. Deployment Readiness Layer
 

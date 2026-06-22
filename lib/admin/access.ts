@@ -6,6 +6,8 @@ export type AdminAccessContext = {
   role: AuthRole;
   permissions: AuthPermission[];
   session: AuthSession;
+  authStatus: AuthSession["authStatus"];
+  shouldRedirectUnauthenticated: boolean;
 };
 
 export async function getAdminAccessContext(): Promise<AdminAccessContext> {
@@ -16,6 +18,9 @@ export async function getAdminAccessContext(): Promise<AdminAccessContext> {
     role: session.role,
     permissions: session.permissions,
     session,
+    authStatus: session.authStatus,
+    shouldRedirectUnauthenticated:
+      session.authStatus === "configured" && !session.isAuthenticated,
   };
 }
 

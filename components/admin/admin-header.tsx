@@ -22,6 +22,9 @@ export function AdminHeader({ access }: AdminHeaderProps) {
             <ShieldCheck className="h-4 w-4 text-accent" aria-hidden="true" />
             Role: {access.role}
           </span>
+          <span className="inline-flex h-10 items-center rounded-md border border-border bg-card px-3 text-sm font-semibold capitalize">
+            Auth: {access.authStatus.replace("-", " ")}
+          </span>
           <Link
             href="/"
             className="inline-flex h-10 items-center justify-center rounded-md border border-border bg-card px-4 text-sm font-semibold transition hover:border-accent hover:text-accent"

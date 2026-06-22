@@ -1,6 +1,8 @@
 # Authentication and Roles Foundation
 
-Step 23 prepares the admin authentication and authorization architecture without connecting real login providers yet.
+Step 23 prepared the admin authentication and authorization architecture. Step 29
+adds the Supabase Auth integration foundation while keeping the role and permission
+model stable.
 
 ## Current Flow
 
@@ -12,7 +14,9 @@ User
 -> Protected Route
 -> Admin Action
 
-Current behavior uses a mock owner session only. No real Supabase Auth, Google OAuth, or email login is active yet.
+Current behavior uses Supabase Auth when the Supabase environment variables are
+configured. When they are not configured, the app uses a clearly labelled local
+development fallback so the admin foundation remains reviewable without secrets.
 
 ## Current Modules
 
@@ -21,7 +25,10 @@ Current behavior uses a mock owner session only. No real Supabase Auth, Google O
 - `lib/auth/permissions.ts`
   - Defines typed permissions for sources, review queue, imports, automation, calculations, settings, and users.
 - `lib/auth/session.ts`
-  - Provides a mock session provider that can later be replaced by Supabase Auth.
+  - Resolves Supabase sessions, maps users to platform roles, and provides a local
+    development fallback when Supabase is not configured.
+- `lib/auth/role-mapping.ts`
+  - Maps `UserProfile.role` values to platform roles.
 - `lib/auth/guards.ts`
   - Provides route/action guard helpers and protected-area definitions.
 - `lib/auth/mock-users.ts`
@@ -53,17 +60,18 @@ Prepared guards cover:
 - Calculation review
 - Settings and future user management
 
-## Future Supabase Auth Plan
+## Supabase Auth Plan
 
-Future implementation should:
+The current foundation supports:
 
-1. Enable Supabase Auth.
-2. Add Google OAuth and email login providers.
-3. Map Supabase users to internal `UserProfile` records.
-4. Store platform role assignments in PostgreSQL.
-5. Resolve the session server-side.
-6. Enforce route and server-action permissions.
-7. Audit privileged actions through `DataVersion` or a dedicated audit table.
+1. Supabase Auth client setup.
+2. Google OAuth and email login preparation.
+3. Supabase user mapping to internal `UserProfile` records.
+4. Platform role assignment through PostgreSQL profile data.
+5. Server-side session resolution.
+6. Admin route protection when Supabase is configured.
+7. Future server-action permission checks.
+8. Future audit attribution through `DataVersion` or a dedicated audit table.
 
 ## Future Audit Integration
 

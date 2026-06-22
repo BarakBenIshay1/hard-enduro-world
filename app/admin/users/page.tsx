@@ -1,10 +1,18 @@
 import type { Metadata } from "next";
-import { Activity, ShieldCheck, UserCog, Users } from "lucide-react";
+import { KeyRound, ShieldCheck, UserCog, Users } from "lucide-react";
 import { AdminStatCard } from "@/components/admin/admin-stat-card";
 import { AdminStatusBadge } from "@/components/admin/admin-status-badge";
 import { Card } from "@/components/ui/card";
-import { authRoles, mockAdminUsers, roleDescriptions, rolePermissions } from "@/lib/auth";
+import {
+  authRoles,
+  databaseRoleToAuthRole,
+  getAuthSession,
+  mockAdminUsers,
+  roleDescriptions,
+  rolePermissions,
+} from "@/lib/auth";
 import { formatDate } from "@/lib/format";
+import { getSupabaseAuthReadiness } from "@/lib/supabase/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +26,10 @@ export const metadata: Metadata = {
   },
 };
 
-export default function AdminUsersPage() {
+export default async function AdminUsersPage() {
+  const session = await getAuthSession();
+  const readiness = getSupabaseAuthReadiness();
+
   return (
     <div className="grid gap-8">
       <section className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -30,18 +41,19 @@ export default function AdminUsersPage() {
             Admin users and roles foundation
           </h1>
           <p className="mt-4 max-w-3xl text-sm leading-6 text-foreground/[0.62]">
-            Mock user, role, and permission previews prepared for future Supabase Auth,
-            Google OAuth, and email login. No real user management is active yet.
+            Supabase Auth is now the primary session architecture. User management remains
+            read-only until real provider credentials and profile administration are
+            enabled.
           </p>
         </div>
-        <AdminStatusBadge status="placeholder" />
+        <AdminStatusBadge status={readiness.browserClientReady ? "ready" : "locked"} />
       </section>
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <AdminStatCard
           label="Mock Users"
           value={mockAdminUsers.length}
-          detail="Demo access records"
+          detail="Local placeholders"
           icon={Users}
         />
         <AdminStatCard
@@ -57,12 +69,81 @@ export default function AdminUsersPage() {
           icon={UserCog}
         />
         <AdminStatCard
-          label="Activity"
-          value="Mock"
-          detail="Audit integration later"
-          icon={Activity}
+          label="Auth Provider"
+          value={readiness.status === "configured" ? "Supabase" : "Pending"}
+          detail="Google OAuth + email prepared"
+          icon={KeyRound}
         />
       </section>
+
+      <section className="grid gap-3 lg:grid-cols-3">
+        <Card className="p-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">
+            Current session
+          </p>
+          <h2 className="mt-3 text-2xl font-black capitalize">{session.role}</h2>
+          <p className="mt-2 text-sm leading-6 text-foreground/[0.62]">
+            Provider: {session.provider}. Role source:{" "}
+            {session.roleSource.replaceAll("-", " ")}.
+          </p>
+        </Card>
+        <Card className="p-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">
+            Login readiness
+          </p>
+          <h2 className="mt-3 text-2xl font-black">
+            {readiness.status === "configured" ? "Configured" : "Needs env values"}
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-foreground/[0.62]">
+            Google OAuth and email login are prepared in code and ready for Supabase
+            project configuration.
+          </p>
+        </Card>
+        <Card className="p-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">
+            Activity
+          </p>
+          <h2 className="mt-3 text-2xl font-black">Audit-ready</h2>
+          <p className="mt-2 text-sm leading-6 text-foreground/[0.62]">
+            User activity can be connected to DataVersion and audit records in a future
+            CRUD/action step.
+          </p>
+        </Card>
+      </section>
+
+      <Card className="overflow-hidden">
+        <div className="border-b border-border p-5">
+          <h2 className="text-xl font-black">Supabase role mapping</h2>
+          <p className="mt-2 text-sm leading-6 text-foreground/[0.62]">
+            Supabase authenticates the user. The platform maps that user to
+            UserProfile.role for authorization.
+          </p>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[720px] text-left text-sm">
+            <thead className="bg-black text-xs uppercase tracking-[0.18em] text-white/[0.64]">
+              <tr>
+                {["Database Role", "Platform Role", "Purpose"].map((heading) => (
+                  <th key={heading} className="px-5 py-4 font-semibold">
+                    {heading}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {Object.entries(databaseRoleToAuthRole).map(([databaseRole, authRole]) => (
+                <tr key={databaseRole} className="border-t border-border">
+                  <td className="px-5 py-4 font-semibold">{databaseRole}</td>
+                  <td className="px-5 py-4">{authRole}</td>
+                  <td className="px-5 py-4 text-foreground/[0.62]">
+                    {roleDescriptions[authRole]}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
 
       <Card className="overflow-hidden">
         <div className="border-b border-border p-5">

@@ -1,7 +1,15 @@
 import type { AuthPermission } from "@/lib/auth/permissions";
 import type { AuthRole } from "@/lib/auth/roles";
 
-export type AuthProvider = "mock" | "supabase" | "google-oauth" | "email";
+export type AuthProvider = "development-fallback" | "email" | "google-oauth" | "supabase";
+
+export type AuthStatus = "configured" | "error" | "not-configured";
+
+export type AuthRoleSource =
+  | "admin-owner-email"
+  | "development-fallback"
+  | "supabase-user-profile"
+  | "unauthenticated";
 
 export type AuthUser = {
   id: string;
@@ -18,6 +26,8 @@ export type AuthSession = {
   role: AuthRole;
   permissions: AuthPermission[];
   provider: AuthProvider;
+  authStatus: AuthStatus;
+  roleSource: AuthRoleSource;
   expiresAt: Date | null;
 };
 

@@ -1,15 +1,17 @@
 import type { Metadata } from "next";
-import { LockKeyhole, Route, ShieldCheck, TableProperties } from "lucide-react";
+import { KeyRound, LockKeyhole, Route, ShieldCheck, TableProperties } from "lucide-react";
 import { AdminStatCard } from "@/components/admin/admin-stat-card";
 import { AdminStatusBadge } from "@/components/admin/admin-status-badge";
 import { Card } from "@/components/ui/card";
 import {
   authPermissions,
   authRoles,
+  getAuthSession,
   permissionDescriptions,
   protectedAreas,
   roleHasPermission,
 } from "@/lib/auth";
+import { getSupabaseAuthReadiness } from "@/lib/supabase/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +25,10 @@ export const metadata: Metadata = {
   },
 };
 
-export default function AdminSecurityPage() {
+export default async function AdminSecurityPage() {
+  const session = await getAuthSession();
+  const readiness = getSupabaseAuthReadiness();
+
   return (
     <div className="grid gap-8">
       <section className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -35,14 +40,20 @@ export default function AdminSecurityPage() {
             Authentication and access matrix
           </h1>
           <p className="mt-4 max-w-3xl text-sm leading-6 text-foreground/[0.62]">
-            Route protection and permission architecture prepared for future Supabase
-            Auth, Google OAuth, and email login. Current access uses mock session logic.
+            Route protection and permission architecture are wired for Supabase Auth,
+            Google OAuth, email login, and platform role mapping.
           </p>
         </div>
-        <AdminStatusBadge status="review" />
+        <AdminStatusBadge status={readiness.browserClientReady ? "ready" : "locked"} />
       </section>
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <AdminStatCard
+          label="Auth Provider"
+          value={readiness.status === "configured" ? "Supabase" : "Pending"}
+          detail="Configured through env values"
+          icon={KeyRound}
+        />
         <AdminStatCard
           label="Roles"
           value={authRoles.length}
@@ -63,10 +74,49 @@ export default function AdminSecurityPage() {
         />
         <AdminStatCard
           label="Access Matrix"
-          value="Ready"
-          detail="Preview only"
+          value={session.role}
+          detail={`Current source: ${session.roleSource.replaceAll("-", " ")}`}
           icon={TableProperties}
         />
+      </section>
+
+      <section className="grid gap-3 lg:grid-cols-3">
+        <Card className="p-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">
+            Login providers
+          </p>
+          <h2 className="mt-3 text-2xl font-black">
+            {readiness.googleOAuthPrepared && readiness.emailLoginPrepared
+              ? "Prepared"
+              : "Pending"}
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-foreground/[0.62]">
+            Google OAuth and email login hooks are ready for Supabase project setup. No
+            provider secrets are stored in the repository.
+          </p>
+        </Card>
+        <Card className="p-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">
+            Admin route guard
+          </p>
+          <h2 className="mt-3 text-2xl font-black">
+            {readiness.status === "configured" ? "Enforced" : "Local fallback"}
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-foreground/[0.62]">
+            When Supabase is configured, unauthenticated admin requests redirect away from
+            the admin shell.
+          </p>
+        </Card>
+        <Card className="p-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">
+            User profile mapping
+          </p>
+          <h2 className="mt-3 text-2xl font-black">Ready</h2>
+          <p className="mt-2 text-sm leading-6 text-foreground/[0.62]">
+            Supabase users map to UserProfile records, then to the existing permission
+            model.
+          </p>
+        </Card>
       </section>
 
       <Card className="overflow-hidden">

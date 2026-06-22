@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { AdminHeader } from "@/components/admin/admin-header";
 import { adminNavItems } from "@/components/admin/admin-nav";
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
@@ -24,6 +25,10 @@ export default async function AdminLayout({
   children: React.ReactNode;
 }>) {
   const access = await getAdminAccessContext();
+
+  if (access.shouldRedirectUnauthenticated) {
+    redirect("/");
+  }
 
   return (
     <div className="min-h-screen bg-surface text-foreground lg:grid lg:grid-cols-[320px_1fr]">
