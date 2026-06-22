@@ -25,6 +25,7 @@ export type AutomationJobDefinition = {
   riskLevel: AutomationRiskLevel;
   reviewRequired: boolean;
   enabled: boolean;
+  connectorPath?: string;
 };
 
 export type AutomationRunContext = {

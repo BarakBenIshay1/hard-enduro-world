@@ -53,6 +53,7 @@ export const automationJobRegistry = [
     riskLevel: "low",
     reviewRequired: true,
     enabled: false,
+    connectorPath: "jobs/connectors/youtube",
   },
   {
     id: "weather-snapshots",

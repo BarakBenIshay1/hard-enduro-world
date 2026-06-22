@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
@@ -788,6 +788,18 @@ async function main() {
     },
   });
 
+  const youtubeSnapshot = await prisma.sourceSnapshot.create({
+    data: {
+      dataSourceId: youtubeSource.id,
+      url: "https://www.youtube.com/@HardEnduroWorld/demo",
+      contentHash: "demo-youtube-videos-2026-001",
+      rawContent:
+        "Demo YouTube payload for Step 17 connector foundation. No external API call was made.",
+      fetchedAt: new Date("2026-06-04T08:30:00.000Z"),
+      statusCode: 200,
+    },
+  });
+
   const completedImportRun = await prisma.importRun.create({
     data: {
       sourceSnapshotId: fimSnapshot.id,
@@ -819,6 +831,24 @@ async function main() {
       metadata: {
         demo: true,
         reviewReason: "Venue description changed in official source.",
+      },
+    },
+  });
+
+  const youtubeImportRun = await prisma.importRun.create({
+    data: {
+      sourceSnapshotId: youtubeSnapshot.id,
+      jobName: "youtube-videos-demo-import",
+      status: "NEEDS_REVIEW",
+      startedAt: new Date("2026-06-04T08:31:00.000Z"),
+      recordsFound: 3,
+      recordsCreated: 0,
+      recordsUpdated: 0,
+      recordsSkipped: 0,
+      metadata: {
+        demo: true,
+        jobId: "youtube-videos",
+        reviewReason: "Video metadata must be approved before publishing.",
       },
     },
   });
@@ -872,6 +902,25 @@ async function main() {
       sourceUrl: championshipSnapshot.url,
       createdBy: "demo-admin",
       createdAt: new Date("2026-06-04T08:12:30.000Z"),
+    },
+  });
+
+  await prisma.dataVersion.create({
+    data: {
+      entityType: "MEDIA_ITEM",
+      entityId: "demo-youtube-video-pending",
+      importRunId: youtubeImportRun.id,
+      action: "IMPORT",
+      previous: Prisma.JsonNull,
+      next: {
+        type: "YOUTUBE",
+        title: "Sample Hard Enduro GP 2026 Prologue Highlights",
+        provider: "youtube",
+        status: "pending review",
+      },
+      sourceUrl: youtubeSnapshot.url,
+      createdBy: "demo-youtube-connector",
+      createdAt: new Date("2026-06-04T08:32:30.000Z"),
     },
   });
 }
