@@ -1,0 +1,123 @@
+import { notFound } from "next/navigation";
+import { prisma } from "@/lib/prisma";
+
+export async function getTeamsList() {
+  return prisma.team.findMany({
+    orderBy: {
+      name: "asc",
+    },
+    include: {
+      country: true,
+      memberships: {
+        include: {
+          rider: {
+            include: {
+              currentMotorcycle: {
+                include: {
+                  manufacturer: true,
+                },
+              },
+            },
+          },
+        },
+      },
+      careerSeasons: {
+        include: {
+          season: true,
+          manufacturer: true,
+          motorcycle: {
+            include: {
+              manufacturer: true,
+            },
+          },
+        },
+      },
+    },
+  });
+}
+
+export async function getTeamDetail(slug: string) {
+  const team = await prisma.team.findUnique({
+    where: { slug },
+    include: {
+      country: true,
+      memberships: {
+        include: {
+          rider: {
+            include: {
+              country: true,
+              currentMotorcycle: {
+                include: {
+                  manufacturer: true,
+                },
+              },
+              standings: {
+                orderBy: {
+                  points: "desc",
+                },
+                take: 1,
+                include: {
+                  season: true,
+                },
+              },
+              careerSeasons: {
+                include: {
+                  season: true,
+                  team: true,
+                  manufacturer: true,
+                  motorcycle: {
+                    include: {
+                      manufacturer: true,
+                    },
+                  },
+                },
+              },
+              results: {
+                include: {
+                  rider: true,
+                  event: {
+                    include: {
+                      country: true,
+                      season: true,
+                    },
+                  },
+                  manufacturer: true,
+                  motorcycle: {
+                    include: {
+                      manufacturer: true,
+                    },
+                  },
+                },
+                orderBy: {
+                  createdAt: "desc",
+                },
+              },
+            },
+          },
+        },
+      },
+      careerSeasons: {
+        include: {
+          season: true,
+          rider: {
+            include: {
+              country: true,
+            },
+          },
+          manufacturer: true,
+          motorcycle: {
+            include: {
+              manufacturer: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!team) {
+    notFound();
+  }
+
+  return team;
+}
