@@ -235,11 +235,16 @@ export default async function RiderProfilePage({ params }: RiderProfilePageProps
 
       <section className="border-y border-border bg-black text-white">
         <Container className="py-12">
-          <SectionTitle
-            eyebrow="Results History"
-            title="Event classifications"
-            description="Seeded final results connected to event, manufacturer, and motorcycle records."
-          />
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+            <SectionTitle
+              eyebrow="Results History"
+              title="Event classifications"
+              description="Seeded final results connected to event, manufacturer, and motorcycle records."
+            />
+            <ButtonLink href="/results" variant="secondary">
+              Open Results Module
+            </ButtonLink>
+          </div>
           <Card className="mt-8 overflow-hidden bg-white/[0.045] text-white">
             <div className="overflow-x-auto">
               <table className="w-full min-w-[920px] text-left text-sm">

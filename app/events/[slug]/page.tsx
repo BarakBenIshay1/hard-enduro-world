@@ -227,11 +227,16 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
 
       <section id="timing" className="border-y border-border bg-black text-white">
         <Container className="py-12">
-          <SectionTitle
-            eyebrow="Timing Table"
-            title="Sortable stage classification foundation"
-            description="Position, rider, country, team, manufacturer, motorcycle, time, gaps, penalties, and status."
-          />
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+            <SectionTitle
+              eyebrow="Timing Table"
+              title="Sortable stage classification foundation"
+              description="Position, rider, country, team, manufacturer, motorcycle, time, gaps, penalties, and status."
+            />
+            <ButtonLink href="/results" variant="secondary">
+              Open Results Module
+            </ButtonLink>
+          </div>
           <div className="mt-8 grid gap-8">
             {event.stages.map((stage) => (
               <section key={stage.id} id={`stage-${stage.slug}`} className="scroll-mt-28">
