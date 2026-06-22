@@ -1,6 +1,7 @@
 import {
   Bike,
   CalendarDays,
+  Calculator,
   ClipboardCheck,
   Database,
   Factory,
@@ -72,6 +73,12 @@ export const adminNavItems: AdminNavItem[] = [
     href: "/admin/standings",
     description: "Points tables",
     icon: ListChecks,
+  },
+  {
+    label: "Calculations",
+    href: "/admin/calculations",
+    description: "Preview engines",
+    icon: Calculator,
   },
   {
     label: "Sources",
