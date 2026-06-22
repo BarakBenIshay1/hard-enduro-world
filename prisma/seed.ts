@@ -835,6 +835,25 @@ async function main() {
     },
   });
 
+  const officialEventsImportRun = await prisma.importRun.create({
+    data: {
+      sourceSnapshotId: championshipSnapshot.id,
+      jobName: "official-events-demo-calendar-import",
+      status: "NEEDS_REVIEW",
+      startedAt: new Date("2026-06-04T08:13:00.000Z"),
+      recordsFound: 3,
+      recordsCreated: 1,
+      recordsUpdated: 2,
+      recordsSkipped: 0,
+      metadata: {
+        demo: true,
+        jobId: "official-events",
+        reviewReason:
+          "Calendar metadata changes require approval before publishing to events.",
+      },
+    },
+  });
+
   const youtubeImportRun = await prisma.importRun.create({
     data: {
       sourceSnapshotId: youtubeSnapshot.id,
@@ -904,6 +923,68 @@ async function main() {
       createdAt: new Date("2026-06-04T08:12:30.000Z"),
     },
   });
+
+  const calendarChangeScenarios = [
+    {
+      entityId: "demo-new-event-found",
+      previous: Prisma.JsonNull,
+      next: {
+        changeType: "new event found",
+        name: "Demo Sea to Sky",
+        country: "Turkey",
+        date: "2026-10-08",
+        officialUrl: "https://iridehardenduro.com/demo-sea-to-sky-2026",
+      },
+    },
+    {
+      entityId: event.id,
+      previous: { startDate: "2026-06-02" },
+      next: { startDate: "2026-06-01", changeType: "event date changed" },
+    },
+    {
+      entityId: event.id,
+      previous: { country: "Country TBC" },
+      next: { country: "Austria", changeType: "event country changed" },
+    },
+    {
+      entityId: event.id,
+      previous: { location: "Location pending" },
+      next: {
+        city: "Eisenerz",
+        venue: "Iron Mountain",
+        changeType: "event location changed",
+      },
+    },
+    {
+      entityId: event.id,
+      previous: { status: "UNKNOWN" },
+      next: { status: "SCHEDULED", changeType: "event status changed" },
+    },
+    {
+      entityId: event.id,
+      previous: { officialUrl: null },
+      next: {
+        officialUrl: "https://iridehardenduro.com/sample-hard-enduro-gp-2026",
+        changeType: "official URL changed",
+      },
+    },
+  ];
+
+  for (const scenario of calendarChangeScenarios) {
+    await prisma.dataVersion.create({
+      data: {
+        entityType: "EVENT",
+        entityId: scenario.entityId,
+        importRunId: officialEventsImportRun.id,
+        action: "IMPORT",
+        previous: scenario.previous,
+        next: scenario.next,
+        sourceUrl: championshipSnapshot.url,
+        createdBy: "demo-events-connector",
+        createdAt: new Date("2026-06-04T08:14:30.000Z"),
+      },
+    });
+  }
 
   await prisma.dataVersion.create({
     data: {

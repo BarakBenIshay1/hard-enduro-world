@@ -11,6 +11,7 @@ export const automationJobRegistry = [
     riskLevel: "medium",
     reviewRequired: true,
     enabled: true,
+    connectorPath: "jobs/connectors/events",
   },
   {
     id: "official-results",

@@ -54,7 +54,7 @@ export default async function EventsPage() {
           <SectionTitle
             eyebrow="Event Index"
             title="Filter the calendar"
-            description="This module is prepared for many seasons while currently using the seeded event dataset."
+            description="This module is prepared for many seasons and future source-tracked calendar imports while currently using the seeded event dataset."
           />
         </div>
         <EventsBrowser events={eventCards} />
