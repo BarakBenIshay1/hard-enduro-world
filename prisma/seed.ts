@@ -2,6 +2,112 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
+function getDemoMotorcycleSpecs(slug: string) {
+  const specs: Record<
+    string,
+    {
+      weightKg: number;
+      suspensionFront: string;
+      suspensionRear: string;
+      horsepower: number;
+      torqueNm: number;
+      fuelCapacityL: number;
+    }
+  > = {
+    "sherco-300-se-factory-2026": {
+      weightKg: 104,
+      suspensionFront: "KYB closed-cartridge fork",
+      suspensionRear: "KYB shock",
+      horsepower: 52,
+      torqueNm: 43,
+      fuelCapacityL: 10.4,
+    },
+    "husqvarna-te-300-2026": {
+      weightKg: 106.4,
+      suspensionFront: "WP XACT 48 mm fork",
+      suspensionRear: "WP XACT shock",
+      horsepower: 54,
+      torqueNm: 44,
+      fuelCapacityL: 8.5,
+    },
+    "ktm-300-xc-w-2026": {
+      weightKg: 104.9,
+      suspensionFront: "WP XACT 48 mm fork",
+      suspensionRear: "WP XPLOR PDS shock",
+      horsepower: 54,
+      torqueNm: 44,
+      fuelCapacityL: 9,
+    },
+    "rieju-mr-300-racing-2026": {
+      weightKg: 108,
+      suspensionFront: "KYB fork",
+      suspensionRear: "KYB shock",
+      horsepower: 51,
+      torqueNm: 42,
+      fuelCapacityL: 9.8,
+    },
+    "beta-rr-300-racing-2026": {
+      weightKg: 103.5,
+      suspensionFront: "KYB AOS fork",
+      suspensionRear: "KYB C46 shock",
+      horsepower: 52,
+      torqueNm: 43,
+      fuelCapacityL: 9.5,
+    },
+    "ktm-300-exc-privateer-2026": {
+      weightKg: 103.4,
+      suspensionFront: "WP XACT 48 mm fork",
+      suspensionRear: "WP XPLOR PDS shock",
+      horsepower: 54,
+      torqueNm: 44,
+      fuelCapacityL: 9,
+    },
+    "gasgas-ec-300-2026": {
+      weightKg: 106.2,
+      suspensionFront: "WP XPLOR fork",
+      suspensionRear: "WP XACT shock",
+      horsepower: 53,
+      torqueNm: 43,
+      fuelCapacityL: 9,
+    },
+    "tm-racing-en-300-2026": {
+      weightKg: 105,
+      suspensionFront: "KYB fork",
+      suspensionRear: "TM Racing shock",
+      horsepower: 53,
+      torqueNm: 43,
+      fuelCapacityL: 8.7,
+    },
+    "honda-crf450rx-2026": {
+      weightKg: 113,
+      suspensionFront: "Showa 49 mm fork",
+      suspensionRear: "Showa shock",
+      horsepower: 56,
+      torqueNm: 48,
+      fuelCapacityL: 8,
+    },
+    "fantic-xe-300-2026": {
+      weightKg: 105,
+      suspensionFront: "KYB fork",
+      suspensionRear: "KYB shock",
+      horsepower: 52,
+      torqueNm: 43,
+      fuelCapacityL: 9,
+    },
+  };
+
+  return (
+    specs[slug] ?? {
+      weightKg: 106,
+      suspensionFront: "Factory enduro fork",
+      suspensionRear: "Factory enduro shock",
+      horsepower: 52,
+      torqueNm: 43,
+      fuelCapacityL: 9,
+    }
+  );
+}
+
 async function main() {
   await prisma.$transaction([
     prisma.dataVersion.deleteMany(),
@@ -66,6 +172,12 @@ async function main() {
       year: 2026,
       engineCc: 300,
       strokeType: "TWO_STROKE",
+      weightKg: 103.4,
+      suspensionFront: "WP XACT 48 mm fork",
+      suspensionRear: "WP XPLOR PDS shock",
+      horsepower: 54,
+      torqueNm: 44,
+      fuelCapacityL: 9,
       description: "Sample motorcycle profile for the foundation dataset.",
     },
   });
@@ -357,6 +469,12 @@ async function main() {
         year: 2026,
         engineCc: 300,
         strokeType: "TWO_STROKE",
+        weightKg: getDemoMotorcycleSpecs(sample.motorcycleSlug).weightKg,
+        suspensionFront: getDemoMotorcycleSpecs(sample.motorcycleSlug).suspensionFront,
+        suspensionRear: getDemoMotorcycleSpecs(sample.motorcycleSlug).suspensionRear,
+        horsepower: getDemoMotorcycleSpecs(sample.motorcycleSlug).horsepower,
+        torqueNm: getDemoMotorcycleSpecs(sample.motorcycleSlug).torqueNm,
+        fuelCapacityL: getDemoMotorcycleSpecs(sample.motorcycleSlug).fuelCapacityL,
         description: "Sample/demo motorcycle assignment for Step 7 rider module.",
       },
     });
@@ -473,8 +591,8 @@ async function main() {
       slug: "tm-racing",
       country: { name: "Italy", isoCode: "IT", slug: "italy", continent: "Europe" },
       motorcycle: {
-        model: "EN 300 ES",
-        slug: "tm-racing-en-300-es-2026",
+        model: "EN 300",
+        slug: "tm-racing-en-300-2026",
         engineCc: 300,
         strokeType: "TWO_STROKE" as const,
       },
@@ -495,10 +613,10 @@ async function main() {
       slug: "fantic",
       country: { name: "Italy", isoCode: "IT", slug: "italy", continent: "Europe" },
       motorcycle: {
-        model: "XEF 310",
-        slug: "fantic-xef-310-2026",
-        engineCc: 310,
-        strokeType: "FOUR_STROKE" as const,
+        model: "XE 300",
+        slug: "fantic-xe-300-2026",
+        engineCc: 300,
+        strokeType: "TWO_STROKE" as const,
       },
     },
   ];
@@ -530,6 +648,12 @@ async function main() {
         year: 2026,
         engineCc: demo.motorcycle.engineCc,
         strokeType: demo.motorcycle.strokeType,
+        weightKg: getDemoMotorcycleSpecs(demo.motorcycle.slug).weightKg,
+        suspensionFront: getDemoMotorcycleSpecs(demo.motorcycle.slug).suspensionFront,
+        suspensionRear: getDemoMotorcycleSpecs(demo.motorcycle.slug).suspensionRear,
+        horsepower: getDemoMotorcycleSpecs(demo.motorcycle.slug).horsepower,
+        torqueNm: getDemoMotorcycleSpecs(demo.motorcycle.slug).torqueNm,
+        fuelCapacityL: getDemoMotorcycleSpecs(demo.motorcycle.slug).fuelCapacityL,
         description:
           "Sample/demo manufacturer motorcycle preview for Step 9 manufacturer module.",
       },
