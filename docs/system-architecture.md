@@ -391,3 +391,43 @@ Current implementation uses `lib/auth/` for typed roles, permissions, mock sessi
 Related doc:
 
 - `docs/authentication.md`
+
+## 14. Deployment Readiness Layer
+
+Step 24 adds a read-only deployment readiness engine for future cloud launch checks.
+
+```text
+Current System State
+  |
+  v
+Readiness Engine
+  |
+  +-- Environment checks
+  +-- Auth checks
+  +-- Database checks
+  +-- Redis checks
+  +-- Automation checks
+  +-- Connector checks
+  +-- Calculation checks
+  |
+  v
+Readiness Report
+  |
+  +-- /admin/system
+  +-- /admin/deployment
+```
+
+The readiness layer does not call external services. It uses environment variables, local database counts, registered jobs, and known placeholders to produce a preview-only launch report.
+
+Current expected blockers:
+
+- Real auth provider is not connected.
+- Production database is not confirmed.
+- Production Redis is not confirmed.
+- Cron protection is not confirmed.
+- Monitoring is not configured.
+- Backups are not confirmed.
+
+Related doc:
+
+- `docs/deployment-readiness.md`

@@ -50,6 +50,12 @@ export default async function AdminSystemPage() {
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <AdminStatCard
+          label="Readiness Score"
+          value={`${data.readiness.score}%`}
+          detail={data.readiness.summary}
+          icon={Activity}
+        />
+        <AdminStatCard
           label="Environment"
           value={data.environment}
           detail={`Node mode: ${data.nodeEnv}`}
@@ -100,6 +106,47 @@ export default async function AdminSystemPage() {
           detail="Version history rows"
           icon={Clock}
         />
+      </section>
+
+      <section className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
+        <Card className="p-6">
+          <h2 className="text-xl font-black">Production blockers</h2>
+          <p className="mt-2 text-sm leading-6 text-foreground/[0.62]">
+            Preview-only detection for missing requirements before a future cloud
+            deployment.
+          </p>
+          <div className="mt-5 grid gap-3">
+            {data.readiness.blockers.length > 0 ? (
+              data.readiness.blockers.map((blocker) => (
+                <StatusRow
+                  key={blocker.id}
+                  label={blocker.label}
+                  value={blocker.detail}
+                />
+              ))
+            ) : (
+              <StatusRow label="Blockers" value="No required blockers detected" />
+            )}
+          </div>
+        </Card>
+
+        <Card className="p-6">
+          <h2 className="text-xl font-black">Readiness checks</h2>
+          <div className="mt-5 grid gap-3">
+            {data.readiness.checks.map((check) => (
+              <div
+                key={check.id}
+                className="grid gap-3 rounded-md border border-border bg-surface-muted p-3 text-sm sm:grid-cols-[180px_110px_1fr]"
+              >
+                <span className="font-semibold">{check.label}</span>
+                <span className="uppercase tracking-[0.14em] text-accent">
+                  {check.status}
+                </span>
+                <span className="text-foreground/[0.62]">{check.detail}</span>
+              </div>
+            ))}
+          </div>
+        </Card>
       </section>
 
       <section className="grid gap-6 lg:grid-cols-2">

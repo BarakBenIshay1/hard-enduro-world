@@ -5,6 +5,7 @@ import {
   Calculator,
   ClipboardCheck,
   Database,
+  Rocket,
   Factory,
   FileSearch,
   Gauge,
@@ -130,6 +131,12 @@ export const adminNavItems: AdminNavItem[] = [
     href: "/admin/system",
     description: "Deployment status",
     icon: ServerCog,
+  },
+  {
+    label: "Deployment",
+    href: "/admin/deployment",
+    description: "Launch readiness",
+    icon: Rocket,
   },
   {
     label: "Users",

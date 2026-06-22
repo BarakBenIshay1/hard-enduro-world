@@ -1,4 +1,5 @@
 import { automationJobRegistry } from "@/jobs/automation/registry";
+import { getDeploymentReadinessData } from "@/db/deployment";
 import { prisma } from "@/lib/prisma";
 
 export async function getSystemAdminData() {
@@ -53,6 +54,8 @@ export async function getSystemAdminData() {
     prisma.dataVersion.count(),
   ]);
 
+  const readiness = await getDeploymentReadinessData();
+
   return {
     environment: process.env.NEXT_PUBLIC_APP_ENV ?? process.env.NODE_ENV ?? "local",
     nodeEnv: process.env.NODE_ENV ?? "development",
@@ -71,5 +74,6 @@ export async function getSystemAdminData() {
     dataVersionCount,
     automationJobs: automationJobRegistry.length,
     enabledAutomationJobs: automationJobRegistry.filter((job) => job.enabled).length,
+    readiness: readiness.report,
   };
 }
