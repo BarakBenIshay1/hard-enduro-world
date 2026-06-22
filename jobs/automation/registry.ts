@@ -22,6 +22,7 @@ export const automationJobRegistry = [
     riskLevel: "high",
     reviewRequired: true,
     enabled: true,
+    connectorPath: "jobs/connectors/results",
   },
   {
     id: "official-stage-results",

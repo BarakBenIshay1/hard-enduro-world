@@ -710,6 +710,15 @@ async function main() {
     },
   });
 
+  const timingSystemSource = await prisma.dataSource.create({
+    data: {
+      name: "Official timing system source",
+      type: "TIMING_SYSTEM",
+      reliability: "OFFICIAL",
+      baseUrl: "https://www.fim-moto.com/results",
+    },
+  });
+
   const championshipSource = await prisma.dataSource.create({
     data: {
       name: "Hard Enduro World Championship official source",
@@ -740,6 +749,7 @@ async function main() {
   for (const source of [
     manualSource,
     fimSource,
+    timingSystemSource,
     championshipSource,
     youtubeSource,
     weatherSource,
@@ -762,6 +772,18 @@ async function main() {
       contentHash: "demo-fim-results-2026-001",
       rawContent: "Demo official timing payload for Step 15 source tracking foundation.",
       fetchedAt: new Date("2026-06-04T08:00:00.000Z"),
+      statusCode: 200,
+    },
+  });
+
+  const timingSnapshot = await prisma.sourceSnapshot.create({
+    data: {
+      dataSourceId: timingSystemSource.id,
+      url: "https://www.fim-moto.com/sample-hard-enduro-results",
+      contentHash: "demo-official-results-2026-001",
+      rawContent:
+        "Demo official results payload for Step 19 connector foundation. No external website was fetched.",
+      fetchedAt: new Date("2026-06-04T08:40:00.000Z"),
       statusCode: 200,
     },
   });
@@ -850,6 +872,28 @@ async function main() {
         jobId: "official-events",
         reviewReason:
           "Calendar metadata changes require approval before publishing to events.",
+      },
+    },
+  });
+
+  const officialResultsImportRun = await prisma.importRun.create({
+    data: {
+      sourceSnapshotId: timingSnapshot.id,
+      jobName: "official-results-demo-classification-import",
+      status: "NEEDS_REVIEW",
+      startedAt: new Date("2026-06-04T08:41:00.000Z"),
+      recordsFound: 4,
+      recordsCreated: 1,
+      recordsUpdated: 3,
+      recordsSkipped: 0,
+      metadata: {
+        demo: true,
+        jobId: "official-results",
+        riskLevel: "high",
+        reviewRequired: true,
+        autoPublish: false,
+        reviewReason:
+          "Official results are high-risk and require approval before changing public timing, standings, statistics, records, or history.",
       },
     },
   });
@@ -982,6 +1026,73 @@ async function main() {
         sourceUrl: championshipSnapshot.url,
         createdBy: "demo-events-connector",
         createdAt: new Date("2026-06-04T08:14:30.000Z"),
+      },
+    });
+  }
+
+  const resultReviewScenarios = [
+    {
+      entityId: "demo-new-result-row-found",
+      previous: Prisma.JsonNull,
+      next: {
+        changeType: "new result row found",
+        event: event.name,
+        stage: "Overall",
+        rider: "Manuel Lettenbichler",
+        position: 1,
+        time: "05:42:18",
+        points: 20,
+        status: "Finished",
+      },
+    },
+    {
+      entityId: "demo-result-position-changed",
+      previous: { position: 3 },
+      next: { position: 2, changeType: "position changed" },
+    },
+    {
+      entityId: "demo-result-time-changed",
+      previous: { time: "05:48:02" },
+      next: { time: "05:47:44", changeType: "time changed" },
+    },
+    {
+      entityId: "demo-result-gap-changed",
+      previous: { gapToLeader: "+05:44", gapToPrevious: "+05:44" },
+      next: {
+        gapToLeader: "+05:26",
+        gapToPrevious: "+05:26",
+        changeType: "gap changed",
+      },
+    },
+    {
+      entityId: "demo-result-penalty-added",
+      previous: { penalties: null },
+      next: { penalties: "+02:00", changeType: "penalty added" },
+    },
+    {
+      entityId: "demo-result-status-changed",
+      previous: { status: "Finished" },
+      next: { status: "DNF", changeType: "rider status changed" },
+    },
+    {
+      entityId: "demo-result-points-changed",
+      previous: { points: 15 },
+      next: { points: 17, changeType: "points changed" },
+    },
+  ];
+
+  for (const scenario of resultReviewScenarios) {
+    await prisma.dataVersion.create({
+      data: {
+        entityType: "RESULT",
+        entityId: scenario.entityId,
+        importRunId: officialResultsImportRun.id,
+        action: "IMPORT",
+        previous: scenario.previous,
+        next: scenario.next,
+        sourceUrl: timingSnapshot.url,
+        createdBy: "demo-results-connector",
+        createdAt: new Date("2026-06-04T08:42:30.000Z"),
       },
     });
   }

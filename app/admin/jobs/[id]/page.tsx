@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card";
 import { getConnectorJobAdminData } from "@/db/connectors";
 import { getAutomationJob } from "@/jobs/automation/registry";
 import type { EventsImportPreview } from "@/jobs/connectors/events/types";
+import type { ResultsImportPreview } from "@/jobs/connectors/results/types";
 import type { YouTubeImportPreview } from "@/jobs/connectors/youtube/types";
 import { formatDate } from "@/lib/format";
 
@@ -60,7 +61,9 @@ export default async function AdminJobDetailPage({ params }: AdminJobDetailPageP
           <p className="mt-4 max-w-3xl text-sm leading-6 text-foreground/[0.62]">
             {data.kind === "events"
               ? "Calendar-only connector foundation for event metadata. It must not import race results, stage timing, points, standings, records, or statistics."
-              : "Safe connector foundation for video metadata. This job can prepare media review items but must not change results, standings, points, or records."}
+              : data.kind === "results"
+                ? "High-risk official results connector foundation. Every proposed timing or classification change requires admin review before public data can change."
+                : "Safe connector foundation for video metadata. This job can prepare media review items but must not change results, standings, points, or records."}
           </p>
         </div>
         <AdminStatusBadge status={job.enabled ? "ready" : "locked"} />
@@ -110,6 +113,7 @@ export default async function AdminJobDetailPage({ params }: AdminJobDetailPageP
 
       {data.kind === "youtube" ? <YouTubePreview preview={data.preview} /> : null}
       {data.kind === "events" ? <EventsPreview preview={data.preview} /> : null}
+      {data.kind === "results" ? <ResultsPreview preview={data.preview} /> : null}
 
       <ChangeDiffCard
         title="Diff preview placeholder"
@@ -219,6 +223,94 @@ function EventsPreview({ preview }: { preview: EventsImportPreview }) {
         </table>
       </div>
     </Card>
+  );
+}
+
+function ResultsPreview({ preview }: { preview: ResultsImportPreview }) {
+  const creates = preview.diffs.filter((diff) => diff.action === "create").length;
+  const updates = preview.diffs.filter((diff) => diff.action === "update").length;
+
+  return (
+    <Card className="overflow-hidden">
+      <div className="border-b border-border p-5">
+        <h2 className="text-xl font-black">Sample fetched results</h2>
+        <p className="mt-2 text-sm text-foreground/[0.62]">
+          Demo timing/classification output only. No official results website is fetched,
+          and no public result row is updated in Step 19.
+        </p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          <PreviewMetric label="Would create" value={creates} />
+          <PreviewMetric label="Would update" value={updates} />
+          <PreviewMetric label="Requires review" value={preview.reviewItems.length} />
+        </div>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[1360px] text-left text-sm">
+          <thead className="bg-black text-xs uppercase tracking-[0.18em] text-white/[0.64]">
+            <tr>
+              {[
+                "Event",
+                "Stage",
+                "Rider",
+                "Country",
+                "Team",
+                "Manufacturer",
+                "Motorcycle",
+                "Pos",
+                "Time",
+                "Leader gap",
+                "Prev gap",
+                "Penalties",
+                "Points",
+                "Status",
+                "Review action",
+              ].map((heading) => (
+                <th key={heading} className="px-5 py-4 font-semibold">
+                  {heading}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {preview.normalizedResults.map((result) => (
+              <tr key={result.externalId} className="border-t border-border">
+                <td className="px-5 py-4 font-semibold">{result.event}</td>
+                <td className="px-5 py-4">{result.stage}</td>
+                <td className="px-5 py-4">{result.rider}</td>
+                <td className="px-5 py-4">{result.country}</td>
+                <td className="px-5 py-4">{result.team}</td>
+                <td className="px-5 py-4">{result.manufacturer}</td>
+                <td className="px-5 py-4">{result.motorcycle}</td>
+                <td className="px-5 py-4">{result.position ?? "-"}</td>
+                <td className="px-5 py-4">{result.time ?? "-"}</td>
+                <td className="px-5 py-4">{result.gapToLeader ?? "-"}</td>
+                <td className="px-5 py-4">{result.gapToPrevious ?? "-"}</td>
+                <td className="px-5 py-4">{result.penalties ?? "-"}</td>
+                <td className="px-5 py-4">{result.points ?? "-"}</td>
+                <td className="px-5 py-4">{result.status}</td>
+                <td className="px-5 py-4">
+                  <span className="inline-flex items-center gap-2 text-accent">
+                    <Check className="h-4 w-4" aria-hidden="true" />
+                    Pending Result review
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Card>
+  );
+}
+
+function PreviewMetric({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-md border border-border bg-surface-muted p-3">
+      <p className="text-xs uppercase tracking-[0.18em] text-foreground/[0.48]">
+        {label}
+      </p>
+      <p className="mt-1 text-2xl font-black text-accent">{value}</p>
+    </div>
   );
 }
 

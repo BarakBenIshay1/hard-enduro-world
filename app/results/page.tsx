@@ -127,7 +127,7 @@ export default async function ResultsPage() {
           <SectionTitle
             eyebrow="Race Results"
             title="Overall and stage classifications"
-            description="A reusable results surface prepared for official imports, complete timing tables, and future live timing."
+            description="A reusable results surface prepared for reviewed, source-tracked official imports, complete timing tables, and future live timing."
           />
           <Card className="p-5">
             <p className="text-xs uppercase tracking-[0.18em] text-foreground/[0.48]">

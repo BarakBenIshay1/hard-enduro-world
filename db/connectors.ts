@@ -1,4 +1,5 @@
 import { previewOfficialEventsImport } from "@/jobs/connectors/events";
+import { previewOfficialResultsImport } from "@/jobs/connectors/results";
 import { previewYouTubeImport } from "@/jobs/connectors/youtube";
 import { prisma } from "@/lib/prisma";
 
@@ -47,12 +48,34 @@ export async function getConnectorJobAdminData(jobId: string) {
     };
   }
 
+  if (jobId === "official-results") {
+    const [preview, importRuns, source] = await Promise.all([
+      previewOfficialResultsImport(),
+      getImportRunsForConnector("official-results", "TIMING_SYSTEM"),
+      prisma.dataSource.findFirst({
+        where: {
+          type: "TIMING_SYSTEM",
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      }),
+    ]);
+
+    return {
+      kind: "results" as const,
+      source,
+      importRuns,
+      preview,
+    };
+  }
+
   return null;
 }
 
 function getImportRunsForConnector(
   jobNameFragment: string,
-  sourceType: "YOUTUBE" | "OFFICIAL_WEBSITE",
+  sourceType: "YOUTUBE" | "OFFICIAL_WEBSITE" | "TIMING_SYSTEM",
 ) {
   return prisma.importRun.findMany({
     where: {
