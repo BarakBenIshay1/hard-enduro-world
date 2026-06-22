@@ -15,6 +15,7 @@ import {
   ServerCog,
   Settings,
   ShieldCheck,
+  UserCog,
   Trophy,
   Users,
 } from "lucide-react";
@@ -129,6 +130,18 @@ export const adminNavItems: AdminNavItem[] = [
     href: "/admin/system",
     description: "Deployment status",
     icon: ServerCog,
+  },
+  {
+    label: "Users",
+    href: "/admin/users",
+    description: "Roles preview",
+    icon: UserCog,
+  },
+  {
+    label: "Security",
+    href: "/admin/security",
+    description: "Access matrix",
+    icon: ShieldCheck,
   },
   {
     label: "Settings",

@@ -341,3 +341,53 @@ Related docs:
 
 - `docs/production-checklist.md`
 - `docs/deployment-guide.md`
+
+## 13. Authentication Layer
+
+Step 23 adds a mock authentication and role foundation for the admin system. Real providers are not connected yet.
+
+```text
+Admin User
+  |
+  v
+Future Provider
+  |
+  +-- Supabase Auth
+  +-- Google OAuth
+  +-- Email Login
+  |
+  v
+Server Session
+  |
+  v
+Role
+  |
+  v
+Permissions
+  |
+  v
+Protected Admin Route / Action
+```
+
+Current role model:
+
+- Owner
+- Admin
+- Editor
+- Reviewer
+- Viewer
+
+Prepared protected areas:
+
+- `/admin/*`
+- Review actions
+- Import actions
+- Automation actions
+- Calculation review
+- Settings and future user management
+
+Current implementation uses `lib/auth/` for typed roles, permissions, mock sessions, and guard helpers. Future Supabase Auth should replace the mock session provider while keeping the permission checks stable.
+
+Related doc:
+
+- `docs/authentication.md`
