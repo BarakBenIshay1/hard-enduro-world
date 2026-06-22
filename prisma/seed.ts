@@ -456,6 +456,86 @@ async function main() {
     });
   }
 
+  const demoManufacturers = [
+    {
+      name: "GASGAS",
+      slug: "gasgas",
+      country: { name: "Spain", isoCode: "ES", slug: "spain", continent: "Europe" },
+      motorcycle: {
+        model: "EC 300",
+        slug: "gasgas-ec-300-2026",
+        engineCc: 300,
+        strokeType: "TWO_STROKE" as const,
+      },
+    },
+    {
+      name: "TM Racing",
+      slug: "tm-racing",
+      country: { name: "Italy", isoCode: "IT", slug: "italy", continent: "Europe" },
+      motorcycle: {
+        model: "EN 300 ES",
+        slug: "tm-racing-en-300-es-2026",
+        engineCc: 300,
+        strokeType: "TWO_STROKE" as const,
+      },
+    },
+    {
+      name: "Honda",
+      slug: "honda",
+      country: { name: "Japan", isoCode: "JP", slug: "japan", continent: "Asia" },
+      motorcycle: {
+        model: "CRF450RX",
+        slug: "honda-crf450rx-2026",
+        engineCc: 450,
+        strokeType: "FOUR_STROKE" as const,
+      },
+    },
+    {
+      name: "Fantic",
+      slug: "fantic",
+      country: { name: "Italy", isoCode: "IT", slug: "italy", continent: "Europe" },
+      motorcycle: {
+        model: "XEF 310",
+        slug: "fantic-xef-310-2026",
+        engineCc: 310,
+        strokeType: "FOUR_STROKE" as const,
+      },
+    },
+  ];
+
+  for (const demo of demoManufacturers) {
+    const demoCountry = await prisma.country.upsert({
+      where: { slug: demo.country.slug },
+      update: {},
+      create: demo.country,
+    });
+
+    const demoManufacturer = await prisma.manufacturer.upsert({
+      where: { slug: demo.slug },
+      update: {},
+      create: {
+        name: demo.name,
+        slug: demo.slug,
+        countryId: demoCountry.id,
+      },
+    });
+
+    await prisma.motorcycle.upsert({
+      where: { slug: demo.motorcycle.slug },
+      update: {},
+      create: {
+        manufacturerId: demoManufacturer.id,
+        model: demo.motorcycle.model,
+        slug: demo.motorcycle.slug,
+        year: 2026,
+        engineCc: demo.motorcycle.engineCc,
+        strokeType: demo.motorcycle.strokeType,
+        description:
+          "Sample/demo manufacturer motorcycle preview for Step 9 manufacturer module.",
+      },
+    });
+  }
+
   await prisma.weatherSnapshot.create({
     data: {
       eventId: event.id,
