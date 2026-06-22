@@ -21,7 +21,7 @@ export function AdminSidebar() {
         </div>
         <nav className="overflow-y-auto p-4" aria-label="Admin navigation">
           <div className="grid gap-1">
-            {adminNavItems.slice(0, 11).map((item) => {
+            {adminNavItems.slice(0, 12).map((item) => {
               const Icon = item.icon;
               const isActive =
                 item.href === "/admin"

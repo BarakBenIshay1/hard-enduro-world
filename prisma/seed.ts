@@ -692,21 +692,186 @@ async function main() {
     },
   });
 
-  const dataSource = await prisma.dataSource.create({
+  const manualSource = await prisma.dataSource.create({
     data: {
-      name: "Manual foundation seed",
+      name: "Manual admin source",
       type: "MANUAL",
       reliability: "OFFICIAL",
+      baseUrl: "https://hardenduroworld.com/admin",
     },
   });
 
-  await prisma.sourceLink.create({
+  const fimSource = await prisma.dataSource.create({
     data: {
-      dataSourceId: dataSource.id,
-      url: "https://example.com/source",
+      name: "FIM official source",
+      type: "OFFICIAL_WEBSITE",
+      reliability: "OFFICIAL",
+      baseUrl: "https://www.fim-moto.com",
+    },
+  });
+
+  const championshipSource = await prisma.dataSource.create({
+    data: {
+      name: "Hard Enduro World Championship official source",
+      type: "OFFICIAL_WEBSITE",
+      reliability: "OFFICIAL",
+      baseUrl: "https://iridehardenduro.com",
+    },
+  });
+
+  const youtubeSource = await prisma.dataSource.create({
+    data: {
+      name: "YouTube official channel source",
+      type: "YOUTUBE",
+      reliability: "TRUSTED",
+      baseUrl: "https://www.youtube.com",
+    },
+  });
+
+  const weatherSource = await prisma.dataSource.create({
+    data: {
+      name: "Weather provider source",
+      type: "WEATHER",
+      reliability: "TRUSTED",
+      baseUrl: "https://open-meteo.com",
+    },
+  });
+
+  for (const source of [
+    manualSource,
+    fimSource,
+    championshipSource,
+    youtubeSource,
+    weatherSource,
+  ]) {
+    await prisma.sourceLink.create({
+      data: {
+        dataSourceId: source.id,
+        url: source.baseUrl ?? "https://example.com/source",
+        entityType: source.type === "WEATHER" ? "WEATHER" : "EVENT",
+        entityId: event.id,
+        note: "Sample/demo source link for Step 15 source tracking foundation.",
+      },
+    });
+  }
+
+  const fimSnapshot = await prisma.sourceSnapshot.create({
+    data: {
+      dataSourceId: fimSource.id,
+      url: "https://www.fim-moto.com/sample-hard-enduro-results",
+      contentHash: "demo-fim-results-2026-001",
+      rawContent: "Demo official timing payload for Step 15 source tracking foundation.",
+      fetchedAt: new Date("2026-06-04T08:00:00.000Z"),
+      statusCode: 200,
+    },
+  });
+
+  const championshipSnapshot = await prisma.sourceSnapshot.create({
+    data: {
+      dataSourceId: championshipSource.id,
+      url: "https://iridehardenduro.com/sample-hard-enduro-gp-2026",
+      contentHash: "demo-championship-event-2026-001",
+      rawContent: "Demo event metadata payload for Step 15 source tracking foundation.",
+      fetchedAt: new Date("2026-06-04T08:10:00.000Z"),
+      statusCode: 200,
+    },
+  });
+
+  const weatherSnapshotSource = await prisma.sourceSnapshot.create({
+    data: {
+      dataSourceId: weatherSource.id,
+      url: "https://open-meteo.com/demo-eisenerz-weather",
+      contentHash: "demo-weather-2026-001",
+      rawContent: "Demo weather payload for Step 15 source tracking foundation.",
+      fetchedAt: new Date("2026-06-04T08:20:00.000Z"),
+      statusCode: 200,
+    },
+  });
+
+  const completedImportRun = await prisma.importRun.create({
+    data: {
+      sourceSnapshotId: fimSnapshot.id,
+      jobName: "demo-final-results-import",
+      status: "COMPLETED",
+      startedAt: new Date("2026-06-04T08:01:00.000Z"),
+      finishedAt: new Date("2026-06-04T08:02:00.000Z"),
+      recordsFound: 7,
+      recordsCreated: 0,
+      recordsUpdated: 2,
+      recordsSkipped: 5,
+      metadata: {
+        demo: true,
+        note: "Sample import run for Step 15 audit foundation.",
+      },
+    },
+  });
+
+  await prisma.importRun.create({
+    data: {
+      sourceSnapshotId: championshipSnapshot.id,
+      jobName: "demo-event-metadata-review",
+      status: "NEEDS_REVIEW",
+      startedAt: new Date("2026-06-04T08:11:00.000Z"),
+      recordsFound: 1,
+      recordsCreated: 0,
+      recordsUpdated: 1,
+      recordsSkipped: 0,
+      metadata: {
+        demo: true,
+        reviewReason: "Venue description changed in official source.",
+      },
+    },
+  });
+
+  await prisma.importRun.create({
+    data: {
+      sourceSnapshotId: weatherSnapshotSource.id,
+      jobName: "demo-weather-import",
+      status: "FAILED",
+      startedAt: new Date("2026-06-04T08:21:00.000Z"),
+      finishedAt: new Date("2026-06-04T08:22:00.000Z"),
+      recordsFound: 1,
+      recordsCreated: 0,
+      recordsUpdated: 0,
+      recordsSkipped: 1,
+      errorMessage: "Demo failure for Step 15 failed-import dashboard state.",
+    },
+  });
+
+  await prisma.dataVersion.create({
+    data: {
+      entityType: "RESULT",
+      entityId: event.id,
+      importRunId: completedImportRun.id,
+      action: "IMPORT",
+      previous: {
+        points: 19,
+        status: "pending review",
+      },
+      next: {
+        points: 20,
+        status: "official",
+      },
+      sourceUrl: fimSnapshot.url,
+      createdBy: "demo-importer",
+      createdAt: new Date("2026-06-04T08:02:30.000Z"),
+    },
+  });
+
+  await prisma.dataVersion.create({
+    data: {
       entityType: "EVENT",
       entityId: event.id,
-      note: "Placeholder source link for the foundation dataset.",
+      action: "MANUAL_EDIT",
+      previous: {
+        description: "Foundation event used to verify the first data model.",
+      },
+      next: {
+        description: "Foundation event verified against official demo source.",
+      },
+      sourceUrl: championshipSnapshot.url,
+      createdBy: "demo-admin",
+      createdAt: new Date("2026-06-04T08:12:30.000Z"),
     },
   });
 }

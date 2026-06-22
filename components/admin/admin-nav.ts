@@ -78,7 +78,13 @@ export const adminNavItems: AdminNavItem[] = [
     icon: Database,
   },
   {
-    label: "Review",
+    label: "Audit Log",
+    href: "/admin/audit",
+    description: "Change history",
+    icon: FileSearch,
+  },
+  {
+    label: "Import Review",
     href: "/admin/review",
     description: "Import approvals",
     icon: ClipboardCheck,
@@ -88,12 +94,6 @@ export const adminNavItems: AdminNavItem[] = [
     href: "/admin/settings",
     description: "Roles and system",
     icon: Settings,
-  },
-  {
-    label: "Audit Ready",
-    href: "/admin/review",
-    description: "History placeholder",
-    icon: FileSearch,
   },
   {
     label: "Health",

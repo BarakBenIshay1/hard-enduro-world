@@ -11,6 +11,9 @@ export async function getAdminDashboardData() {
     standings,
     records,
     sources,
+    pendingReviews,
+    failedImports,
+    latestChanges,
   ] = await prisma.$transaction([
     prisma.event.count(),
     prisma.rider.count(),
@@ -20,7 +23,20 @@ export async function getAdminDashboardData() {
     prisma.result.count(),
     prisma.standing.count(),
     prisma.championshipRecord.count(),
-    prisma.sourceLink.count(),
+    prisma.dataSource.count(),
+    prisma.importRun.count({
+      where: {
+        status: {
+          in: ["PENDING", "NEEDS_REVIEW"],
+        },
+      },
+    }),
+    prisma.importRun.count({
+      where: {
+        status: "FAILED",
+      },
+    }),
+    prisma.dataVersion.count(),
   ]);
 
   return {
@@ -34,7 +50,9 @@ export async function getAdminDashboardData() {
       standings,
       records,
       sources,
-      pendingReviews: 0,
+      pendingReviews,
+      failedImports,
+      latestChanges,
     },
   };
 }

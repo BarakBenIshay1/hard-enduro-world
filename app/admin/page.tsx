@@ -70,6 +70,18 @@ export default async function AdminDashboardPage() {
       detail: "Import approvals",
       icon: ClipboardCheck,
     },
+    {
+      label: "Failed Imports",
+      value: counts.failedImports,
+      detail: "Needs inspection",
+      icon: ClipboardCheck,
+    },
+    {
+      label: "Latest Changes",
+      value: counts.latestChanges,
+      detail: "Audit entries",
+      icon: Database,
+    },
   ];
 
   return (
