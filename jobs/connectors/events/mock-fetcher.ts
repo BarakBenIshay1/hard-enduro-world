@@ -1,4 +1,7 @@
-import type { RawOfficialEvent } from "@/jobs/connectors/events/types";
+import type {
+  OfficialEventsFetchResult,
+  RawOfficialEvent,
+} from "@/jobs/connectors/events/types";
 
 export async function fetchOfficialEventsDemo(): Promise<RawOfficialEvent[]> {
   return [
@@ -42,4 +45,20 @@ export async function fetchOfficialEventsDemo(): Promise<RawOfficialEvent[]> {
       officialUrl: "https://iridehardenduro.com/demo-valleys-2026",
     },
   ];
+}
+
+export async function fetchOfficialEventsDemoResult(
+  sourceUrl: string,
+): Promise<OfficialEventsFetchResult> {
+  const events = await fetchOfficialEventsDemo();
+
+  return {
+    mode: "demo",
+    connectorStatus: "demo-fallback",
+    sourceStatus: "not-configured",
+    sourceUrl,
+    fetchedAt: new Date(),
+    rawContent: JSON.stringify({ events }, null, 2),
+    events,
+  };
 }

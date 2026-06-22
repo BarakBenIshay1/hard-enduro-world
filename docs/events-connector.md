@@ -1,33 +1,70 @@
-# Official Events Connector Foundation
+# Official Events Connector
 
-Step 18 introduces the calendar-only connector foundation for official event metadata. It is intentionally limited to event name, season, dates, country, location, status, and official URL.
+Step 27 upgrades the official events calendar connector foundation to support real calendar metadata imports while preserving review-first publishing.
 
-This connector does not import race results, stage timing, points, standings, records, or statistics.
+This connector is limited to event metadata only. It must not import results, stage timing, standings, points, records, or statistics.
 
-## Future Flow
+## Environment Configuration
 
-Official calendar source
--> fetch calendar
--> save snapshot
--> parse events
--> normalize event metadata
--> create pending review
--> admin approval
--> publish to `/events`
+Use the placeholder in `.env.example`:
+
+- `OFFICIAL_EVENTS_URL=`
+
+No real secrets are required. The URL should point to an official championship/FIM/event calendar source when configured later.
+
+If `OFFICIAL_EVENTS_URL` is missing, the connector uses safe demo fallback data and marks the connector status as `demo-fallback` / `missing-config`.
+
+## Supported Fields
+
+The normalized import preview supports:
+
+- Event name
+- Season
+- Country
+- Location
+- Start date
+- End date
+- Status
+- Official URL
+
+## Supported Payloads
+
+The parser is modular and prepared for:
+
+- JSON array payloads
+- JSON objects with an `events` array
+- Basic iCalendar-style payloads
+
+Future source-specific parsers can be added without changing the review workflow.
 
 ## Source Tracking
 
-No event metadata should bypass source tracking. A future production run should create or reuse:
+Every import must prepare:
 
-- `DataSource` for the official calendar provider
-- `SourceSnapshot` for the raw fetched calendar payload
-- `ImportRun` for the connector execution
-- `SourceLink` for relationships between imported records and official URLs
-- `DataVersion` entries for every proposed create or update
+- `DataSource`
+- `SourceSnapshot`
+- `ImportRun`
+- `SourceLink`
+- `DataVersion` preview
+
+Current Step 27 behavior builds source-tracking preview objects for review. Future approval actions can persist these records through the admin review flow.
+
+## Review Workflow
+
+Official calendar source
+-> fetch calendar
+-> save snapshot preview
+-> parse events
+-> normalize event metadata
+-> create diff preview
+-> create pending review items
+-> admin review
+-> approval later
+-> publish to `/events`
 
 ## Review Scenarios
 
-The review queue should be prepared to show:
+The review queue should show:
 
 - New event found
 - Event date changed
@@ -36,6 +73,12 @@ The review queue should be prepared to show:
 - Event status changed
 - Official URL changed
 
-## Current Step 18 Behavior
+## Safety Rules
 
-The connector uses mock/demo data only. No external websites are called, and all normalized events become preview rows and diff placeholders for future admin review.
+- No auto publish.
+- No results import.
+- No stage timing import.
+- No standings import.
+- No statistics or records recalculation.
+- Every proposed event create/update requires admin review.
+- Public `/events` continues to read approved database event records only.

@@ -220,10 +220,23 @@ function EventsPreview({ preview }: { preview: EventsImportPreview }) {
   return (
     <Card className="overflow-hidden">
       <div className="border-b border-border p-5">
-        <h2 className="text-xl font-black">Sample fetched events</h2>
+        <h2 className="text-xl font-black">Imported event metadata</h2>
         <p className="mt-2 text-sm text-foreground/[0.62]">
-          Demo calendar output only. No official website is fetched in Step 18.
+          Official calendar connector output limited to event metadata only. Results,
+          timing, standings, records, and statistics are not imported here.
         </p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+          <PreviewMetric label="Connector" value={preview.connectorStatus} />
+          <PreviewMetric label="Source" value={preview.sourceStatus} />
+          <PreviewMetric label="Fetched" value={formatDate(preview.fetchedAt)} />
+          <PreviewMetric label="Events" value={preview.normalizedEvents.length} />
+          <PreviewMetric label="Pending review" value={preview.reviewItems.length} />
+        </div>
+        {preview.errorMessage ? (
+          <div className="mt-4 rounded-md border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-300">
+            {preview.errorMessage}
+          </div>
+        ) : null}
       </div>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[1120px] text-left text-sm">
@@ -269,6 +282,26 @@ function EventsPreview({ preview }: { preview: EventsImportPreview }) {
             ))}
           </tbody>
         </table>
+      </div>
+      <div className="border-t border-border p-5">
+        <h3 className="text-sm font-black uppercase tracking-[0.18em] text-foreground/[0.48]">
+          Source tracking preview
+        </h3>
+        <div className="mt-4 grid gap-3 text-sm md:grid-cols-2 xl:grid-cols-4">
+          <ConfigRow
+            label="Snapshot"
+            value={preview.sourceTracking.sourceSnapshot.status}
+          />
+          <ConfigRow label="Import run" value={preview.sourceTracking.importRun.status} />
+          <ConfigRow
+            label="Source links"
+            value={String(preview.sourceTracking.sourceLinks.length)}
+          />
+          <ConfigRow
+            label="Data versions"
+            value={String(preview.sourceTracking.dataVersions.length)}
+          />
+        </div>
       </div>
     </Card>
   );
