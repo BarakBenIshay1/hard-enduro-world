@@ -35,6 +35,10 @@ export function SiteHeader() {
     setIsMegaOpen(false);
   }, [pathname]);
 
+  if (pathname.startsWith("/admin")) {
+    return null;
+  }
+
   return (
     <header
       className={cn(

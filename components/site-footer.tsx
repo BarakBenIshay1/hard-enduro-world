@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import { Mail } from "lucide-react";
+import { usePathname } from "next/navigation";
 import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
@@ -35,6 +38,12 @@ const footerGroups = [
 ];
 
 export function SiteFooter() {
+  const pathname = usePathname();
+
+  if (pathname.startsWith("/admin")) {
+    return null;
+  }
+
   return (
     <footer className="border-t border-border bg-black text-white">
       <Container className="grid gap-10 py-12 lg:grid-cols-[1.2fr_1fr_1fr]">
