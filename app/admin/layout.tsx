@@ -34,7 +34,7 @@ export default async function AdminLayout({
           aria-label="Admin mobile navigation"
           className="flex gap-2 overflow-x-auto border-b border-border bg-surface-muted px-5 py-3 lg:hidden"
         >
-          {adminNavItems.slice(0, 12).map((item) => (
+          {adminNavItems.slice(0, 15).map((item) => (
             <Link
               key={item.href}
               href={item.href}

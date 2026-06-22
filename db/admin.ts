@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { automationJobRegistry } from "@/jobs/automation/registry";
 
 export async function getAdminDashboardData() {
   const [
@@ -14,6 +15,7 @@ export async function getAdminDashboardData() {
     pendingReviews,
     failedImports,
     latestChanges,
+    lastSuccessfulImport,
   ] = await prisma.$transaction([
     prisma.event.count(),
     prisma.rider.count(),
@@ -37,6 +39,14 @@ export async function getAdminDashboardData() {
       },
     }),
     prisma.dataVersion.count(),
+    prisma.importRun.findFirst({
+      where: {
+        status: "COMPLETED",
+      },
+      orderBy: {
+        startedAt: "desc",
+      },
+    }),
   ]);
 
   return {
@@ -53,6 +63,8 @@ export async function getAdminDashboardData() {
       pendingReviews,
       failedImports,
       latestChanges,
+      activeJobs: automationJobRegistry.filter((job) => job.enabled).length,
+      lastSuccessfulImport: lastSuccessfulImport?.startedAt ?? null,
     },
   };
 }

@@ -4,7 +4,9 @@ import {
   ClipboardCheck,
   Database,
   Factory,
+  Gauge,
   ListChecks,
+  PlayCircle,
   ShieldCheck,
   Trophy,
   Users,
@@ -81,6 +83,20 @@ export default async function AdminDashboardPage() {
       value: counts.latestChanges,
       detail: "Audit entries",
       icon: Database,
+    },
+    {
+      label: "Active Jobs",
+      value: counts.activeJobs,
+      detail: "Registry enabled",
+      icon: PlayCircle,
+    },
+    {
+      label: "Last Successful Import",
+      value: counts.lastSuccessfulImport ? "Ready" : "Pending",
+      detail: counts.lastSuccessfulImport
+        ? counts.lastSuccessfulImport.toISOString().slice(0, 10)
+        : "No completed imports",
+      icon: Gauge,
     },
   ];
 
