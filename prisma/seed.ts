@@ -198,6 +198,264 @@ async function main() {
     },
   });
 
+  const sampleRiders = [
+    {
+      firstName: "Mario",
+      lastName: "Roman",
+      slug: "mario-roman",
+      country: { name: "Spain", isoCode: "ES", slug: "spain" },
+      team: "Factory Sherco Racing",
+      teamSlug: "factory-sherco-racing",
+      manufacturer: "Sherco",
+      manufacturerSlug: "sherco",
+      motorcycle: "300 SE Factory",
+      motorcycleSlug: "sherco-300-se-factory-2026",
+      position: 2,
+      points: 17,
+      wins: 0,
+      podiums: 1,
+      starts: 1,
+      dnfs: 0,
+      timeMs: 326000,
+      timeText: "05:26.000",
+      gapText: "+00:14.000",
+    },
+    {
+      firstName: "Billy",
+      lastName: "Bolt",
+      slug: "billy-bolt",
+      country: { name: "United Kingdom", isoCode: "GB", slug: "united-kingdom" },
+      team: "Husqvarna Factory Racing",
+      teamSlug: "husqvarna-factory-racing",
+      manufacturer: "Husqvarna",
+      manufacturerSlug: "husqvarna",
+      motorcycle: "TE 300",
+      motorcycleSlug: "husqvarna-te-300-2026",
+      position: 3,
+      points: 15,
+      wins: 0,
+      podiums: 1,
+      starts: 1,
+      dnfs: 0,
+      timeMs: 337000,
+      timeText: "05:37.000",
+      gapText: "+00:25.000",
+    },
+    {
+      firstName: "Trystan",
+      lastName: "Hart",
+      slug: "trystan-hart",
+      country: { name: "Canada", isoCode: "CA", slug: "canada" },
+      team: "FMF KTM Factory Racing",
+      teamSlug: "fmf-ktm-factory-racing",
+      manufacturer: "KTM",
+      manufacturerSlug: "ktm",
+      motorcycle: "300 XC-W",
+      motorcycleSlug: "ktm-300-xc-w-2026",
+      position: 4,
+      points: 13,
+      wins: 0,
+      podiums: 0,
+      starts: 1,
+      dnfs: 0,
+      timeMs: 348000,
+      timeText: "05:48.000",
+      gapText: "+00:36.000",
+    },
+    {
+      firstName: "Wade",
+      lastName: "Young",
+      slug: "wade-young",
+      country: { name: "South Africa", isoCode: "ZA", slug: "south-africa" },
+      team: "Rieju Factory Racing",
+      teamSlug: "rieju-factory-racing",
+      manufacturer: "Rieju",
+      manufacturerSlug: "rieju",
+      motorcycle: "MR 300 Racing",
+      motorcycleSlug: "rieju-mr-300-racing-2026",
+      position: 5,
+      points: 11,
+      wins: 0,
+      podiums: 0,
+      starts: 1,
+      dnfs: 0,
+      timeMs: 363000,
+      timeText: "06:03.000",
+      gapText: "+00:51.000",
+    },
+    {
+      firstName: "Jonny",
+      lastName: "Walker",
+      slug: "jonny-walker",
+      country: { name: "United Kingdom", isoCode: "GB", slug: "united-kingdom" },
+      team: "Beta Factory Racing",
+      teamSlug: "beta-factory-racing",
+      manufacturer: "Beta",
+      manufacturerSlug: "beta",
+      motorcycle: "RR 300 Racing",
+      motorcycleSlug: "beta-rr-300-racing-2026",
+      position: 6,
+      points: 10,
+      wins: 0,
+      podiums: 0,
+      starts: 1,
+      dnfs: 0,
+      timeMs: 378000,
+      timeText: "06:18.000",
+      gapText: "+01:06.000",
+    },
+    {
+      firstName: "Lettenbichler Demo",
+      lastName: "Privateer",
+      slug: "demo-privateer-rider",
+      country: { name: "United States", isoCode: "US", slug: "united-states" },
+      team: "Independent Hard Enduro",
+      teamSlug: "independent-hard-enduro",
+      manufacturer: "KTM",
+      manufacturerSlug: "ktm",
+      motorcycle: "300 EXC Privateer",
+      motorcycleSlug: "ktm-300-exc-privateer-2026",
+      position: null,
+      points: 0,
+      wins: 0,
+      podiums: 0,
+      starts: 1,
+      dnfs: 1,
+      timeMs: null,
+      timeText: null,
+      gapText: null,
+    },
+  ];
+
+  for (const sample of sampleRiders) {
+    const sampleCountry = await prisma.country.upsert({
+      where: { slug: sample.country.slug },
+      update: {},
+      create: {
+        name: sample.country.name,
+        isoCode: sample.country.isoCode,
+        slug: sample.country.slug,
+        continent: sample.country.isoCode === "ZA" ? "Africa" : "Europe",
+      },
+    });
+
+    const sampleManufacturer = await prisma.manufacturer.upsert({
+      where: { slug: sample.manufacturerSlug },
+      update: {},
+      create: {
+        name: sample.manufacturer,
+        slug: sample.manufacturerSlug,
+        countryId: sampleCountry.id,
+      },
+    });
+
+    const sampleMotorcycle = await prisma.motorcycle.create({
+      data: {
+        manufacturerId: sampleManufacturer.id,
+        model: sample.motorcycle,
+        slug: sample.motorcycleSlug,
+        year: 2026,
+        engineCc: 300,
+        strokeType: "TWO_STROKE",
+        description: "Sample/demo motorcycle assignment for Step 7 rider module.",
+      },
+    });
+
+    const sampleTeam = await prisma.team.create({
+      data: {
+        name: sample.team,
+        slug: sample.teamSlug,
+        countryId: sampleCountry.id,
+      },
+    });
+
+    const sampleRider = await prisma.rider.create({
+      data: {
+        firstName: sample.firstName,
+        lastName: sample.lastName,
+        slug: sample.slug,
+        countryId: sampleCountry.id,
+        currentMotorcycleId: sampleMotorcycle.id,
+        birthDate: new Date("1995-01-01T00:00:00.000Z"),
+      },
+    });
+
+    await prisma.teamMembership.create({
+      data: {
+        riderId: sampleRider.id,
+        teamId: sampleTeam.id,
+        seasonId: season.id,
+      },
+    });
+
+    await prisma.stageResult.create({
+      data: {
+        stageId: stage.id,
+        riderId: sampleRider.id,
+        motorcycleId: sampleMotorcycle.id,
+        manufacturerId: sampleManufacturer.id,
+        className: "Pro",
+        overallPosition: sample.position,
+        classPosition: sample.position,
+        totalTimeMs: sample.timeMs,
+        totalTimeText: sample.timeText,
+        gapToLeaderText: sample.gapText,
+        status: sample.dnfs > 0 ? "DNF" : "FINISHED",
+        officialRawRow: {
+          sample: true,
+          rider: `${sample.firstName} ${sample.lastName}`,
+          time: sample.timeText,
+        },
+      },
+    });
+
+    await prisma.result.create({
+      data: {
+        eventId: event.id,
+        riderId: sampleRider.id,
+        motorcycleId: sampleMotorcycle.id,
+        manufacturerId: sampleManufacturer.id,
+        className: "Pro",
+        overallPosition: sample.position,
+        classPosition: sample.position,
+        points: sample.points,
+        totalTimeText: sample.timeText ?? "DNF",
+        status: sample.dnfs > 0 ? "DNF" : "FINISHED",
+      },
+    });
+
+    await prisma.standing.create({
+      data: {
+        seasonId: season.id,
+        riderId: sampleRider.id,
+        className: "Pro",
+        position: sample.position,
+        points: sample.points,
+        wins: sample.wins,
+        podiums: sample.podiums,
+        starts: sample.starts,
+        dnfs: sample.dnfs,
+      },
+    });
+
+    await prisma.riderCareerSeason.create({
+      data: {
+        riderId: sampleRider.id,
+        seasonId: season.id,
+        teamId: sampleTeam.id,
+        manufacturerId: sampleManufacturer.id,
+        motorcycleId: sampleMotorcycle.id,
+        className: "Pro",
+        championshipPosition: sample.position,
+        points: sample.points,
+        wins: sample.wins,
+        podiums: sample.podiums,
+        starts: sample.starts,
+        dnfs: sample.dnfs,
+      },
+    });
+  }
+
   await prisma.weatherSnapshot.create({
     data: {
       eventId: event.id,
