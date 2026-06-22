@@ -1,5 +1,6 @@
 import {
   Bike,
+  BarChart3,
   CalendarDays,
   Calculator,
   ClipboardCheck,
@@ -79,6 +80,12 @@ export const adminNavItems: AdminNavItem[] = [
     href: "/admin/calculations",
     description: "Preview engines",
     icon: Calculator,
+  },
+  {
+    label: "Recalculation",
+    href: "/admin/recalculation",
+    description: "Stats and records",
+    icon: BarChart3,
   },
   {
     label: "Sources",
