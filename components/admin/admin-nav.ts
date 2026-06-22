@@ -12,6 +12,7 @@ import {
   GitPullRequest,
   LayoutDashboard,
   ListChecks,
+  PlaneTakeoff,
   MapPinned,
   PlayCircle,
   ServerCog,
@@ -144,6 +145,12 @@ export const adminNavItems: AdminNavItem[] = [
     href: "/admin/deployment",
     description: "Launch readiness",
     icon: Rocket,
+  },
+  {
+    label: "Preflight",
+    href: "/admin/preflight",
+    description: "Audit and QA",
+    icon: PlaneTakeoff,
   },
   {
     label: "Users",
