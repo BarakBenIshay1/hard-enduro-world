@@ -6,12 +6,17 @@ import {
   ClipboardList,
   Clock,
   Download,
+  FileText,
   Flag,
+  Globe2,
+  Image as ImageIcon,
+  Link as LinkIcon,
   MapPin,
   Mountain,
   Sparkles,
   Trophy,
   Users,
+  Youtube,
 } from "lucide-react";
 import {
   StageTimingTable,
@@ -25,6 +30,9 @@ import { Container } from "@/components/ui/container";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SectionTitle } from "@/components/ui/section-title";
 import { siteConfig } from "@/config/site";
+import { getVerifiedEventFact } from "@/data/verified/events";
+import { getOfficialSource } from "@/data/verified/source-registry";
+import type { VerifiedEventFact, VerifiedSourcedLink } from "@/data/verified/types";
 import { getEventDetail } from "@/db/events";
 import { cn } from "@/lib/cn";
 import { formatDate, formatDateRange, formatOptional } from "@/lib/format";
@@ -43,6 +51,9 @@ type Result = EventDetail["results"][number];
 
 const eventTabs = [
   "Overview",
+  "About The Race",
+  "Race Format",
+  "Course",
   "Schedule",
   "Stages",
   "Results",
@@ -50,9 +61,13 @@ const eventTabs = [
   "Manufacturers",
   "Teams",
   "History",
+  "Verified Facts",
+  "Official Links",
   "Media",
   "Documents",
 ];
+
+const UNKNOWN_VERIFIED_VALUE = "Verified data coming soon";
 
 export async function generateMetadata({
   params,
@@ -83,6 +98,7 @@ export async function generateMetadata({
 export default async function EventDetailPage({ params }: EventDetailPageProps) {
   const { slug } = await params;
   const event = await getEventDetail(slug);
+  const verifiedFact = getVerifiedEventFact(event.slug);
   const terrain = extractDescriptionField(event.description, "Terrain");
   const elevation = extractDescriptionField(event.description, "Elevation");
   const previousWinner = extractDescriptionField(
@@ -110,6 +126,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
   const teamRows = buildTeamRows(event.results);
   const documents = buildDocuments(event);
   const mediaStats = buildMediaStats(event.mediaItems);
+  const verifiedOfficialLinks = buildOfficialLinks(verifiedFact);
 
   return (
     <main className="min-h-screen bg-surface text-foreground">
@@ -136,7 +153,8 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
               {event.name}
             </h1>
             <p className="mt-6 max-w-3xl text-base leading-7 text-white/[0.72] md:text-lg">
-              {buildOverview(event, terrain, elevation)}
+              {verifiedFact?.eventDescription?.value ??
+                buildOverview(event, terrain, elevation)}
             </p>
             <div className="mt-8 flex flex-wrap gap-4 text-sm text-white/[0.72]">
               <HeroFact icon={Flag} value={event.country?.name ?? "Country TBC"} />
@@ -198,13 +216,19 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
           <SectionTitle
             eyebrow="Overview"
             title="Race week command center"
-            description="A complete event hub built from existing event, stage, result, media, source, and timeline demo data."
+            description={
+              verifiedFact
+                ? "Verified event information, official-source placeholders, and source-tracked result context for Erzbergrodeo 2026."
+                : "A complete event hub built from existing event, stage, result, media, source, and timeline demo data."
+            }
           />
           <div className="mt-8 grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
             <Card className="p-6">
               <h2 className="text-2xl font-black">Event profile</h2>
               <p className="mt-4 leading-7 text-foreground/[0.68]">
-                {event.description ?? buildOverview(event, terrain, elevation)}
+                {verifiedFact?.eventDescription?.value ??
+                  event.description ??
+                  buildOverview(event, terrain, elevation)}
               </p>
               <div className="mt-6 grid gap-3 sm:grid-cols-2">
                 <DetailRow label="Terrain" value={terrain || "Terrain profile pending"} />
@@ -227,16 +251,20 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                 <Sparkles className="h-5 w-5 text-accent" aria-hidden="true" />
                 <h2 className="mt-5 text-xl font-black">Interesting facts</h2>
                 <ul className="mt-4 grid gap-3 text-sm leading-6 text-foreground/[0.66]">
-                  {buildFacts(event, terrain, elevation, manufacturerRows.length).map(
-                    (fact) => (
-                      <li
-                        key={fact}
-                        className="rounded-md border border-border bg-surface-muted p-3"
-                      >
-                        {fact}
-                      </li>
-                    ),
-                  )}
+                  {buildFacts(
+                    event,
+                    terrain,
+                    elevation,
+                    manufacturerRows.length,
+                    verifiedFact,
+                  ).map((fact) => (
+                    <li
+                      key={fact}
+                      className="rounded-md border border-border bg-surface-muted p-3"
+                    >
+                      {fact}
+                    </li>
+                  ))}
                 </ul>
               </Card>
               <Card className="p-6">
@@ -255,6 +283,110 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
             </div>
           </div>
         </section>
+
+        {verifiedFact ? (
+          <>
+            <section id="about-the-race" className="scroll-mt-32">
+              <SectionTitle
+                eyebrow="About"
+                title="About the race"
+                description="Official-source backed context first; unknown historical details remain clearly marked."
+              />
+              <div className="mt-8 grid gap-6 lg:grid-cols-2">
+                <VerifiedInfoCard
+                  title="Event description"
+                  value={verifiedFact.eventDescription?.value}
+                  sourceIds={verifiedFact.eventDescription?.sourceIds}
+                  notes={verifiedFact.eventDescription?.notes}
+                />
+                <VerifiedInfoCard
+                  title="Event history summary"
+                  value={verifiedFact.historySummary?.value}
+                  sourceIds={verifiedFact.historySummary?.sourceIds}
+                  notes={verifiedFact.historySummary?.notes}
+                />
+                <VerifiedInfoCard
+                  title="Official organizer"
+                  value={verifiedFact.officialOrganizer?.value}
+                  sourceIds={verifiedFact.officialOrganizer?.sourceIds}
+                  notes={verifiedFact.officialOrganizer?.notes}
+                />
+                <VerifiedInfoCard
+                  title="Weather"
+                  value={verifiedFact.weather?.value}
+                  sourceIds={verifiedFact.weather?.sourceIds}
+                  notes={verifiedFact.weather?.notes}
+                />
+              </div>
+            </section>
+
+            <section id="race-format" className="scroll-mt-32">
+              <SectionTitle
+                eyebrow="Format"
+                title="Race format"
+                description="Prologue and main-race structure will be filled only from official source material."
+              />
+              <div className="mt-8 grid gap-6 lg:grid-cols-3">
+                <VerifiedInfoCard
+                  title="Event format"
+                  value={verifiedFact.eventFormat?.value}
+                  sourceIds={verifiedFact.eventFormat?.sourceIds}
+                  notes={verifiedFact.eventFormat?.notes}
+                />
+                <VerifiedInfoCard
+                  title="Prologue explanation"
+                  value={verifiedFact.prologueExplanation?.value}
+                  sourceIds={verifiedFact.prologueExplanation?.sourceIds}
+                  notes={verifiedFact.prologueExplanation?.notes}
+                />
+                <VerifiedInfoCard
+                  title="Main race explanation"
+                  value={verifiedFact.mainRaceExplanation?.value}
+                  sourceIds={verifiedFact.mainRaceExplanation?.sourceIds}
+                  notes={verifiedFact.mainRaceExplanation?.notes}
+                />
+              </div>
+            </section>
+
+            <section id="course" className="scroll-mt-32">
+              <SectionTitle
+                eyebrow="Course"
+                title="Course profile"
+                description="Terrain, distance, elevation, and checkpoint data stay pending until official values are verified."
+              />
+              <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <VerifiedInfoCard
+                  title="Terrain"
+                  value={verifiedFact.terrainDescription?.value}
+                  sourceIds={verifiedFact.terrainDescription?.sourceIds}
+                  notes={verifiedFact.terrainDescription?.notes}
+                  compact
+                />
+                <VerifiedInfoCard
+                  title="Elevation"
+                  value={verifiedFact.elevation?.value}
+                  sourceIds={verifiedFact.elevation?.sourceIds}
+                  notes={verifiedFact.elevation?.notes}
+                  compact
+                />
+                <VerifiedInfoCard
+                  title="Distance"
+                  value={verifiedFact.distance?.value}
+                  sourceIds={verifiedFact.distance?.sourceIds}
+                  notes={verifiedFact.distance?.notes}
+                  compact
+                />
+                <VerifiedInfoCard
+                  title="Checkpoints"
+                  value={verifiedFact.checkpointCount?.value}
+                  sourceIds={verifiedFact.checkpointCount?.sourceIds}
+                  notes={verifiedFact.checkpointCount?.notes}
+                  compact
+                />
+              </div>
+            </section>
+          </>
+        ) : null}
 
         <section id="schedule" className="scroll-mt-32">
           <SectionTitle
@@ -514,6 +646,61 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
           </div>
         </section>
 
+        {verifiedFact ? (
+          <>
+            <section id="verified-facts" className="scroll-mt-32">
+              <SectionTitle
+                eyebrow="Verified"
+                title="Verified facts"
+                description="Only approved event facts are shown here; partial data is labeled instead of filled by assumption."
+              />
+              <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <VerifiedInfoCard
+                  title="Winner"
+                  value={verifiedFact.verifiedWinner}
+                  sourceIds={verifiedFact.sourceIds}
+                  notes={verifiedFact.factsNote}
+                  compact
+                />
+                <VerifiedInfoCard
+                  title="Podium"
+                  value="1 Manuel Lettenbichler / 2 Trystan Hart / 3 Mario Roman"
+                  sourceIds={verifiedFact.sourceIds}
+                  notes="Verified first-pass podium only. Full results remain pending."
+                  compact
+                />
+                <VerifiedInfoCard
+                  title="Finishers"
+                  value={`${verifiedFact.verifiedFinisherCount ?? UNKNOWN_VERIFIED_VALUE}`}
+                  sourceIds={verifiedFact.sourceIds}
+                  notes="Verified finisher count; full finisher list remains pending."
+                  compact
+                />
+                <VerifiedInfoCard
+                  title="Finish rate"
+                  value={verifiedFact.finishRate?.value}
+                  sourceIds={verifiedFact.finishRate?.sourceIds}
+                  notes={verifiedFact.finishRate?.notes}
+                  compact
+                />
+              </div>
+            </section>
+
+            <section id="official-links" className="scroll-mt-32">
+              <SectionTitle
+                eyebrow="Official"
+                title="Official links"
+                description="Official and trusted links only. Missing links stay as verified placeholders."
+              />
+              <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {verifiedOfficialLinks.map((link) => (
+                  <OfficialLinkCard key={`${link.group}-${link.label}`} link={link} />
+                ))}
+              </div>
+            </section>
+          </>
+        ) : null}
+
         <section id="media" className="scroll-mt-32">
           <SectionTitle
             eyebrow="Media"
@@ -522,6 +709,14 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
           />
           <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_360px]">
             <div className="grid gap-3 sm:grid-cols-3">
+              {verifiedFact?.officialMediaGalleryPlaceholders?.map((item) => (
+                <OfficialPlaceholderCard
+                  key={item.label}
+                  icon={ImageIcon}
+                  title={item.label}
+                  link={item}
+                />
+              ))}
               {event.mediaItems.slice(0, 9).map((item) => (
                 <Card key={item.id} className="overflow-hidden">
                   <div className="aspect-[4/3] bg-[linear-gradient(135deg,hsl(0_0%_11%),hsl(24_78%_26%))]" />
@@ -553,6 +748,14 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
             description="Regulations, entry lists, final results, and PDF placeholders remain demo-only until approved sources are connected."
           />
           <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {verifiedFact?.officialPdfPlaceholders?.map((item) => (
+              <OfficialPlaceholderCard
+                key={item.label}
+                icon={FileText}
+                title={item.label}
+                link={item}
+              />
+            ))}
             {documents.map((document) => (
               <Card key={document.title} className="p-5">
                 <document.icon className="h-5 w-5 text-accent" aria-hidden="true" />
@@ -621,6 +824,131 @@ function DetailRow({
       <p className="mt-1 font-semibold">{value}</p>
     </div>
   );
+}
+
+function VerifiedInfoCard({
+  title,
+  value,
+  sourceIds,
+  notes,
+  compact,
+}: {
+  title: string;
+  value: string | number | null | undefined;
+  sourceIds?: string[];
+  notes?: string;
+  compact?: boolean;
+}) {
+  const displayValue =
+    value === null || value === undefined || value === ""
+      ? UNKNOWN_VERIFIED_VALUE
+      : String(value);
+
+  return (
+    <Card className={cn("p-6", compact && "p-4")}>
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">
+        {title}
+      </p>
+      <p className={cn("mt-3 font-black", compact ? "text-lg" : "text-2xl")}>
+        {displayValue}
+      </p>
+      {notes ? (
+        <p className="mt-3 text-sm leading-6 text-foreground/[0.62]">{notes}</p>
+      ) : null}
+      <SourceTrail sourceIds={sourceIds} />
+    </Card>
+  );
+}
+
+function SourceTrail({ sourceIds }: { sourceIds?: string[] }) {
+  const labels =
+    sourceIds?.map((sourceId) => getOfficialSource(sourceId)?.name ?? sourceId) ?? [];
+
+  return (
+    <div className="mt-4 flex flex-wrap gap-2">
+      {labels.length > 0 ? (
+        labels.map((label) => (
+          <span
+            key={label}
+            className="rounded-sm border border-border bg-surface-muted px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground/[0.54]"
+          >
+            Source: {label}
+          </span>
+        ))
+      ) : (
+        <span className="rounded-sm border border-border bg-surface-muted px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground/[0.54]">
+          Source: {UNKNOWN_VERIFIED_VALUE}
+        </span>
+      )}
+    </div>
+  );
+}
+
+type OfficialLinkItem = VerifiedSourcedLink & {
+  group: string;
+};
+
+function OfficialLinkCard({ link }: { link: OfficialLinkItem }) {
+  const content = (
+    <Card className="h-full p-5">
+      <div className="flex items-start gap-3">
+        {getOfficialLinkIcon(link.group)}
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">
+            {link.group}
+          </p>
+          <h3 className="mt-2 text-lg font-black">{link.label}</h3>
+        </div>
+      </div>
+      <p className="mt-4 text-sm leading-6 text-foreground/[0.62]">
+        {link.url ?? UNKNOWN_VERIFIED_VALUE}
+      </p>
+      <p className="mt-3 text-sm leading-6 text-foreground/[0.62]">{link.notes}</p>
+      <SourceTrail sourceIds={link.sourceIds} />
+    </Card>
+  );
+
+  return link.url ? (
+    <a href={link.url} target="_blank" rel="noreferrer" className="block h-full">
+      {content}
+    </a>
+  ) : (
+    content
+  );
+}
+
+function OfficialPlaceholderCard({
+  icon: Icon,
+  title,
+  link,
+}: {
+  icon: typeof FileText;
+  title: string;
+  link: VerifiedSourcedLink;
+}) {
+  return (
+    <Card className="p-5">
+      <Icon className="h-5 w-5 text-accent" aria-hidden="true" />
+      <h3 className="mt-5 text-lg font-black">{title}</h3>
+      <p className="mt-2 text-sm leading-6 text-foreground/[0.62]">
+        {link.url ?? UNKNOWN_VERIFIED_VALUE}
+      </p>
+      <p className="mt-2 text-sm leading-6 text-foreground/[0.62]">{link.notes}</p>
+      <SourceTrail sourceIds={link.sourceIds} />
+    </Card>
+  );
+}
+
+function getOfficialLinkIcon(group: string) {
+  if (group === "Website") {
+    return <Globe2 className="mt-1 h-5 w-5 text-accent" aria-hidden="true" />;
+  }
+
+  if (group === "YouTube") {
+    return <Youtube className="mt-1 h-5 w-5 text-accent" aria-hidden="true" />;
+  }
+
+  return <LinkIcon className="mt-1 h-5 w-5 text-accent" aria-hidden="true" />;
 }
 
 function TimelineItem({
@@ -947,6 +1275,28 @@ function buildDocuments(event: EventDetail) {
   ];
 }
 
+function buildOfficialLinks(eventFact: VerifiedEventFact | null): OfficialLinkItem[] {
+  if (!eventFact) {
+    return [];
+  }
+
+  return [
+    eventFact.officialWebsite ? { ...eventFact.officialWebsite, group: "Website" } : null,
+    ...(eventFact.officialSocialLinks ?? []).map((link) => ({
+      ...link,
+      group: "Social",
+    })),
+    ...(eventFact.officialYoutubeLinks ?? []).map((link) => ({
+      ...link,
+      group: "YouTube",
+    })),
+    ...(eventFact.officialDocumentPlaceholders ?? []).map((link) => ({
+      ...link,
+      group: "Documents",
+    })),
+  ].filter((link) => link !== null);
+}
+
 function buildMediaStats(mediaItems: EventDetail["mediaItems"]) {
   return {
     images: mediaItems.filter((item) => item.type === "IMAGE").length,
@@ -997,7 +1347,17 @@ function buildFacts(
   terrain: string,
   elevation: string,
   manufacturerCount: number,
+  verifiedFact: VerifiedEventFact | null,
 ) {
+  if (verifiedFact) {
+    return [
+      `${event.results.length} verified first-pass overall result rows are connected to rider, team, manufacturer, and motorcycle records.`,
+      `${verifiedFact.verifiedFinisherCount ?? UNKNOWN_VERIFIED_VALUE} finishers are verified; complete timing and full finisher details remain pending.`,
+      `Official-source placeholders are attached for documents, media, and event-format verification.`,
+      `${terrain || "Terrain"} and ${elevation || "elevation"} remain database metadata unless confirmed by official source material.`,
+    ];
+  }
+
   return [
     `${event.results.length} seeded entries are connected to rider, team, manufacturer, and motorcycle records.`,
     `${event.stages.length} stages are prepared for timing, live-status, and future source-tracked updates.`,

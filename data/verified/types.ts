@@ -54,6 +54,37 @@ export type VerifiedEventFact = {
   verifiedFinisherCount: number | null;
   factsNote: string;
   sourceIds: string[];
+  eventDescription?: VerifiedSourcedValue<string>;
+  historySummary?: VerifiedSourcedValue<string>;
+  terrainDescription?: VerifiedSourcedValue<string>;
+  elevation?: VerifiedSourcedValue<string>;
+  distance?: VerifiedSourcedValue<string>;
+  checkpointCount?: VerifiedSourcedValue<string>;
+  eventFormat?: VerifiedSourcedValue<string>;
+  prologueExplanation?: VerifiedSourcedValue<string>;
+  mainRaceExplanation?: VerifiedSourcedValue<string>;
+  finishRate?: VerifiedSourcedValue<string>;
+  weather?: VerifiedSourcedValue<string>;
+  officialOrganizer?: VerifiedSourcedValue<string>;
+  officialWebsite?: VerifiedSourcedLink;
+  officialSocialLinks?: VerifiedSourcedLink[];
+  officialYoutubeLinks?: VerifiedSourcedLink[];
+  officialPdfPlaceholders?: VerifiedSourcedLink[];
+  officialMediaGalleryPlaceholders?: VerifiedSourcedLink[];
+  officialDocumentPlaceholders?: VerifiedSourcedLink[];
+};
+
+export type VerifiedSourcedValue<T> = {
+  value: T | null;
+  sourceIds: string[];
+  notes: string;
+};
+
+export type VerifiedSourcedLink = {
+  label: string;
+  url: string | null;
+  sourceIds: string[];
+  notes: string;
 };
 
 export type VerifiedRiderEntry = {
