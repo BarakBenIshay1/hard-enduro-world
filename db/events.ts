@@ -111,7 +111,17 @@ export async function getEventDetail(slug: string) {
       results: {
         orderBy: [{ overallPosition: "asc" }, { classPosition: "asc" }],
         include: {
-          rider: true,
+          rider: {
+            include: {
+              country: true,
+              standings: true,
+              teamMemberships: {
+                include: {
+                  team: true,
+                },
+              },
+            },
+          },
           motorcycle: {
             include: {
               manufacturer: true,
@@ -130,5 +140,41 @@ export async function getEventDetail(slug: string) {
     notFound();
   }
 
-  return event;
+  const baseName = event.name.replace(/\s+\d{4}$/, "");
+  const previousEditions = await prisma.event.findMany({
+    where: {
+      name: {
+        startsWith: baseName,
+      },
+      NOT: {
+        id: event.id,
+      },
+    },
+    orderBy: {
+      startDate: "desc",
+    },
+    take: 8,
+    include: {
+      country: true,
+      season: true,
+      results: {
+        orderBy: [{ overallPosition: "asc" }],
+        take: 1,
+        include: {
+          rider: true,
+          manufacturer: true,
+          motorcycle: {
+            include: {
+              manufacturer: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  return {
+    ...event,
+    previousEditions,
+  };
 }
