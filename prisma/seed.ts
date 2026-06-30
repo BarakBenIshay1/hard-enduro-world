@@ -56,15 +56,34 @@ const countries = [
   ["poland", "Poland", "PL", "Europe"],
   ["turkey", "Turkey", "TR", "Europe/Asia"],
   ["italy", "Italy", "IT", "Europe"],
+  ["romania", "Romania", "RO", "Europe"],
   ["israel", "Israel", "IL", "Asia"],
   ["united-states", "United States", "US", "North America"],
   ["japan", "Japan", "JP", "Asia"],
+  ["france", "France", "FR", "Europe"],
+  ["portugal", "Portugal", "PT", "Europe"],
+  ["sweden", "Sweden", "SE", "Europe"],
+  ["norway", "Norway", "NO", "Europe"],
+  ["serbia", "Serbia", "RS", "Europe"],
+  ["slovakia", "Slovakia", "SK", "Europe"],
+  ["slovenia", "Slovenia", "SI", "Europe"],
+  ["croatia", "Croatia", "HR", "Europe"],
+  ["greece", "Greece", "GR", "Europe"],
+  ["mexico", "Mexico", "MX", "North America"],
+  ["chile", "Chile", "CL", "South America"],
+  ["australia", "Australia", "AU", "Oceania"],
+  ["new-zealand", "New Zealand", "NZ", "Oceania"],
+  ["finland", "Finland", "FI", "Europe"],
+  ["czech-republic", "Czech Republic", "CZ", "Europe"],
 ] as const;
 
 const seasons = [
+  { year: 2022, name: "2022 FIM Hard Enduro World Championship", status: "COMPLETED" },
+  { year: 2023, name: "2023 FIM Hard Enduro World Championship", status: "COMPLETED" },
   { year: 2024, name: "2024 FIM Hard Enduro World Championship", status: "COMPLETED" },
   { year: 2025, name: "2025 FIM Hard Enduro World Championship", status: "COMPLETED" },
   { year: 2026, name: "2026 FIM Hard Enduro World Championship", status: "ACTIVE" },
+  { year: 2027, name: "2027 FIM Hard Enduro World Championship", status: "UPCOMING" },
 ] as const;
 
 const manufacturers = [
@@ -174,7 +193,7 @@ const teams = [
   ],
 ] as const;
 
-const riders: RiderSeed[] = [
+const featuredRiders: RiderSeed[] = [
   {
     firstName: "Manuel",
     lastName: "Lettenbichler",
@@ -297,12 +316,251 @@ const riders: RiderSeed[] = [
   },
 ];
 
+const generatedRiderFirstNames = [
+  "Luca",
+  "Noah",
+  "Mateo",
+  "Elias",
+  "Tomas",
+  "Oscar",
+  "Niko",
+  "Rafael",
+  "Arvid",
+  "Felix",
+  "Samuel",
+  "Milan",
+  "Jakub",
+  "Liam",
+  "Henrik",
+  "Pablo",
+  "Diego",
+  "Marco",
+  "Ivan",
+  "Ruben",
+  "Callum",
+  "Evan",
+  "Ryan",
+  "Kian",
+  "Dylan",
+  "Leo",
+  "Max",
+  "Santiago",
+  "Matias",
+  "Hugo",
+  "Oskar",
+  "Jan",
+  "Viktor",
+  "Petar",
+  "Andrei",
+  "Rok",
+  "Luka",
+  "Filip",
+  "Mason",
+  "Cooper",
+  "Tyler",
+  "Blake",
+  "Aiden",
+  "Sebastian",
+  "Julian",
+  "Emil",
+  "Theo",
+  "Alex",
+] as const;
+
+const generatedRiderLastNames = [
+  "Stone",
+  "Varga",
+  "Muller",
+  "Santos",
+  "Novak",
+  "Kovac",
+  "Martin",
+  "Silva",
+  "Berg",
+  "Moreau",
+  "Rossi",
+  "Horvat",
+  "Jensen",
+  "Garcia",
+  "Petrov",
+  "Costa",
+  "Williams",
+  "Fraser",
+  "Reed",
+  "Bennett",
+  "Larsson",
+  "Nilsen",
+  "Popescu",
+  "Marin",
+  "Keller",
+  "Schmid",
+  "Kral",
+  "Mendez",
+  "Herrera",
+  "Vidal",
+  "Sundberg",
+  "Hansen",
+  "Markovic",
+  "Ilic",
+  "Pavic",
+  "Todorov",
+  "Sokol",
+  "Walker",
+  "Turner",
+  "Morris",
+  "Campbell",
+  "Young",
+  "Fischer",
+  "Weber",
+  "Laurent",
+  "Duarte",
+  "Niemi",
+  "Hakala",
+] as const;
+
+const riderCountryPool = [
+  "austria",
+  "germany",
+  "united-kingdom",
+  "spain",
+  "south-africa",
+  "bulgaria",
+  "canada",
+  "poland",
+  "turkey",
+  "italy",
+  "israel",
+  "united-states",
+  "france",
+  "portugal",
+  "sweden",
+  "norway",
+  "serbia",
+  "slovakia",
+  "slovenia",
+  "croatia",
+  "greece",
+  "mexico",
+  "chile",
+  "australia",
+  "new-zealand",
+  "finland",
+  "czech-republic",
+] as const;
+
+const riderTeamPool = [
+  "red-bull-ktm-factory-racing",
+  "husqvarna-factory-racing",
+  "factory-sherco-racing",
+  "rieju-factory-racing",
+  "fmf-ktm-factory-racing",
+  "beta-factory-racing",
+  "gasgas-factory-racing",
+  "tm-racing-enduro",
+  "privateer-hard-enduro",
+  "sherco-privateer-racing",
+  "moto-club-romania",
+  "alpine-hard-enduro",
+  "iberian-extreme-racing",
+  "nordic-enduro-lab",
+  "balkan-hard-enduro",
+  "carpathian-privateers",
+  "rookie-hard-enduro-academy",
+  "desert-hard-enduro-team",
+  "andes-extreme-racing",
+  "pacific-hard-enduro",
+  "north-american-privateers",
+  "junior-factory-program",
+] as const;
+
+const riderBikePool = [
+  ["ktm", "ktm-300-exc-2026"],
+  ["ktm", "ktm-300-xc-w-2026"],
+  ["husqvarna", "husqvarna-te-300-2026"],
+  ["gasgas", "gasgas-ec-300-2026"],
+  ["sherco", "sherco-300-se-factory-2026"],
+  ["beta", "beta-rr-300-racing-2026"],
+  ["rieju", "rieju-mr-300-racing-2026"],
+  ["tm-racing", "tm-racing-en-300-2026"],
+  ["honda", "honda-crf450rx-2026"],
+  ["fantic", "fantic-xe-300-2026"],
+] as const;
+
+const riders: RiderSeed[] = [...featuredRiders, ...buildGeneratedRiders(48)];
+
 const extraTeams = [
   [
     "sherco-privateer-racing",
     "Sherco Privateer Racing",
     "bulgaria",
     "https://example.com/demo/sherco-privateer",
+  ],
+  [
+    "moto-club-romania",
+    "Moto Club Romania",
+    "romania",
+    "https://example.com/demo/romania",
+  ],
+  [
+    "alpine-hard-enduro",
+    "Alpine Hard Enduro",
+    "france",
+    "https://example.com/demo/alpine",
+  ],
+  [
+    "iberian-extreme-racing",
+    "Iberian Extreme Racing",
+    "portugal",
+    "https://example.com/demo/iberian",
+  ],
+  ["nordic-enduro-lab", "Nordic Enduro Lab", "sweden", "https://example.com/demo/nordic"],
+  [
+    "balkan-hard-enduro",
+    "Balkan Hard Enduro",
+    "serbia",
+    "https://example.com/demo/balkan",
+  ],
+  [
+    "carpathian-privateers",
+    "Carpathian Privateers",
+    "romania",
+    "https://example.com/demo/carpathian",
+  ],
+  [
+    "rookie-hard-enduro-academy",
+    "Rookie Hard Enduro Academy",
+    "united-kingdom",
+    "https://example.com/demo/rookie",
+  ],
+  [
+    "desert-hard-enduro-team",
+    "Desert Hard Enduro Team",
+    "israel",
+    "https://example.com/demo/desert",
+  ],
+  [
+    "andes-extreme-racing",
+    "Andes Extreme Racing",
+    "chile",
+    "https://example.com/demo/andes",
+  ],
+  [
+    "pacific-hard-enduro",
+    "Pacific Hard Enduro",
+    "australia",
+    "https://example.com/demo/pacific",
+  ],
+  [
+    "north-american-privateers",
+    "North American Privateers",
+    "canada",
+    "https://example.com/demo/north-american",
+  ],
+  [
+    "junior-factory-program",
+    "Junior Factory Program",
+    "germany",
+    "https://example.com/demo/junior-factory",
   ],
 ] as const;
 
@@ -397,6 +655,114 @@ const eventTemplates = [
     "Knockout racing, creek beds, Tennessee rock ledges",
     "420 m",
   ],
+  [
+    "xl-lagares",
+    "XL Lagares",
+    "portugal",
+    "Porto",
+    "Porto urban and river valley course",
+    "Urban prologue, granite riverbeds, forest climbs",
+    "320 m",
+  ],
+  [
+    "alestrem",
+    "Alestrem",
+    "france",
+    "Ales",
+    "Cevennes winter forest",
+    "Wet limestone, forest switchbacks, winter enduro climbs",
+    "650 m",
+  ],
+  [
+    "xross-hard-enduro",
+    "Xross Hard Enduro",
+    "serbia",
+    "Zlatibor",
+    "Balkan mountain ridges",
+    "Rocky climbs, alpine meadows, technical forest descents",
+    "1,496 m",
+  ],
+  [
+    "red-bull-outliers",
+    "Red Bull Outliers",
+    "canada",
+    "Calgary",
+    "Badlands and urban prologue",
+    "Coulee climbs, sandstone ledges, river valley terrain",
+    "1,045 m",
+  ],
+  [
+    "battle-of-vikings",
+    "Battle of Vikings",
+    "sweden",
+    "Karlskoga",
+    "Nordic forest course",
+    "Mossy granite, roots, lakeside climbs",
+    "250 m",
+  ],
+  [
+    "wildwood-rock-extreme",
+    "Wildwood Rock Extreme",
+    "australia",
+    "Melbourne",
+    "Wildwood rock quarry",
+    "Basalt boulders, quarry climbs, technical arena laps",
+    "310 m",
+  ],
+  [
+    "king-of-the-motos",
+    "King of the Motos",
+    "united-states",
+    "Johnson Valley",
+    "Mojave desert rocks",
+    "Desert navigation, giant boulders, high-speed sand washes",
+    "850 m",
+  ],
+  [
+    "terra-inferno",
+    "Terra Inferno",
+    "mexico",
+    "Monterrey",
+    "Sierra Madre canyons",
+    "Dry waterfalls, canyon ledges, heat management",
+    "1,120 m",
+  ],
+  [
+    "andes-hard-enduro",
+    "Andes Hard Enduro",
+    "chile",
+    "Santiago",
+    "Andes foothills",
+    "Loose volcanic climbs, high-altitude ridges, dust",
+    "2,600 m",
+  ],
+  [
+    "carpathian-hard-enduro",
+    "Carpathian Hard Enduro",
+    "romania",
+    "Brasov",
+    "Carpathian forest",
+    "Forest switchbacks, river crossings, alpine pasture climbs",
+    "1,900 m",
+  ],
+  [
+    "hellas-extreme",
+    "Hellas Extreme",
+    "greece",
+    "Meteora",
+    "Meteora rock valleys",
+    "Dry limestone, monastery valley climbs, hot prologue",
+    "780 m",
+  ],
+  [
+    "slovak-hard-enduro",
+    "Slovak Hard Enduro",
+    "slovakia",
+    "Kosice",
+    "Slovak ore mountains",
+    "Mine tracks, wet roots, narrow ridge trails",
+    "1,100 m",
+  ],
 ] as const;
 
 const winnerCycle = [
@@ -413,35 +779,92 @@ const winnerCycle = [
 ];
 
 const eventSeeds: EventSeed[] = [
+  ...buildSeasonEvents(2027, "2027", [
+    "minus-400",
+    "valleys-hard-enduro",
+    "xl-lagares",
+    "erzbergrodeo",
+    "xross-hard-enduro",
+    "red-bull-romaniacs",
+    "tennessee-knockout",
+    "sea-to-sky",
+    "hixpania-hard-enduro",
+    "getzenrodeo",
+    "roof-of-africa",
+    "andes-hard-enduro",
+  ]),
   ...buildSeasonEvents(2026, "2026", [
     "minus-400",
     "valleys-hard-enduro",
+    "xl-lagares",
     "erzbergrodeo",
     "abestone-hard-enduro",
     "red-bull-romaniacs",
+    "xross-hard-enduro",
+    "red-bull-outliers",
+    "tennessee-knockout",
     "sea-to-sky",
     "hixpania-hard-enduro",
     "getzenrodeo",
     "roof-of-africa",
-    "tennessee-knockout",
+    "wildwood-rock-extreme",
+    "terra-inferno",
   ]),
   ...buildSeasonEvents(2025, "2025", [
+    "minus-400",
+    "valleys-hard-enduro",
+    "xl-lagares",
     "erzbergrodeo",
     "red-bull-romaniacs",
     "abestone-hard-enduro",
+    "xross-hard-enduro",
+    "red-bull-outliers",
+    "tennessee-knockout",
     "sea-to-sky",
     "hixpania-hard-enduro",
     "getzenrodeo",
     "roof-of-africa",
-    "tennessee-knockout",
+    "battle-of-vikings",
+    "king-of-the-motos",
   ]),
   ...buildSeasonEvents(2024, "2024", [
+    "minus-400",
+    "valleys-hard-enduro",
+    "xl-lagares",
     "erzbergrodeo",
     "red-bull-romaniacs",
+    "abestone-hard-enduro",
+    "xross-hard-enduro",
+    "tennessee-knockout",
     "hixpania-hard-enduro",
     "sea-to-sky",
     "getzenrodeo",
     "roof-of-africa",
+    "wildwood-rock-extreme",
+  ]),
+  ...buildSeasonEvents(2023, "2023", [
+    "xl-lagares",
+    "alestrem",
+    "erzbergrodeo",
+    "red-bull-romaniacs",
+    "sea-to-sky",
+    "hixpania-hard-enduro",
+    "getzenrodeo",
+    "roof-of-africa",
+    "battle-of-vikings",
+    "carpathian-hard-enduro",
+  ]),
+  ...buildSeasonEvents(2022, "2022", [
+    "alestrem",
+    "xl-lagares",
+    "erzbergrodeo",
+    "red-bull-romaniacs",
+    "sea-to-sky",
+    "hixpania-hard-enduro",
+    "getzenrodeo",
+    "roof-of-africa",
+    "slovak-hard-enduro",
+    "hellas-extreme",
   ]),
 ];
 
@@ -490,10 +913,7 @@ async function main() {
   >();
   const eventMap = new Map<string, { id: string; slug: string; name: string }>();
 
-  for (const [slug, name, isoCode, continent] of [
-    ...countries,
-    ["romania", "Romania", "RO", "Europe"] as const,
-  ]) {
+  for (const [slug, name, isoCode, continent] of countries) {
     const country = await prisma.country.create({
       data: {
         name,
@@ -641,6 +1061,18 @@ function buildSeasonEvents(year: number, suffix: string, templateSlugs: string[]
     getzenrodeo: [`${year}-11-01`, `${year}-11-01`],
     "roof-of-africa": [`${year}-11-20`, `${year}-11-22`],
     "tennessee-knockout": [`${year}-08-14`, `${year}-08-16`],
+    "xl-lagares": [`${year}-05-02`, `${year}-05-04`],
+    alestrem: [`${year}-01-25`, `${year}-01-26`],
+    "xross-hard-enduro": [`${year}-06-12`, `${year}-06-14`],
+    "red-bull-outliers": [`${year}-08-22`, `${year}-08-24`],
+    "battle-of-vikings": [`${year}-09-06`, `${year}-09-07`],
+    "wildwood-rock-extreme": [`${year}-11-08`, `${year}-11-08`],
+    "king-of-the-motos": [`${year}-02-13`, `${year}-02-15`],
+    "terra-inferno": [`${year}-03-21`, `${year}-03-22`],
+    "andes-hard-enduro": [`${year}-12-05`, `${year}-12-07`],
+    "carpathian-hard-enduro": [`${year}-09-19`, `${year}-09-21`],
+    "hellas-extreme": [`${year}-04-11`, `${year}-04-12`],
+    "slovak-hard-enduro": [`${year}-09-27`, `${year}-09-28`],
   };
 
   return templateSlugs.map((templateSlug, index): EventSeed => {
@@ -668,6 +1100,31 @@ function buildSeasonEvents(year: number, suffix: string, templateSlugs: string[]
       officialUrl: `https://example.com/demo/events/${baseSlug}-${year}`,
       completed,
       winnerSlug: winnerCycle[(index + year) % winnerCycle.length],
+    };
+  });
+}
+
+function buildGeneratedRiders(count: number): RiderSeed[] {
+  return Array.from({ length: count }, (_, index) => {
+    const firstName = generatedRiderFirstNames[index % generatedRiderFirstNames.length];
+    const lastName =
+      generatedRiderLastNames[
+        (index * 7 + Math.floor(index / generatedRiderFirstNames.length)) %
+          generatedRiderLastNames.length
+      ];
+    const bike = riderBikePool[index % riderBikePool.length];
+    const rookieOffset = index % 8 === 0 ? 6 : 0;
+    const birthYear = 1984 + ((index * 3 + rookieOffset) % 24);
+
+    return {
+      firstName,
+      lastName,
+      slug: `demo-${slugify(`${firstName}-${lastName}`)}-${index + 1}`,
+      countrySlug: riderCountryPool[index % riderCountryPool.length],
+      teamSlug: riderTeamPool[index % riderTeamPool.length],
+      manufacturerSlug: bike[0],
+      motorcycleSlug: bike[1],
+      birthDate: `${birthYear}-${String((index % 12) + 1).padStart(2, "0")}-${String((index % 25) + 1).padStart(2, "0")}`,
     };
   });
 }
@@ -881,11 +1338,18 @@ async function seedStagesAndResults(
 
 function buildEventResults(seed: EventSeed) {
   const winnerIndex = riders.findIndex((rider) => rider.slug === seed.winnerSlug);
-  const ordered = rotateArray(riders, winnerIndex >= 0 ? winnerIndex : seed.roundNumber);
+  const ordered = rotateArray(
+    riders,
+    winnerIndex >= 0 ? winnerIndex : seed.roundNumber,
+  ).slice(0, 36);
   const dnfSlug = ordered[(seed.roundNumber + 5) % ordered.length].slug;
   const dnsSlug =
     seed.roundNumber % 4 === 0
       ? ordered[(seed.roundNumber + 8) % ordered.length].slug
+      : null;
+  const dsqSlug =
+    seed.roundNumber % 7 === 0
+      ? ordered[(seed.roundNumber + 11) % ordered.length].slug
       : null;
   let finishPosition = 1;
   let previousTime: number | null = null;
@@ -893,7 +1357,13 @@ function buildEventResults(seed: EventSeed) {
 
   return ordered.map((rider, index) => {
     const status =
-      rider.slug === dnsSlug ? "DNS" : rider.slug === dnfSlug ? "DNF" : "FINISHED";
+      rider.slug === dsqSlug
+        ? "DSQ"
+        : rider.slug === dnsSlug
+          ? "DNS"
+          : rider.slug === dnfSlug
+            ? "DNF"
+            : "FINISHED";
     const position = status === "FINISHED" ? finishPosition++ : null;
     const penaltiesMs = index % 5 === 0 && status === "FINISHED" ? 120_000 : 0;
     const totalTimeMs =
@@ -1001,6 +1471,15 @@ async function seedMembershipsAndCareers() {
           statistics: {
             demo: true,
             note: DEMO_NOTE,
+            biography: `${riderName(rider)} is part of the expanded demo Hard Enduro database. This preview profile is generated to test rich rider pages, filters, standings, and historical statistics.`,
+            achievements: buildDemoAchievements(rider, wins, podiums, starts),
+            status: starts > 0 ? "active demo competitor" : "archive/demo roster",
+            category:
+              rider.slug.startsWith("demo-") && Number(rider.slug.split("-").at(-1)) <= 10
+                ? "junior-rookie-style demo rider"
+                : rider.slug.startsWith("demo-")
+                  ? "privateer demo rider"
+                  : "featured demo rider",
           },
         },
       });
@@ -1111,6 +1590,24 @@ async function seedRecordsAndHallOfFame() {
     orderBy: [{ dnfs: "desc" }, { starts: "desc" }],
     include: { rider: true },
   });
+  const mostPodiums = await prisma.standing.findFirst({
+    orderBy: [{ podiums: "desc" }, { points: "desc" }],
+    include: { rider: true },
+  });
+  const mostStarts = await prisma.standing.findFirst({
+    orderBy: [{ starts: "desc" }, { points: "desc" }],
+    include: { rider: true },
+  });
+  const championCareers = await prisma.riderCareerSeason.groupBy({
+    by: ["riderId"],
+    where: { championshipPosition: 1 },
+    _count: { riderId: true },
+    orderBy: { _count: { riderId: "desc" } },
+    take: 1,
+  });
+  const mostChampionshipsRider = championCareers[0]
+    ? await prisma.rider.findUnique({ where: { id: championCareers[0].riderId } })
+    : null;
   const ktm = await prisma.manufacturer.findUnique({ where: { slug: "ktm" } });
   const ktmBike = await prisma.motorcycle.findUnique({
     where: { slug: "ktm-300-exc-2026" },
@@ -1141,6 +1638,52 @@ async function seedRecordsAndHallOfFame() {
           ? `${mostDnfs.rider.firstName} ${mostDnfs.rider.lastName}`
           : "Pending",
         metadata: { demo: true },
+      },
+      {
+        type: "MOST_PODIUMS",
+        title: "Most demo podiums",
+        description: DEMO_NOTE,
+        entityType: "RIDER",
+        entityId: mostPodiums?.riderId,
+        valueNumber: mostPodiums?.podiums ?? 0,
+        valueText: mostPodiums
+          ? `${mostPodiums.rider.firstName} ${mostPodiums.rider.lastName}`
+          : "Pending",
+        metadata: { demo: true },
+      },
+      {
+        type: "MOST_STARTS",
+        title: "Most demo starts",
+        description: DEMO_NOTE,
+        entityType: "RIDER",
+        entityId: mostStarts?.riderId,
+        valueNumber: mostStarts?.starts ?? 0,
+        valueText: mostStarts
+          ? `${mostStarts.rider.firstName} ${mostStarts.rider.lastName}`
+          : "Pending",
+        metadata: { demo: true },
+      },
+      {
+        type: "MOST_CHAMPIONSHIPS",
+        title: "Most demo championships",
+        description: DEMO_NOTE,
+        entityType: "RIDER",
+        entityId: mostChampionshipsRider?.id,
+        valueNumber: championCareers[0]?._count.riderId ?? 0,
+        valueText: mostChampionshipsRider
+          ? `${mostChampionshipsRider.firstName} ${mostChampionshipsRider.lastName}`
+          : "Pending",
+        metadata: { demo: true },
+      },
+      {
+        type: "LONGEST_WINNING_STREAK",
+        title: "Longest demo winning streak placeholder",
+        description: DEMO_NOTE,
+        entityType: "RIDER",
+        entityId: topStanding?.riderId,
+        valueNumber: 3,
+        valueText: "3 demo wins",
+        metadata: { demo: true, placeholder: true },
       },
       {
         type: "CUSTOM",
@@ -1474,6 +2017,37 @@ async function seedSourcesAndAudit(
         publishedAt: new Date("2026-06-08T18:00:00.000Z"),
         tags: ["demo", "video", "erzbergrodeo"],
       },
+      ...Array.from(eventMap.values())
+        .slice(0, 12)
+        .map((event, index) => ({
+          eventId: event.id,
+          type: "YOUTUBE" as const,
+          title: `${event.name} demo video feature`,
+          description: DEMO_NOTE,
+          url: `https://www.youtube.com/watch?v=demo-${event.slug}`,
+          thumbnailUrl: `https://example.com/demo/youtube/${event.slug}.jpg`,
+          source: "demo YouTube connector",
+          provider: "youtube",
+          providerId: `demo-${event.slug}`,
+          publishedAt: new Date(
+            `2026-06-${String(index + 10).padStart(2, "0")}T18:00:00.000Z`,
+          ),
+          tags: ["demo", "video", event.slug],
+        })),
+      ...Array.from(eventMap.values())
+        .slice(12, 24)
+        .map((event) => ({
+          eventId: event.id,
+          type: "DOCUMENT" as const,
+          title: `${event.name} demo official PDF`,
+          description: DEMO_NOTE,
+          url: `https://example.com/demo/documents/${event.slug}.pdf`,
+          thumbnailUrl: `https://example.com/demo/documents/${event.slug}.jpg`,
+          source: "manual demo seed",
+          provider: "manual",
+          providerId: `demo-document-${event.slug}`,
+          tags: ["demo", "document", event.slug],
+        })),
     ],
   });
 
@@ -1495,6 +2069,37 @@ function riderNameBySlug(slug: string) {
 
 function riderName(rider: RiderSeed) {
   return `${rider.firstName} ${rider.lastName}`;
+}
+
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+function buildDemoAchievements(
+  rider: RiderSeed,
+  wins: number,
+  podiums: number,
+  starts: number,
+) {
+  const achievements = [
+    `${starts} seeded championship starts`,
+    `${podiums} seeded podium finishes`,
+  ];
+
+  if (wins > 0) {
+    achievements.unshift(`${wins} seeded event win${wins === 1 ? "" : "s"}`);
+  }
+
+  if (rider.slug.startsWith("demo-")) {
+    achievements.push("Expanded roster demo profile");
+  } else {
+    achievements.push("Featured rider demo profile");
+  }
+
+  return achievements;
 }
 
 function rotateArray<T>(items: T[], startIndex: number) {
