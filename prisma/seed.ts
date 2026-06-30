@@ -2,111 +2,450 @@ import { Prisma, PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-function getDemoMotorcycleSpecs(slug: string) {
-  const specs: Record<
-    string,
-    {
-      weightKg: number;
-      suspensionFront: string;
-      suspensionRear: string;
-      horsepower: number;
-      torqueNm: number;
-      fuelCapacityL: number;
-    }
-  > = {
-    "sherco-300-se-factory-2026": {
-      weightKg: 104,
-      suspensionFront: "KYB closed-cartridge fork",
-      suspensionRear: "KYB shock",
-      horsepower: 52,
-      torqueNm: 43,
-      fuelCapacityL: 10.4,
-    },
-    "husqvarna-te-300-2026": {
-      weightKg: 106.4,
-      suspensionFront: "WP XACT 48 mm fork",
-      suspensionRear: "WP XACT shock",
-      horsepower: 54,
-      torqueNm: 44,
-      fuelCapacityL: 8.5,
-    },
-    "ktm-300-xc-w-2026": {
-      weightKg: 104.9,
-      suspensionFront: "WP XACT 48 mm fork",
-      suspensionRear: "WP XPLOR PDS shock",
-      horsepower: 54,
-      torqueNm: 44,
-      fuelCapacityL: 9,
-    },
-    "rieju-mr-300-racing-2026": {
-      weightKg: 108,
-      suspensionFront: "KYB fork",
-      suspensionRear: "KYB shock",
-      horsepower: 51,
-      torqueNm: 42,
-      fuelCapacityL: 9.8,
-    },
-    "beta-rr-300-racing-2026": {
-      weightKg: 103.5,
-      suspensionFront: "KYB AOS fork",
-      suspensionRear: "KYB C46 shock",
-      horsepower: 52,
-      torqueNm: 43,
-      fuelCapacityL: 9.5,
-    },
-    "ktm-300-exc-privateer-2026": {
-      weightKg: 103.4,
-      suspensionFront: "WP XACT 48 mm fork",
-      suspensionRear: "WP XPLOR PDS shock",
-      horsepower: 54,
-      torqueNm: 44,
-      fuelCapacityL: 9,
-    },
-    "gasgas-ec-300-2026": {
-      weightKg: 106.2,
-      suspensionFront: "WP XPLOR fork",
-      suspensionRear: "WP XACT shock",
-      horsepower: 53,
-      torqueNm: 43,
-      fuelCapacityL: 9,
-    },
-    "tm-racing-en-300-2026": {
-      weightKg: 105,
-      suspensionFront: "KYB fork",
-      suspensionRear: "TM Racing shock",
-      horsepower: 53,
-      torqueNm: 43,
-      fuelCapacityL: 8.7,
-    },
-    "honda-crf450rx-2026": {
-      weightKg: 113,
-      suspensionFront: "Showa 49 mm fork",
-      suspensionRear: "Showa shock",
-      horsepower: 56,
-      torqueNm: 48,
-      fuelCapacityL: 8,
-    },
-    "fantic-xe-300-2026": {
-      weightKg: 105,
-      suspensionFront: "KYB fork",
-      suspensionRear: "KYB shock",
-      horsepower: 52,
-      torqueNm: 43,
-      fuelCapacityL: 9,
-    },
-  };
+const DEMO_NOTE =
+  "Demo seed data for preview only. Inspired by real Hard Enduro names and places; not official championship data.";
 
-  return (
-    specs[slug] ?? {
-      weightKg: 106,
-      suspensionFront: "Factory enduro fork",
-      suspensionRear: "Factory enduro shock",
-      horsepower: 52,
-      torqueNm: 43,
-      fuelCapacityL: 9,
-    }
-  );
-}
+type RiderSeed = {
+  firstName: string;
+  lastName: string;
+  slug: string;
+  countrySlug: string;
+  teamSlug: string;
+  manufacturerSlug: string;
+  motorcycleSlug: string;
+  birthDate: string;
+};
+
+type EventSeed = {
+  name: string;
+  slug: string;
+  year: number;
+  roundNumber: number;
+  countrySlug: string;
+  city: string;
+  venue: string;
+  startDate: string;
+  endDate: string;
+  status: "COMPLETED" | "LIVE" | "SCHEDULED";
+  liveStatus: "FINISHED" | "LIVE" | "UPCOMING";
+  terrain: string;
+  elevation: string;
+  previousWinner: string;
+  officialUrl: string;
+  completed: boolean;
+  winnerSlug?: string;
+};
+
+type ResultSeed = {
+  rider: RiderSeed;
+  position: number | null;
+  status: "FINISHED" | "DNF" | "DNS" | "DSQ";
+  points: number;
+  totalTimeMs: number | null;
+  penaltiesMs: number;
+};
+
+const countries = [
+  ["austria", "Austria", "AT", "Europe"],
+  ["germany", "Germany", "DE", "Europe"],
+  ["united-kingdom", "United Kingdom", "GB", "Europe"],
+  ["spain", "Spain", "ES", "Europe"],
+  ["south-africa", "South Africa", "ZA", "Africa"],
+  ["bulgaria", "Bulgaria", "BG", "Europe"],
+  ["canada", "Canada", "CA", "North America"],
+  ["poland", "Poland", "PL", "Europe"],
+  ["turkey", "Turkey", "TR", "Europe/Asia"],
+  ["italy", "Italy", "IT", "Europe"],
+  ["israel", "Israel", "IL", "Asia"],
+  ["united-states", "United States", "US", "North America"],
+  ["japan", "Japan", "JP", "Asia"],
+] as const;
+
+const seasons = [
+  { year: 2024, name: "2024 FIM Hard Enduro World Championship", status: "COMPLETED" },
+  { year: 2025, name: "2025 FIM Hard Enduro World Championship", status: "COMPLETED" },
+  { year: 2026, name: "2026 FIM Hard Enduro World Championship", status: "ACTIVE" },
+] as const;
+
+const manufacturers = [
+  { name: "KTM", slug: "ktm", countrySlug: "austria" },
+  { name: "Husqvarna", slug: "husqvarna", countrySlug: "austria" },
+  { name: "GASGAS", slug: "gasgas", countrySlug: "spain" },
+  { name: "Sherco", slug: "sherco", countrySlug: "spain" },
+  { name: "Beta", slug: "beta", countrySlug: "italy" },
+  { name: "Rieju", slug: "rieju", countrySlug: "spain" },
+  { name: "TM Racing", slug: "tm-racing", countrySlug: "italy" },
+  { name: "Honda", slug: "honda", countrySlug: "japan" },
+  { name: "Fantic", slug: "fantic", countrySlug: "italy" },
+] as const;
+
+const motorcycles = [
+  ["ktm-300-exc-2026", "ktm", "300 EXC", 300, "TWO_STROKE", 103.4, 54, 44, 9],
+  ["ktm-300-xc-w-2026", "ktm", "300 XC-W", 300, "TWO_STROKE", 104.9, 54, 44, 9],
+  ["husqvarna-te-300-2026", "husqvarna", "TE 300", 300, "TWO_STROKE", 106.4, 54, 44, 8.5],
+  ["gasgas-ec-300-2026", "gasgas", "EC 300", 300, "TWO_STROKE", 106.2, 53, 43, 9],
+  [
+    "sherco-300-se-factory-2026",
+    "sherco",
+    "300 SE Factory",
+    300,
+    "TWO_STROKE",
+    104,
+    52,
+    43,
+    10.4,
+  ],
+  [
+    "beta-rr-300-racing-2026",
+    "beta",
+    "RR 300 Racing",
+    300,
+    "TWO_STROKE",
+    103.5,
+    52,
+    43,
+    9.5,
+  ],
+  [
+    "rieju-mr-300-racing-2026",
+    "rieju",
+    "MR 300 Racing",
+    300,
+    "TWO_STROKE",
+    108,
+    51,
+    42,
+    9.8,
+  ],
+  ["tm-racing-en-300-2026", "tm-racing", "EN 300", 300, "TWO_STROKE", 105, 53, 43, 8.7],
+  ["honda-crf450rx-2026", "honda", "CRF450RX", 450, "FOUR_STROKE", 113, 56, 48, 8],
+  ["fantic-xe-300-2026", "fantic", "XE 300", 300, "TWO_STROKE", 105, 52, 43, 9],
+] as const;
+
+const teams = [
+  [
+    "red-bull-ktm-factory-racing",
+    "Red Bull KTM Factory Racing",
+    "austria",
+    "https://example.com/demo/red-bull-ktm",
+  ],
+  [
+    "husqvarna-factory-racing",
+    "Husqvarna Factory Racing",
+    "austria",
+    "https://example.com/demo/husqvarna",
+  ],
+  [
+    "factory-sherco-racing",
+    "Factory Sherco Racing",
+    "spain",
+    "https://example.com/demo/sherco",
+  ],
+  [
+    "rieju-factory-racing",
+    "Rieju Factory Racing",
+    "spain",
+    "https://example.com/demo/rieju",
+  ],
+  [
+    "fmf-ktm-factory-racing",
+    "FMF KTM Factory Racing",
+    "united-states",
+    "https://example.com/demo/fmf-ktm",
+  ],
+  [
+    "beta-factory-racing",
+    "Beta Factory Racing",
+    "italy",
+    "https://example.com/demo/beta",
+  ],
+  [
+    "gasgas-factory-racing",
+    "GASGAS Factory Racing",
+    "spain",
+    "https://example.com/demo/gasgas",
+  ],
+  ["tm-racing-enduro", "TM Racing Enduro", "italy", "https://example.com/demo/tm-racing"],
+  [
+    "privateer-hard-enduro",
+    "Privateer Hard Enduro",
+    "united-kingdom",
+    "https://example.com/demo/privateer",
+  ],
+] as const;
+
+const riders: RiderSeed[] = [
+  {
+    firstName: "Manuel",
+    lastName: "Lettenbichler",
+    slug: "manuel-lettenbichler",
+    countrySlug: "germany",
+    teamSlug: "red-bull-ktm-factory-racing",
+    manufacturerSlug: "ktm",
+    motorcycleSlug: "ktm-300-exc-2026",
+    birthDate: "1998-03-10",
+  },
+  {
+    firstName: "Billy",
+    lastName: "Bolt",
+    slug: "billy-bolt",
+    countrySlug: "united-kingdom",
+    teamSlug: "husqvarna-factory-racing",
+    manufacturerSlug: "husqvarna",
+    motorcycleSlug: "husqvarna-te-300-2026",
+    birthDate: "1997-08-17",
+  },
+  {
+    firstName: "Mario",
+    lastName: "Roman",
+    slug: "mario-roman",
+    countrySlug: "spain",
+    teamSlug: "factory-sherco-racing",
+    manufacturerSlug: "sherco",
+    motorcycleSlug: "sherco-300-se-factory-2026",
+    birthDate: "1990-01-16",
+  },
+  {
+    firstName: "Wade",
+    lastName: "Young",
+    slug: "wade-young",
+    countrySlug: "south-africa",
+    teamSlug: "rieju-factory-racing",
+    manufacturerSlug: "rieju",
+    motorcycleSlug: "rieju-mr-300-racing-2026",
+    birthDate: "1996-04-05",
+  },
+  {
+    firstName: "Teodor",
+    lastName: "Kabakchiev",
+    slug: "teodor-kabakchiev",
+    countrySlug: "bulgaria",
+    teamSlug: "sherco-privateer-racing",
+    manufacturerSlug: "sherco",
+    motorcycleSlug: "sherco-300-se-factory-2026",
+    birthDate: "1998-02-21",
+  },
+  {
+    firstName: "Trystan",
+    lastName: "Hart",
+    slug: "trystan-hart",
+    countrySlug: "canada",
+    teamSlug: "fmf-ktm-factory-racing",
+    manufacturerSlug: "ktm",
+    motorcycleSlug: "ktm-300-xc-w-2026",
+    birthDate: "1997-08-03",
+  },
+  {
+    firstName: "Jonny",
+    lastName: "Walker",
+    slug: "jonny-walker",
+    countrySlug: "united-kingdom",
+    teamSlug: "beta-factory-racing",
+    manufacturerSlug: "beta",
+    motorcycleSlug: "beta-rr-300-racing-2026",
+    birthDate: "1991-01-27",
+  },
+  {
+    firstName: "Graham",
+    lastName: "Jarvis",
+    slug: "graham-jarvis",
+    countrySlug: "united-kingdom",
+    teamSlug: "privateer-hard-enduro",
+    manufacturerSlug: "husqvarna",
+    motorcycleSlug: "husqvarna-te-300-2026",
+    birthDate: "1975-04-21",
+  },
+  {
+    firstName: "Michael",
+    lastName: "Walkner",
+    slug: "michael-walkner",
+    countrySlug: "austria",
+    teamSlug: "gasgas-factory-racing",
+    manufacturerSlug: "gasgas",
+    motorcycleSlug: "gasgas-ec-300-2026",
+    birthDate: "1998-05-24",
+  },
+  {
+    firstName: "Alfredo",
+    lastName: "Gomez",
+    slug: "alfredo-gomez",
+    countrySlug: "spain",
+    teamSlug: "rieju-factory-racing",
+    manufacturerSlug: "rieju",
+    motorcycleSlug: "rieju-mr-300-racing-2026",
+    birthDate: "1989-08-06",
+  },
+  {
+    firstName: "Dominik",
+    lastName: "Olszowy",
+    slug: "dominik-olszowy",
+    countrySlug: "poland",
+    teamSlug: "tm-racing-enduro",
+    manufacturerSlug: "tm-racing",
+    motorcycleSlug: "tm-racing-en-300-2026",
+    birthDate: "1999-11-02",
+  },
+  {
+    firstName: "Mitch",
+    lastName: "Brightmore",
+    slug: "mitch-brightmore",
+    countrySlug: "united-kingdom",
+    teamSlug: "gasgas-factory-racing",
+    manufacturerSlug: "gasgas",
+    motorcycleSlug: "gasgas-ec-300-2026",
+    birthDate: "2001-07-18",
+  },
+];
+
+const extraTeams = [
+  [
+    "sherco-privateer-racing",
+    "Sherco Privateer Racing",
+    "bulgaria",
+    "https://example.com/demo/sherco-privateer",
+  ],
+] as const;
+
+const eventTemplates = [
+  [
+    "minus-400",
+    "Minus 400",
+    "israel",
+    "Arad",
+    "Dead Sea desert",
+    "Desert ridges, dry riverbeds, heat, navigation",
+    "430 m below sea level",
+  ],
+  [
+    "valleys-hard-enduro",
+    "Valleys Hard Enduro",
+    "united-kingdom",
+    "South Wales",
+    "Welsh valleys",
+    "Steep woodland, slick climbs, roots, rock gardens",
+    "550 m",
+  ],
+  [
+    "erzbergrodeo",
+    "Erzbergrodeo",
+    "austria",
+    "Eisenerz",
+    "Iron Giant quarry",
+    "Iron ore quarry, boulder fields, high-speed quarry climbs",
+    "1,466 m",
+  ],
+  [
+    "abestone-hard-enduro",
+    "Abestone Hard Enduro",
+    "italy",
+    "Abetone",
+    "Tuscan Apennines",
+    "Mountain singletrack, ski slopes, forest climbs",
+    "1,388 m",
+  ],
+  [
+    "red-bull-romaniacs",
+    "Red Bull Romaniacs",
+    "romania",
+    "Sibiu",
+    "Carpathian Mountains",
+    "Multi-day mountain navigation, riverbeds, alpine climbs",
+    "2,200 m",
+  ],
+  [
+    "sea-to-sky",
+    "Sea to Sky",
+    "turkey",
+    "Kemer",
+    "Mediterranean coast to Olympos",
+    "Beach start, canyon trails, mountain summit finish",
+    "2,365 m",
+  ],
+  [
+    "hixpania-hard-enduro",
+    "Hixpania Hard Enduro",
+    "spain",
+    "Aguilar de Campoo",
+    "Campoo lake and medieval old town",
+    "Lake shore sprints, forest climbs, rocky ravines",
+    "1,050 m",
+  ],
+  [
+    "getzenrodeo",
+    "GetzenRodeo",
+    "germany",
+    "Griesbach",
+    "Getzenwald forest",
+    "Short-course forest intensity, technical climbs, spectator arena",
+    "720 m",
+  ],
+  [
+    "roof-of-africa",
+    "Roof of Africa",
+    "south-africa",
+    "Maseru",
+    "Maloti Mountains",
+    "High-altitude passes, remote mountain trails, endurance navigation",
+    "3,000 m",
+  ],
+  [
+    "tennessee-knockout",
+    "Tennessee Knockout",
+    "united-states",
+    "Sequatchie",
+    "Trials Training Center",
+    "Knockout racing, creek beds, Tennessee rock ledges",
+    "420 m",
+  ],
+] as const;
+
+const winnerCycle = [
+  "manuel-lettenbichler",
+  "billy-bolt",
+  "mario-roman",
+  "trystan-hart",
+  "manuel-lettenbichler",
+  "wade-young",
+  "billy-bolt",
+  "mario-roman",
+  "manuel-lettenbichler",
+  "trystan-hart",
+];
+
+const eventSeeds: EventSeed[] = [
+  ...buildSeasonEvents(2026, "2026", [
+    "minus-400",
+    "valleys-hard-enduro",
+    "erzbergrodeo",
+    "abestone-hard-enduro",
+    "red-bull-romaniacs",
+    "sea-to-sky",
+    "hixpania-hard-enduro",
+    "getzenrodeo",
+    "roof-of-africa",
+    "tennessee-knockout",
+  ]),
+  ...buildSeasonEvents(2025, "2025", [
+    "erzbergrodeo",
+    "red-bull-romaniacs",
+    "abestone-hard-enduro",
+    "sea-to-sky",
+    "hixpania-hard-enduro",
+    "getzenrodeo",
+    "roof-of-africa",
+    "tennessee-knockout",
+  ]),
+  ...buildSeasonEvents(2024, "2024", [
+    "erzbergrodeo",
+    "red-bull-romaniacs",
+    "hixpania-hard-enduro",
+    "sea-to-sky",
+    "getzenrodeo",
+    "roof-of-africa",
+  ]),
+];
+
+const pointsByPosition = [25, 20, 16, 13, 11, 10, 9, 8, 7, 6, 5, 4];
 
 async function main() {
   await prisma.$transaction([
@@ -117,6 +456,7 @@ async function main() {
     prisma.dataSource.deleteMany(),
     prisma.mediaEntityLink.deleteMany(),
     prisma.mediaItem.deleteMany(),
+    prisma.newsArticle.deleteMany(),
     prisma.weatherSnapshot.deleteMany(),
     prisma.hallOfFameEntry.deleteMany(),
     prisma.championshipRecord.deleteMany(),
@@ -139,990 +479,1065 @@ async function main() {
     prisma.season.deleteMany(),
   ]);
 
-  const austria = await prisma.country.create({
-    data: {
-      name: "Austria",
-      isoCode: "AT",
-      slug: "austria",
-      continent: "Europe",
-    },
-  });
+  const countryMap = new Map<string, { id: string; name: string; slug: string }>();
+  const seasonMap = new Map<number, { id: string; year: number }>();
+  const manufacturerMap = new Map<string, { id: string; name: string; slug: string }>();
+  const motorcycleMap = new Map<string, { id: string; slug: string }>();
+  const teamMap = new Map<string, { id: string; name: string; slug: string }>();
+  const riderMap = new Map<
+    string,
+    { id: string; slug: string; firstName: string; lastName: string }
+  >();
+  const eventMap = new Map<string, { id: string; slug: string; name: string }>();
 
-  const season = await prisma.season.create({
-    data: {
-      year: 2026,
-      name: "2026 FIM Hard Enduro World Championship",
-      status: "UPCOMING",
-    },
-  });
-
-  const manufacturer = await prisma.manufacturer.create({
-    data: {
-      name: "KTM",
-      slug: "ktm",
-      countryId: austria.id,
-    },
-  });
-
-  const motorcycle = await prisma.motorcycle.create({
-    data: {
-      manufacturerId: manufacturer.id,
-      model: "300 EXC",
-      slug: "ktm-300-exc-2026",
-      year: 2026,
-      engineCc: 300,
-      strokeType: "TWO_STROKE",
-      weightKg: 103.4,
-      suspensionFront: "WP XACT 48 mm fork",
-      suspensionRear: "WP XPLOR PDS shock",
-      horsepower: 54,
-      torqueNm: 44,
-      fuelCapacityL: 9,
-      description: "Sample motorcycle profile for the foundation dataset.",
-    },
-  });
-
-  const team = await prisma.team.create({
-    data: {
-      name: "Red Bull KTM Factory Racing",
-      slug: "red-bull-ktm-factory-racing",
-      countryId: austria.id,
-    },
-  });
-
-  const rider = await prisma.rider.create({
-    data: {
-      firstName: "Manuel",
-      lastName: "Lettenbichler",
-      slug: "manuel-lettenbichler",
-      countryId: austria.id,
-      currentMotorcycleId: motorcycle.id,
-    },
-  });
-
-  await prisma.teamMembership.create({
-    data: {
-      riderId: rider.id,
-      teamId: team.id,
-      seasonId: season.id,
-    },
-  });
-
-  const event = await prisma.event.create({
-    data: {
-      seasonId: season.id,
-      countryId: austria.id,
-      name: "Sample Hard Enduro GP",
-      slug: "sample-hard-enduro-gp-2026",
-      roundNumber: 1,
-      city: "Eisenerz",
-      venue: "Iron Mountain",
-      startDate: new Date("2026-06-01T08:00:00.000Z"),
-      endDate: new Date("2026-06-03T18:00:00.000Z"),
-      status: "SCHEDULED",
-      liveStatus: "UPCOMING",
-      description: "Foundation event used to verify the first data model.",
-    },
-  });
-
-  await prisma.eventTimelineItem.create({
-    data: {
-      eventId: event.id,
-      type: "REGISTRATION_OPEN",
-      title: "Registration opens",
-      occurredAt: new Date("2026-03-01T08:00:00.000Z"),
-    },
-  });
-
-  const stage = await prisma.raceStage.create({
-    data: {
-      eventId: event.id,
-      name: "Prologue",
-      slug: "prologue",
-      stageType: "PROLOGUE",
-      stageOrder: 1,
-      status: "UPCOMING",
-      distanceKm: 5.5,
-    },
-  });
-
-  await prisma.stageResult.create({
-    data: {
-      stageId: stage.id,
-      riderId: rider.id,
-      motorcycleId: motorcycle.id,
-      manufacturerId: manufacturer.id,
-      className: "Pro",
-      overallPosition: 1,
-      classPosition: 1,
-      totalTimeMs: 312000,
-      totalTimeText: "05:12.000",
-      status: "FINISHED",
-      officialRawRow: {
-        position: "1",
-        rider: "Manuel Lettenbichler",
-        time: "05:12.000",
-      },
-    },
-  });
-
-  await prisma.result.create({
-    data: {
-      eventId: event.id,
-      riderId: rider.id,
-      motorcycleId: motorcycle.id,
-      manufacturerId: manufacturer.id,
-      className: "Pro",
-      overallPosition: 1,
-      classPosition: 1,
-      points: 20,
-      totalTimeText: "Official final classification pending",
-      status: "FINISHED",
-    },
-  });
-
-  await prisma.standing.create({
-    data: {
-      seasonId: season.id,
-      riderId: rider.id,
-      className: "Pro",
-      position: 1,
-      points: 20,
-      wins: 1,
-      podiums: 1,
-      starts: 1,
-    },
-  });
-
-  await prisma.riderCareerSeason.create({
-    data: {
-      riderId: rider.id,
-      seasonId: season.id,
-      teamId: team.id,
-      manufacturerId: manufacturer.id,
-      motorcycleId: motorcycle.id,
-      className: "Pro",
-      championshipPosition: 1,
-      points: 20,
-      wins: 1,
-      podiums: 1,
-      starts: 1,
-    },
-  });
-
-  const sampleRiders = [
-    {
-      firstName: "Mario",
-      lastName: "Roman",
-      slug: "mario-roman",
-      country: { name: "Spain", isoCode: "ES", slug: "spain" },
-      team: "Factory Sherco Racing",
-      teamSlug: "factory-sherco-racing",
-      manufacturer: "Sherco",
-      manufacturerSlug: "sherco",
-      motorcycle: "300 SE Factory",
-      motorcycleSlug: "sherco-300-se-factory-2026",
-      position: 2,
-      points: 17,
-      wins: 0,
-      podiums: 1,
-      starts: 1,
-      dnfs: 0,
-      timeMs: 326000,
-      timeText: "05:26.000",
-      gapText: "+00:14.000",
-    },
-    {
-      firstName: "Billy",
-      lastName: "Bolt",
-      slug: "billy-bolt",
-      country: { name: "United Kingdom", isoCode: "GB", slug: "united-kingdom" },
-      team: "Husqvarna Factory Racing",
-      teamSlug: "husqvarna-factory-racing",
-      manufacturer: "Husqvarna",
-      manufacturerSlug: "husqvarna",
-      motorcycle: "TE 300",
-      motorcycleSlug: "husqvarna-te-300-2026",
-      position: 3,
-      points: 15,
-      wins: 0,
-      podiums: 1,
-      starts: 1,
-      dnfs: 0,
-      timeMs: 337000,
-      timeText: "05:37.000",
-      gapText: "+00:25.000",
-    },
-    {
-      firstName: "Trystan",
-      lastName: "Hart",
-      slug: "trystan-hart",
-      country: { name: "Canada", isoCode: "CA", slug: "canada" },
-      team: "FMF KTM Factory Racing",
-      teamSlug: "fmf-ktm-factory-racing",
-      manufacturer: "KTM",
-      manufacturerSlug: "ktm",
-      motorcycle: "300 XC-W",
-      motorcycleSlug: "ktm-300-xc-w-2026",
-      position: 4,
-      points: 13,
-      wins: 0,
-      podiums: 0,
-      starts: 1,
-      dnfs: 0,
-      timeMs: 348000,
-      timeText: "05:48.000",
-      gapText: "+00:36.000",
-    },
-    {
-      firstName: "Wade",
-      lastName: "Young",
-      slug: "wade-young",
-      country: { name: "South Africa", isoCode: "ZA", slug: "south-africa" },
-      team: "Rieju Factory Racing",
-      teamSlug: "rieju-factory-racing",
-      manufacturer: "Rieju",
-      manufacturerSlug: "rieju",
-      motorcycle: "MR 300 Racing",
-      motorcycleSlug: "rieju-mr-300-racing-2026",
-      position: 5,
-      points: 11,
-      wins: 0,
-      podiums: 0,
-      starts: 1,
-      dnfs: 0,
-      timeMs: 363000,
-      timeText: "06:03.000",
-      gapText: "+00:51.000",
-    },
-    {
-      firstName: "Jonny",
-      lastName: "Walker",
-      slug: "jonny-walker",
-      country: { name: "United Kingdom", isoCode: "GB", slug: "united-kingdom" },
-      team: "Beta Factory Racing",
-      teamSlug: "beta-factory-racing",
-      manufacturer: "Beta",
-      manufacturerSlug: "beta",
-      motorcycle: "RR 300 Racing",
-      motorcycleSlug: "beta-rr-300-racing-2026",
-      position: 6,
-      points: 10,
-      wins: 0,
-      podiums: 0,
-      starts: 1,
-      dnfs: 0,
-      timeMs: 378000,
-      timeText: "06:18.000",
-      gapText: "+01:06.000",
-    },
-    {
-      firstName: "Lettenbichler Demo",
-      lastName: "Privateer",
-      slug: "demo-privateer-rider",
-      country: { name: "United States", isoCode: "US", slug: "united-states" },
-      team: "Independent Hard Enduro",
-      teamSlug: "independent-hard-enduro",
-      manufacturer: "KTM",
-      manufacturerSlug: "ktm",
-      motorcycle: "300 EXC Privateer",
-      motorcycleSlug: "ktm-300-exc-privateer-2026",
-      position: null,
-      points: 0,
-      wins: 0,
-      podiums: 0,
-      starts: 1,
-      dnfs: 1,
-      timeMs: null,
-      timeText: null,
-      gapText: null,
-    },
-  ];
-
-  for (const sample of sampleRiders) {
-    const sampleCountry = await prisma.country.upsert({
-      where: { slug: sample.country.slug },
-      update: {},
-      create: {
-        name: sample.country.name,
-        isoCode: sample.country.isoCode,
-        slug: sample.country.slug,
-        continent: sample.country.isoCode === "ZA" ? "Africa" : "Europe",
-      },
-    });
-
-    const sampleManufacturer = await prisma.manufacturer.upsert({
-      where: { slug: sample.manufacturerSlug },
-      update: {},
-      create: {
-        name: sample.manufacturer,
-        slug: sample.manufacturerSlug,
-        countryId: sampleCountry.id,
-      },
-    });
-
-    const sampleMotorcycle = await prisma.motorcycle.create({
+  for (const [slug, name, isoCode, continent] of [
+    ...countries,
+    ["romania", "Romania", "RO", "Europe"] as const,
+  ]) {
+    const country = await prisma.country.create({
       data: {
-        manufacturerId: sampleManufacturer.id,
-        model: sample.motorcycle,
-        slug: sample.motorcycleSlug,
-        year: 2026,
-        engineCc: 300,
-        strokeType: "TWO_STROKE",
-        weightKg: getDemoMotorcycleSpecs(sample.motorcycleSlug).weightKg,
-        suspensionFront: getDemoMotorcycleSpecs(sample.motorcycleSlug).suspensionFront,
-        suspensionRear: getDemoMotorcycleSpecs(sample.motorcycleSlug).suspensionRear,
-        horsepower: getDemoMotorcycleSpecs(sample.motorcycleSlug).horsepower,
-        torqueNm: getDemoMotorcycleSpecs(sample.motorcycleSlug).torqueNm,
-        fuelCapacityL: getDemoMotorcycleSpecs(sample.motorcycleSlug).fuelCapacityL,
-        description: "Sample/demo motorcycle assignment for Step 7 rider module.",
+        name,
+        isoCode,
+        slug,
+        continent,
+        flagImageUrl: `https://example.com/demo/flags/${isoCode.toLowerCase()}.svg`,
       },
     });
-
-    const sampleTeam = await prisma.team.create({
-      data: {
-        name: sample.team,
-        slug: sample.teamSlug,
-        countryId: sampleCountry.id,
-      },
-    });
-
-    const sampleRider = await prisma.rider.create({
-      data: {
-        firstName: sample.firstName,
-        lastName: sample.lastName,
-        slug: sample.slug,
-        countryId: sampleCountry.id,
-        currentMotorcycleId: sampleMotorcycle.id,
-        birthDate: new Date("1995-01-01T00:00:00.000Z"),
-      },
-    });
-
-    await prisma.teamMembership.create({
-      data: {
-        riderId: sampleRider.id,
-        teamId: sampleTeam.id,
-        seasonId: season.id,
-      },
-    });
-
-    await prisma.stageResult.create({
-      data: {
-        stageId: stage.id,
-        riderId: sampleRider.id,
-        motorcycleId: sampleMotorcycle.id,
-        manufacturerId: sampleManufacturer.id,
-        className: "Pro",
-        overallPosition: sample.position,
-        classPosition: sample.position,
-        totalTimeMs: sample.timeMs,
-        totalTimeText: sample.timeText,
-        gapToLeaderText: sample.gapText,
-        status: sample.dnfs > 0 ? "DNF" : "FINISHED",
-        officialRawRow: {
-          sample: true,
-          rider: `${sample.firstName} ${sample.lastName}`,
-          time: sample.timeText,
-        },
-      },
-    });
-
-    await prisma.result.create({
-      data: {
-        eventId: event.id,
-        riderId: sampleRider.id,
-        motorcycleId: sampleMotorcycle.id,
-        manufacturerId: sampleManufacturer.id,
-        className: "Pro",
-        overallPosition: sample.position,
-        classPosition: sample.position,
-        points: sample.points,
-        totalTimeText: sample.timeText ?? "DNF",
-        status: sample.dnfs > 0 ? "DNF" : "FINISHED",
-      },
-    });
-
-    await prisma.standing.create({
-      data: {
-        seasonId: season.id,
-        riderId: sampleRider.id,
-        className: "Pro",
-        position: sample.position,
-        points: sample.points,
-        wins: sample.wins,
-        podiums: sample.podiums,
-        starts: sample.starts,
-        dnfs: sample.dnfs,
-      },
-    });
-
-    await prisma.riderCareerSeason.create({
-      data: {
-        riderId: sampleRider.id,
-        seasonId: season.id,
-        teamId: sampleTeam.id,
-        manufacturerId: sampleManufacturer.id,
-        motorcycleId: sampleMotorcycle.id,
-        className: "Pro",
-        championshipPosition: sample.position,
-        points: sample.points,
-        wins: sample.wins,
-        podiums: sample.podiums,
-        starts: sample.starts,
-        dnfs: sample.dnfs,
-      },
-    });
+    countryMap.set(slug, country);
   }
 
-  const demoManufacturers = [
-    {
-      name: "GASGAS",
-      slug: "gasgas",
-      country: { name: "Spain", isoCode: "ES", slug: "spain", continent: "Europe" },
-      motorcycle: {
-        model: "EC 300",
-        slug: "gasgas-ec-300-2026",
-        engineCc: 300,
-        strokeType: "TWO_STROKE" as const,
-      },
-    },
-    {
-      name: "TM Racing",
-      slug: "tm-racing",
-      country: { name: "Italy", isoCode: "IT", slug: "italy", continent: "Europe" },
-      motorcycle: {
-        model: "EN 300",
-        slug: "tm-racing-en-300-2026",
-        engineCc: 300,
-        strokeType: "TWO_STROKE" as const,
-      },
-    },
-    {
-      name: "Honda",
-      slug: "honda",
-      country: { name: "Japan", isoCode: "JP", slug: "japan", continent: "Asia" },
-      motorcycle: {
-        model: "CRF450RX",
-        slug: "honda-crf450rx-2026",
-        engineCc: 450,
-        strokeType: "FOUR_STROKE" as const,
-      },
-    },
-    {
-      name: "Fantic",
-      slug: "fantic",
-      country: { name: "Italy", isoCode: "IT", slug: "italy", continent: "Europe" },
-      motorcycle: {
-        model: "XE 300",
-        slug: "fantic-xe-300-2026",
-        engineCc: 300,
-        strokeType: "TWO_STROKE" as const,
-      },
-    },
-  ];
-
-  for (const demo of demoManufacturers) {
-    const demoCountry = await prisma.country.upsert({
-      where: { slug: demo.country.slug },
-      update: {},
-      create: demo.country,
+  for (const seed of seasons) {
+    const season = await prisma.season.create({
+      data: seed,
     });
-
-    const demoManufacturer = await prisma.manufacturer.upsert({
-      where: { slug: demo.slug },
-      update: {},
-      create: {
-        name: demo.name,
-        slug: demo.slug,
-        countryId: demoCountry.id,
-      },
-    });
-
-    await prisma.motorcycle.upsert({
-      where: { slug: demo.motorcycle.slug },
-      update: {},
-      create: {
-        manufacturerId: demoManufacturer.id,
-        model: demo.motorcycle.model,
-        slug: demo.motorcycle.slug,
-        year: 2026,
-        engineCc: demo.motorcycle.engineCc,
-        strokeType: demo.motorcycle.strokeType,
-        weightKg: getDemoMotorcycleSpecs(demo.motorcycle.slug).weightKg,
-        suspensionFront: getDemoMotorcycleSpecs(demo.motorcycle.slug).suspensionFront,
-        suspensionRear: getDemoMotorcycleSpecs(demo.motorcycle.slug).suspensionRear,
-        horsepower: getDemoMotorcycleSpecs(demo.motorcycle.slug).horsepower,
-        torqueNm: getDemoMotorcycleSpecs(demo.motorcycle.slug).torqueNm,
-        fuelCapacityL: getDemoMotorcycleSpecs(demo.motorcycle.slug).fuelCapacityL,
-        description:
-          "Sample/demo manufacturer motorcycle preview for Step 9 manufacturer module.",
-      },
-    });
+    seasonMap.set(seed.year, season);
   }
 
+  for (const seed of manufacturers) {
+    const manufacturer = await prisma.manufacturer.create({
+      data: {
+        name: seed.name,
+        slug: seed.slug,
+        countryId: countryMap.get(seed.countrySlug)?.id,
+      },
+    });
+    manufacturerMap.set(seed.slug, manufacturer);
+    prismaManufacturerMap.set(seed.slug, manufacturer);
+  }
+
+  for (const [
+    slug,
+    manufacturerSlug,
+    model,
+    engineCc,
+    strokeType,
+    weightKg,
+    horsepower,
+    torqueNm,
+    fuelCapacityL,
+  ] of motorcycles) {
+    const motorcycle = await prisma.motorcycle.create({
+      data: {
+        manufacturerId: manufacturerMap.get(manufacturerSlug)!.id,
+        model,
+        slug,
+        year: 2026,
+        engineCc,
+        strokeType,
+        weightKg,
+        suspensionFront:
+          strokeType === "FOUR_STROKE"
+            ? "Showa 49 mm factory fork"
+            : "Factory 48 mm enduro fork",
+        suspensionRear:
+          strokeType === "FOUR_STROKE" ? "Showa factory shock" : "Factory enduro shock",
+        horsepower,
+        torqueNm,
+        fuelCapacityL,
+        description: `${DEMO_NOTE} Technical preview for ${model}.`,
+      },
+    });
+    motorcycleMap.set(slug, motorcycle);
+    prismaMotorcycleMap.set(slug, motorcycle);
+  }
+
+  for (const [slug, name, countrySlug, officialUrl] of [...teams, ...extraTeams]) {
+    const team = await prisma.team.create({
+      data: {
+        name,
+        slug,
+        countryId: countryMap.get(countrySlug)?.id,
+        officialUrl,
+      },
+    });
+    teamMap.set(slug, team);
+  }
+
+  for (const seed of riders) {
+    const rider = await prisma.rider.create({
+      data: {
+        firstName: seed.firstName,
+        lastName: seed.lastName,
+        slug: seed.slug,
+        countryId: countryMap.get(seed.countrySlug)?.id,
+        currentMotorcycleId: motorcycleMap.get(seed.motorcycleSlug)?.id,
+        birthDate: new Date(`${seed.birthDate}T00:00:00.000Z`),
+        officialUrl: `https://example.com/demo/riders/${seed.slug}`,
+      },
+    });
+    riderMap.set(seed.slug, rider);
+    prismaRiderMap.set(seed.slug, rider);
+  }
+
+  for (const seed of eventSeeds) {
+    const season = seasonMap.get(seed.year)!;
+    const event = await prisma.event.create({
+      data: {
+        seasonId: season.id,
+        countryId: countryMap.get(seed.countrySlug)?.id,
+        name: seed.name,
+        slug: seed.slug,
+        roundNumber: seed.roundNumber,
+        city: seed.city,
+        venue: seed.venue,
+        startDate: new Date(`${seed.startDate}T08:00:00.000Z`),
+        endDate: new Date(`${seed.endDate}T18:00:00.000Z`),
+        status: seed.status,
+        liveStatus: seed.liveStatus,
+        officialUrl: seed.officialUrl,
+        description: `${DEMO_NOTE} Terrain: ${seed.terrain}. Elevation: ${seed.elevation}. Previous winner marker: ${seed.previousWinner}.`,
+      },
+    });
+    eventMap.set(seed.slug, event);
+
+    await seedEventTimeline(event.id, seed);
+    await seedWeather(event.id, seed.roundNumber);
+    await seedEventMedia(event.id, seed);
+
+    if (seed.completed) {
+      await seedStagesAndResults(event, seed);
+    }
+  }
+
+  await seedMembershipsAndCareers();
+  await seedSeasonStandingsAndStats();
+  await seedRecordsAndHallOfFame();
+  await seedSourcesAndAudit(eventMap);
+
+  console.log(
+    `Seed complete: ${eventSeeds.length} demo events, ${riders.length} demo riders, review-only connector data.`,
+  );
+}
+
+function buildSeasonEvents(year: number, suffix: string, templateSlugs: string[]) {
+  const startDates: Record<string, [string, string]> = {
+    "minus-400": [`${year}-02-05`, `${year}-02-07`],
+    "valleys-hard-enduro": [`${year}-05-09`, `${year}-05-10`],
+    erzbergrodeo: [`${year}-06-04`, `${year}-06-07`],
+    "abestone-hard-enduro": [`${year}-06-20`, `${year}-06-21`],
+    "red-bull-romaniacs": [`${year}-07-21`, `${year}-07-25`],
+    "sea-to-sky": [`${year}-10-08`, `${year}-10-10`],
+    "hixpania-hard-enduro": [`${year}-10-16`, `${year}-10-18`],
+    getzenrodeo: [`${year}-11-01`, `${year}-11-01`],
+    "roof-of-africa": [`${year}-11-20`, `${year}-11-22`],
+    "tennessee-knockout": [`${year}-08-14`, `${year}-08-16`],
+  };
+
+  return templateSlugs.map((templateSlug, index): EventSeed => {
+    const template = eventTemplates.find(([slug]) => slug === templateSlug)!;
+    const [baseSlug, name, countrySlug, city, venue, terrain, elevation] = template;
+    const completed = year < 2026 || index < 4;
+    const isLiveDemo = year === 2026 && index === 4;
+    const [startDate, endDate] = startDates[baseSlug];
+
+    return {
+      name: `${name} ${suffix}`,
+      slug: `${baseSlug}-${year}`,
+      year,
+      roundNumber: index + 1,
+      countrySlug,
+      city,
+      venue,
+      startDate,
+      endDate,
+      status: completed ? "COMPLETED" : isLiveDemo ? "LIVE" : "SCHEDULED",
+      liveStatus: completed ? "FINISHED" : isLiveDemo ? "LIVE" : "UPCOMING",
+      terrain,
+      elevation,
+      previousWinner: riderNameBySlug(winnerCycle[(index + year) % winnerCycle.length]),
+      officialUrl: `https://example.com/demo/events/${baseSlug}-${year}`,
+      completed,
+      winnerSlug: winnerCycle[(index + year) % winnerCycle.length],
+    };
+  });
+}
+
+async function seedEventTimeline(eventId: string, seed: EventSeed) {
+  const start = new Date(`${seed.startDate}T08:00:00.000Z`);
+  const dayBefore = new Date(start);
+  dayBefore.setDate(dayBefore.getDate() - 1);
+
+  await prisma.eventTimelineItem.createMany({
+    data: [
+      {
+        eventId,
+        type: "REGISTRATION_OPEN",
+        title: "Demo registration opens",
+        description: DEMO_NOTE,
+        occurredAt: new Date(`${seed.year}-01-10T09:00:00.000Z`),
+      },
+      {
+        eventId,
+        type: "ENTRY_LIST_PUBLISHED",
+        title: "Demo entry list published",
+        description: "Preview entry list for seeded riders.",
+        occurredAt: dayBefore,
+      },
+      {
+        eventId,
+        type: seed.completed ? "FINAL_CLASSIFICATION" : "OFFICIAL_DOCUMENT",
+        title: seed.completed
+          ? "Demo final classification available"
+          : "Official document placeholder",
+        description: seed.completed
+          ? "Seeded final classification for preview pages."
+          : "Future source-tracked official document placeholder.",
+        occurredAt: seed.completed ? new Date(`${seed.endDate}T18:30:00.000Z`) : start,
+        url: seed.officialUrl,
+      },
+    ],
+  });
+}
+
+async function seedWeather(eventId: string, roundNumber: number) {
   await prisma.weatherSnapshot.create({
     data: {
-      eventId: event.id,
-      temperatureC: 18,
-      humidityPercent: 64,
-      rainMm: 0,
-      windSpeedKmh: 8,
-      weatherDescription: "Clear sample conditions",
-      provider: "manual-seed",
+      eventId,
+      temperatureC: 14 + roundNumber * 1.8,
+      humidityPercent: 48 + roundNumber * 3,
+      rainMm: roundNumber % 3 === 0 ? 6.5 : 0,
+      windSpeedKmh: 7 + roundNumber,
+      weatherDescription:
+        roundNumber % 3 === 0 ? "Demo mixed mountain weather" : "Demo dry race window",
+      provider: "manual-demo-seed",
+      rawPayload: {
+        demo: true,
+        note: DEMO_NOTE,
+      },
     },
   });
+}
 
-  const media = await prisma.mediaItem.create({
+async function seedEventMedia(eventId: string, seed: EventSeed) {
+  const image = await prisma.mediaItem.create({
     data: {
-      eventId: event.id,
+      eventId,
       type: "IMAGE",
-      title: "Sample event image",
-      url: "https://example.com/sample-event-image.jpg",
-      source: "manual seed",
+      title: `${seed.name} demo hero image`,
+      description: DEMO_NOTE,
+      url: `https://example.com/demo/media/${seed.slug}.jpg`,
+      thumbnailUrl: `https://example.com/demo/media/${seed.slug}-thumb.jpg`,
+      source: "manual demo seed",
       provider: "manual",
-      tags: ["sample", "event"],
+      tags: ["demo", "event", seed.countrySlug],
+      dateTaken: new Date(`${seed.startDate}T12:00:00.000Z`),
     },
   });
 
   await prisma.mediaEntityLink.create({
     data: {
-      mediaItemId: media.id,
+      mediaItemId: image.id,
       entityType: "EVENT",
-      entityId: event.id,
-    },
-  });
-
-  const manualSource = await prisma.dataSource.create({
-    data: {
-      name: "Manual admin source",
-      type: "MANUAL",
-      reliability: "OFFICIAL",
-      baseUrl: "https://hardenduroworld.com/admin",
-    },
-  });
-
-  const fimSource = await prisma.dataSource.create({
-    data: {
-      name: "FIM official source",
-      type: "OFFICIAL_WEBSITE",
-      reliability: "OFFICIAL",
-      baseUrl: "https://www.fim-moto.com",
-    },
-  });
-
-  const timingSystemSource = await prisma.dataSource.create({
-    data: {
-      name: "Official timing system source",
-      type: "TIMING_SYSTEM",
-      reliability: "OFFICIAL",
-      baseUrl: "https://www.fim-moto.com/results",
-    },
-  });
-
-  const championshipSource = await prisma.dataSource.create({
-    data: {
-      name: "Hard Enduro World Championship official source",
-      type: "OFFICIAL_WEBSITE",
-      reliability: "OFFICIAL",
-      baseUrl: "https://iridehardenduro.com",
-    },
-  });
-
-  const youtubeSource = await prisma.dataSource.create({
-    data: {
-      name: "YouTube official channel source",
-      type: "YOUTUBE",
-      reliability: "TRUSTED",
-      baseUrl: "https://www.youtube.com",
-    },
-  });
-
-  const weatherSource = await prisma.dataSource.create({
-    data: {
-      name: "Weather provider source",
-      type: "WEATHER",
-      reliability: "TRUSTED",
-      baseUrl: "https://open-meteo.com",
-    },
-  });
-
-  for (const source of [
-    manualSource,
-    fimSource,
-    timingSystemSource,
-    championshipSource,
-    youtubeSource,
-    weatherSource,
-  ]) {
-    await prisma.sourceLink.create({
-      data: {
-        dataSourceId: source.id,
-        url: source.baseUrl ?? "https://example.com/source",
-        entityType: source.type === "WEATHER" ? "WEATHER" : "EVENT",
-        entityId: event.id,
-        note: "Sample/demo source link for Step 15 source tracking foundation.",
-      },
-    });
-  }
-
-  const fimSnapshot = await prisma.sourceSnapshot.create({
-    data: {
-      dataSourceId: fimSource.id,
-      url: "https://www.fim-moto.com/sample-hard-enduro-results",
-      contentHash: "demo-fim-results-2026-001",
-      rawContent: "Demo official timing payload for Step 15 source tracking foundation.",
-      fetchedAt: new Date("2026-06-04T08:00:00.000Z"),
-      statusCode: 200,
-    },
-  });
-
-  const timingSnapshot = await prisma.sourceSnapshot.create({
-    data: {
-      dataSourceId: timingSystemSource.id,
-      url: "https://www.fim-moto.com/sample-hard-enduro-results",
-      contentHash: "demo-official-results-2026-001",
-      rawContent:
-        "Demo official results payload for Step 19 connector foundation. No external website was fetched.",
-      fetchedAt: new Date("2026-06-04T08:40:00.000Z"),
-      statusCode: 200,
-    },
-  });
-
-  const championshipSnapshot = await prisma.sourceSnapshot.create({
-    data: {
-      dataSourceId: championshipSource.id,
-      url: "https://iridehardenduro.com/sample-hard-enduro-gp-2026",
-      contentHash: "demo-championship-event-2026-001",
-      rawContent: "Demo event metadata payload for Step 15 source tracking foundation.",
-      fetchedAt: new Date("2026-06-04T08:10:00.000Z"),
-      statusCode: 200,
-    },
-  });
-
-  const weatherSnapshotSource = await prisma.sourceSnapshot.create({
-    data: {
-      dataSourceId: weatherSource.id,
-      url: "https://open-meteo.com/demo-eisenerz-weather",
-      contentHash: "demo-weather-2026-001",
-      rawContent: "Demo weather payload for Step 15 source tracking foundation.",
-      fetchedAt: new Date("2026-06-04T08:20:00.000Z"),
-      statusCode: 200,
-    },
-  });
-
-  const youtubeSnapshot = await prisma.sourceSnapshot.create({
-    data: {
-      dataSourceId: youtubeSource.id,
-      url: "https://www.youtube.com/@HardEnduroWorld/demo",
-      contentHash: "demo-youtube-videos-2026-001",
-      rawContent:
-        "Demo YouTube payload for Step 17 connector foundation. No external API call was made.",
-      fetchedAt: new Date("2026-06-04T08:30:00.000Z"),
-      statusCode: 200,
-    },
-  });
-
-  const completedImportRun = await prisma.importRun.create({
-    data: {
-      sourceSnapshotId: fimSnapshot.id,
-      jobName: "demo-final-results-import",
-      status: "COMPLETED",
-      startedAt: new Date("2026-06-04T08:01:00.000Z"),
-      finishedAt: new Date("2026-06-04T08:02:00.000Z"),
-      recordsFound: 7,
-      recordsCreated: 0,
-      recordsUpdated: 2,
-      recordsSkipped: 5,
-      metadata: {
-        demo: true,
-        note: "Sample import run for Step 15 audit foundation.",
-      },
-    },
-  });
-
-  await prisma.importRun.create({
-    data: {
-      sourceSnapshotId: championshipSnapshot.id,
-      jobName: "demo-event-metadata-review",
-      status: "NEEDS_REVIEW",
-      startedAt: new Date("2026-06-04T08:11:00.000Z"),
-      recordsFound: 1,
-      recordsCreated: 0,
-      recordsUpdated: 1,
-      recordsSkipped: 0,
-      metadata: {
-        demo: true,
-        reviewReason: "Venue description changed in official source.",
-      },
-    },
-  });
-
-  const officialEventsImportRun = await prisma.importRun.create({
-    data: {
-      sourceSnapshotId: championshipSnapshot.id,
-      jobName: "official-events-demo-calendar-import",
-      status: "NEEDS_REVIEW",
-      startedAt: new Date("2026-06-04T08:13:00.000Z"),
-      recordsFound: 3,
-      recordsCreated: 1,
-      recordsUpdated: 2,
-      recordsSkipped: 0,
-      metadata: {
-        demo: true,
-        jobId: "official-events",
-        reviewReason:
-          "Calendar metadata changes require approval before publishing to events.",
-      },
-    },
-  });
-
-  const officialResultsImportRun = await prisma.importRun.create({
-    data: {
-      sourceSnapshotId: timingSnapshot.id,
-      jobName: "official-results-demo-classification-import",
-      status: "NEEDS_REVIEW",
-      startedAt: new Date("2026-06-04T08:41:00.000Z"),
-      recordsFound: 4,
-      recordsCreated: 1,
-      recordsUpdated: 3,
-      recordsSkipped: 0,
-      metadata: {
-        demo: true,
-        jobId: "official-results",
-        riskLevel: "high",
-        reviewRequired: true,
-        autoPublish: false,
-        reviewReason:
-          "Official results are high-risk and require approval before changing public timing, standings, statistics, records, or history.",
-      },
-    },
-  });
-
-  const youtubeImportRun = await prisma.importRun.create({
-    data: {
-      sourceSnapshotId: youtubeSnapshot.id,
-      jobName: "youtube-videos-demo-import",
-      status: "NEEDS_REVIEW",
-      startedAt: new Date("2026-06-04T08:31:00.000Z"),
-      recordsFound: 3,
-      recordsCreated: 0,
-      recordsUpdated: 0,
-      recordsSkipped: 0,
-      metadata: {
-        demo: true,
-        jobId: "youtube-videos",
-        reviewReason: "Video metadata must be approved before publishing.",
-      },
-    },
-  });
-
-  await prisma.importRun.create({
-    data: {
-      sourceSnapshotId: weatherSnapshotSource.id,
-      jobName: "demo-weather-import",
-      status: "FAILED",
-      startedAt: new Date("2026-06-04T08:21:00.000Z"),
-      finishedAt: new Date("2026-06-04T08:22:00.000Z"),
-      recordsFound: 1,
-      recordsCreated: 0,
-      recordsUpdated: 0,
-      recordsSkipped: 1,
-      errorMessage: "Demo failure for Step 15 failed-import dashboard state.",
-    },
-  });
-
-  await prisma.dataVersion.create({
-    data: {
-      entityType: "RESULT",
-      entityId: event.id,
-      importRunId: completedImportRun.id,
-      action: "IMPORT",
-      previous: {
-        points: 19,
-        status: "pending review",
-      },
-      next: {
-        points: 20,
-        status: "official",
-      },
-      sourceUrl: fimSnapshot.url,
-      createdBy: "demo-importer",
-      createdAt: new Date("2026-06-04T08:02:30.000Z"),
-    },
-  });
-
-  await prisma.dataVersion.create({
-    data: {
-      entityType: "EVENT",
-      entityId: event.id,
-      action: "MANUAL_EDIT",
-      previous: {
-        description: "Foundation event used to verify the first data model.",
-      },
-      next: {
-        description: "Foundation event verified against official demo source.",
-      },
-      sourceUrl: championshipSnapshot.url,
-      createdBy: "demo-admin",
-      createdAt: new Date("2026-06-04T08:12:30.000Z"),
-    },
-  });
-
-  const calendarChangeScenarios = [
-    {
-      entityId: "demo-new-event-found",
-      previous: Prisma.JsonNull,
-      next: {
-        changeType: "new event found",
-        name: "Demo Sea to Sky",
-        country: "Turkey",
-        date: "2026-10-08",
-        officialUrl: "https://iridehardenduro.com/demo-sea-to-sky-2026",
-      },
-    },
-    {
-      entityId: event.id,
-      previous: { startDate: "2026-06-02" },
-      next: { startDate: "2026-06-01", changeType: "event date changed" },
-    },
-    {
-      entityId: event.id,
-      previous: { country: "Country TBC" },
-      next: { country: "Austria", changeType: "event country changed" },
-    },
-    {
-      entityId: event.id,
-      previous: { location: "Location pending" },
-      next: {
-        city: "Eisenerz",
-        venue: "Iron Mountain",
-        changeType: "event location changed",
-      },
-    },
-    {
-      entityId: event.id,
-      previous: { status: "UNKNOWN" },
-      next: { status: "SCHEDULED", changeType: "event status changed" },
-    },
-    {
-      entityId: event.id,
-      previous: { officialUrl: null },
-      next: {
-        officialUrl: "https://iridehardenduro.com/sample-hard-enduro-gp-2026",
-        changeType: "official URL changed",
-      },
-    },
-  ];
-
-  for (const scenario of calendarChangeScenarios) {
-    await prisma.dataVersion.create({
-      data: {
-        entityType: "EVENT",
-        entityId: scenario.entityId,
-        importRunId: officialEventsImportRun.id,
-        action: "IMPORT",
-        previous: scenario.previous,
-        next: scenario.next,
-        sourceUrl: championshipSnapshot.url,
-        createdBy: "demo-events-connector",
-        createdAt: new Date("2026-06-04T08:14:30.000Z"),
-      },
-    });
-  }
-
-  const resultReviewScenarios = [
-    {
-      entityId: "demo-new-result-row-found",
-      previous: Prisma.JsonNull,
-      next: {
-        changeType: "new result row found",
-        event: event.name,
-        stage: "Overall",
-        rider: "Manuel Lettenbichler",
-        position: 1,
-        time: "05:42:18",
-        points: 20,
-        status: "Finished",
-      },
-    },
-    {
-      entityId: "demo-result-position-changed",
-      previous: { position: 3 },
-      next: { position: 2, changeType: "position changed" },
-    },
-    {
-      entityId: "demo-result-time-changed",
-      previous: { time: "05:48:02" },
-      next: { time: "05:47:44", changeType: "time changed" },
-    },
-    {
-      entityId: "demo-result-gap-changed",
-      previous: { gapToLeader: "+05:44", gapToPrevious: "+05:44" },
-      next: {
-        gapToLeader: "+05:26",
-        gapToPrevious: "+05:26",
-        changeType: "gap changed",
-      },
-    },
-    {
-      entityId: "demo-result-penalty-added",
-      previous: { penalties: null },
-      next: { penalties: "+02:00", changeType: "penalty added" },
-    },
-    {
-      entityId: "demo-result-status-changed",
-      previous: { status: "Finished" },
-      next: { status: "DNF", changeType: "rider status changed" },
-    },
-    {
-      entityId: "demo-result-points-changed",
-      previous: { points: 15 },
-      next: { points: 17, changeType: "points changed" },
-    },
-  ];
-
-  for (const scenario of resultReviewScenarios) {
-    await prisma.dataVersion.create({
-      data: {
-        entityType: "RESULT",
-        entityId: scenario.entityId,
-        importRunId: officialResultsImportRun.id,
-        action: "IMPORT",
-        previous: scenario.previous,
-        next: scenario.next,
-        sourceUrl: timingSnapshot.url,
-        createdBy: "demo-results-connector",
-        createdAt: new Date("2026-06-04T08:42:30.000Z"),
-      },
-    });
-  }
-
-  await prisma.dataVersion.create({
-    data: {
-      entityType: "MEDIA_ITEM",
-      entityId: "demo-youtube-video-pending",
-      importRunId: youtubeImportRun.id,
-      action: "IMPORT",
-      previous: Prisma.JsonNull,
-      next: {
-        type: "YOUTUBE",
-        title: "Sample Hard Enduro GP 2026 Prologue Highlights",
-        provider: "youtube",
-        status: "pending review",
-      },
-      sourceUrl: youtubeSnapshot.url,
-      createdBy: "demo-youtube-connector",
-      createdAt: new Date("2026-06-04T08:32:30.000Z"),
+      entityId: eventId,
     },
   });
 }
 
+async function seedStagesAndResults(
+  event: { id: string; slug: string; name: string },
+  seed: EventSeed,
+) {
+  const stageSeeds = [
+    ["prologue", "Prologue", "PROLOGUE", 1, 6.2],
+    ["day-1", "Day 1", "DAY", 2, 58],
+    ["day-2", "Day 2", "DAY", 3, 64],
+    ["final", "Final", "FINAL", 4, 42],
+  ] as const;
+  const overallResults = buildEventResults(seed);
+
+  for (const [slug, name, stageType, stageOrder, distanceKm] of stageSeeds) {
+    const stage = await prisma.raceStage.create({
+      data: {
+        eventId: event.id,
+        name,
+        slug,
+        stageType,
+        stageOrder,
+        status: "FINISHED",
+        startDate: new Date(
+          `${seed.startDate}T0${Math.min(stageOrder + 7, 9)}:00:00.000Z`,
+        ),
+        endDate: new Date(`${seed.startDate}T1${Math.min(stageOrder, 9)}:30:00.000Z`),
+        distanceKm,
+        officialUrl: `${seed.officialUrl}#${slug}`,
+        notes: DEMO_NOTE,
+      },
+    });
+
+    const stageOrderResults = rotateResults(overallResults, stageOrder - 1);
+    let previousTime: number | null = null;
+    const leaderTime = stageOrderResults.find(
+      (row) => row.status === "FINISHED",
+    )?.totalTimeMs;
+
+    for (let index = 0; index < stageOrderResults.length; index += 1) {
+      const row = stageOrderResults[index];
+      const stageTime =
+        row.status === "FINISHED" && row.totalTimeMs
+          ? Math.round(row.totalTimeMs / 4 + stageOrder * 45000 + index * 9000)
+          : null;
+      const position = row.status === "FINISHED" ? index + 1 : null;
+
+      await prisma.stageResult.create({
+        data: {
+          stageId: stage.id,
+          riderId: row.riderRecord.id,
+          motorcycleId: row.motorcycleId,
+          manufacturerId: row.manufacturerId,
+          className: "Pro",
+          overallPosition: position,
+          classPosition: position,
+          totalTimeMs: stageTime,
+          totalTimeText: stageTime ? formatDuration(stageTime) : row.status,
+          gapToLeaderMs:
+            stageTime && leaderTime ? Math.max(stageTime - leaderTime / 4, 0) : null,
+          gapToLeaderText:
+            stageTime && leaderTime
+              ? formatGap(Math.max(stageTime - leaderTime / 4, 0))
+              : null,
+          gapToPreviousMs:
+            stageTime && previousTime ? Math.max(stageTime - previousTime, 0) : null,
+          gapToPreviousText:
+            stageTime && previousTime
+              ? formatGap(Math.max(stageTime - previousTime, 0))
+              : null,
+          checkpointsCompleted: row.status === "DNS" ? 0 : row.status === "DNF" ? 7 : 12,
+          penaltiesMs: row.penaltiesMs,
+          penaltiesText: row.penaltiesMs ? formatGap(row.penaltiesMs) : null,
+          averageSpeedKmh: stageTime
+            ? Math.round(Number(distanceKm) / (stageTime / 3600000))
+            : null,
+          status: row.status,
+          notes: DEMO_NOTE,
+          officialRawRow: {
+            demo: true,
+            event: seed.name,
+            stage: name,
+            rider: riderName(row.rider),
+          },
+        },
+      });
+
+      if (stageTime) {
+        previousTime = stageTime;
+      }
+    }
+  }
+
+  for (let index = 0; index < overallResults.length; index += 1) {
+    const row = overallResults[index];
+
+    await prisma.result.create({
+      data: {
+        eventId: event.id,
+        riderId: row.riderRecord.id,
+        motorcycleId: row.motorcycleId,
+        manufacturerId: row.manufacturerId,
+        className: "Pro",
+        overallPosition: row.position,
+        classPosition: row.position,
+        points: row.points,
+        totalTimeMs: row.totalTimeMs,
+        totalTimeText: row.totalTimeMs ? formatDuration(row.totalTimeMs) : row.status,
+        gapToLeaderMs: row.gapToLeaderMs,
+        gapToLeaderText: row.gapToLeaderMs ? formatGap(row.gapToLeaderMs) : null,
+        gapToPreviousMs: row.gapToPreviousMs,
+        gapToPreviousText: row.gapToPreviousMs ? formatGap(row.gapToPreviousMs) : null,
+        penaltiesMs: row.penaltiesMs,
+        checkpointsCompleted: row.status === "DNS" ? 0 : row.status === "DNF" ? 9 : 18,
+        averageSpeedKmh: row.status === "FINISHED" ? 18 + index : null,
+        status: row.status,
+        notes: DEMO_NOTE,
+        officialRawRow: {
+          demo: true,
+          source: "manual-seed",
+          event: seed.name,
+          rider: riderName(row.rider),
+        },
+      },
+    });
+  }
+}
+
+function buildEventResults(seed: EventSeed) {
+  const winnerIndex = riders.findIndex((rider) => rider.slug === seed.winnerSlug);
+  const ordered = rotateArray(riders, winnerIndex >= 0 ? winnerIndex : seed.roundNumber);
+  const dnfSlug = ordered[(seed.roundNumber + 5) % ordered.length].slug;
+  const dnsSlug =
+    seed.roundNumber % 4 === 0
+      ? ordered[(seed.roundNumber + 8) % ordered.length].slug
+      : null;
+  let finishPosition = 1;
+  let previousTime: number | null = null;
+  const leaderTime = 12_600_000 + seed.roundNumber * 420_000;
+
+  return ordered.map((rider, index) => {
+    const status =
+      rider.slug === dnsSlug ? "DNS" : rider.slug === dnfSlug ? "DNF" : "FINISHED";
+    const position = status === "FINISHED" ? finishPosition++ : null;
+    const penaltiesMs = index % 5 === 0 && status === "FINISHED" ? 120_000 : 0;
+    const totalTimeMs =
+      status === "FINISHED" && position
+        ? leaderTime +
+          (position - 1) * (440_000 + seed.roundNumber * 12_000) +
+          penaltiesMs
+        : null;
+    const gapToLeaderMs = totalTimeMs ? totalTimeMs - leaderTime : null;
+    const gapToPreviousMs =
+      totalTimeMs && previousTime ? Math.max(totalTimeMs - previousTime, 0) : null;
+    const points = position
+      ? (pointsByPosition[position - 1] ?? Math.max(12 - position, 0))
+      : 0;
+    const riderRecord = prismaRiderMap.get(rider.slug)!;
+    const motorcycleId = prismaMotorcycleMap.get(rider.motorcycleSlug)!.id;
+    const manufacturerId = prismaManufacturerMap.get(rider.manufacturerSlug)!.id;
+
+    if (totalTimeMs) {
+      previousTime = totalTimeMs;
+    }
+
+    return {
+      rider,
+      riderRecord,
+      motorcycleId,
+      manufacturerId,
+      position,
+      status,
+      points,
+      totalTimeMs,
+      gapToLeaderMs,
+      gapToPreviousMs,
+      penaltiesMs,
+    } satisfies ResultSeed & {
+      riderRecord: { id: string };
+      motorcycleId: string;
+      manufacturerId: string;
+      gapToLeaderMs: number | null;
+      gapToPreviousMs: number | null;
+    };
+  });
+}
+
+const prismaRiderMap = new Map<string, { id: string }>();
+const prismaMotorcycleMap = new Map<string, { id: string }>();
+const prismaManufacturerMap = new Map<string, { id: string }>();
+
+async function seedMembershipsAndCareers() {
+  const seasonsInDb = await prisma.season.findMany();
+  const resultRows = await prisma.result.findMany({
+    include: {
+      event: true,
+      rider: true,
+    },
+  });
+
+  for (const rider of riders) {
+    const riderRecord = prismaRiderMap.get(rider.slug)!;
+    const team = await prisma.team.findUnique({ where: { slug: rider.teamSlug } });
+    const manufacturer = prismaManufacturerMap.get(rider.manufacturerSlug)!;
+    const motorcycle = prismaMotorcycleMap.get(rider.motorcycleSlug)!;
+
+    for (const season of seasonsInDb) {
+      await prisma.teamMembership.create({
+        data: {
+          riderId: riderRecord.id,
+          teamId: team!.id,
+          seasonId: season.id,
+          startDate: new Date(`${season.year}-01-01T00:00:00.000Z`),
+        },
+      });
+
+      const seasonResults = resultRows.filter(
+        (result) =>
+          result.riderId === riderRecord.id && result.event.seasonId === season.id,
+      );
+      const starts = seasonResults.length;
+      const wins = seasonResults.filter((result) => result.overallPosition === 1).length;
+      const podiums = seasonResults.filter(
+        (result) => result.overallPosition && result.overallPosition <= 3,
+      ).length;
+      const dnfs = seasonResults.filter((result) => result.status === "DNF").length;
+      const points = seasonResults.reduce(
+        (total, result) => total + (result.points ?? 0),
+        0,
+      );
+
+      await prisma.riderCareerSeason.create({
+        data: {
+          riderId: riderRecord.id,
+          seasonId: season.id,
+          teamId: team?.id,
+          manufacturerId: manufacturer.id,
+          motorcycleId: motorcycle.id,
+          className: "Pro",
+          championshipPosition: null,
+          points,
+          wins,
+          podiums,
+          starts,
+          dnfs,
+          stageWins: Math.max(wins * 2, podiums),
+          averageFinishPosition: averageFinish(seasonResults),
+          statistics: {
+            demo: true,
+            note: DEMO_NOTE,
+          },
+        },
+      });
+    }
+  }
+}
+
+async function seedSeasonStandingsAndStats() {
+  const seasonsInDb = await prisma.season.findMany();
+
+  for (const season of seasonsInDb) {
+    const careers = await prisma.riderCareerSeason.findMany({
+      where: { seasonId: season.id },
+      orderBy: [{ points: "desc" }, { wins: "desc" }, { podiums: "desc" }],
+    });
+
+    for (let index = 0; index < careers.length; index += 1) {
+      const career = careers[index];
+      await prisma.standing.create({
+        data: {
+          seasonId: season.id,
+          riderId: career.riderId,
+          className: "Pro",
+          position: index + 1,
+          points: career.points,
+          wins: career.wins,
+          podiums: career.podiums,
+          starts: career.starts,
+          dnfs: career.dnfs,
+        },
+      });
+
+      await prisma.riderCareerSeason.update({
+        where: { id: career.id },
+        data: {
+          championshipPosition: index + 1,
+        },
+      });
+    }
+
+    const results = await prisma.result.findMany({
+      where: { event: { seasonId: season.id } },
+      include: {
+        motorcycle: true,
+        manufacturer: true,
+      },
+    });
+    const manufacturerIds = [
+      ...new Set(
+        results.flatMap((row) => (row.manufacturerId ? [row.manufacturerId] : [])),
+      ),
+    ];
+    const motorcycleIds = [
+      ...new Set(results.flatMap((row) => (row.motorcycleId ? [row.motorcycleId] : []))),
+    ];
+
+    for (const manufacturerId of manufacturerIds) {
+      const rows = results.filter((row) => row.manufacturerId === manufacturerId);
+      await prisma.manufacturerSeasonStat.create({
+        data: {
+          manufacturerId,
+          seasonId: season.id,
+          className: "Pro",
+          championshipsWon: careers[0]?.manufacturerId === manufacturerId ? 1 : 0,
+          wins: rows.filter((row) => row.overallPosition === 1).length,
+          podiums: rows.filter((row) => row.overallPosition && row.overallPosition <= 3)
+            .length,
+          starts: rows.length,
+          dnfs: rows.filter((row) => row.status === "DNF").length,
+          winPercentage: rows.length
+            ? (rows.filter((row) => row.overallPosition === 1).length / rows.length) * 100
+            : 0,
+          statistics: { demo: true, note: DEMO_NOTE },
+        },
+      });
+    }
+
+    for (const motorcycleId of motorcycleIds) {
+      const rows = results.filter((row) => row.motorcycleId === motorcycleId);
+      await prisma.motorcycleSeasonStat.create({
+        data: {
+          motorcycleId,
+          seasonId: season.id,
+          className: "Pro",
+          eventsEntered: new Set(rows.map((row) => row.eventId)).size,
+          ridersCount: new Set(rows.map((row) => row.riderId)).size,
+          wins: rows.filter((row) => row.overallPosition === 1).length,
+          podiums: rows.filter((row) => row.overallPosition && row.overallPosition <= 3)
+            .length,
+          dnfs: rows.filter((row) => row.status === "DNF").length,
+          championshipsWon: careers[0]?.motorcycleId === motorcycleId ? 1 : 0,
+          winPercentage: rows.length
+            ? (rows.filter((row) => row.overallPosition === 1).length / rows.length) * 100
+            : 0,
+          statistics: { demo: true, note: DEMO_NOTE },
+        },
+      });
+    }
+  }
+}
+
+async function seedRecordsAndHallOfFame() {
+  const topStanding = await prisma.standing.findFirst({
+    orderBy: [{ wins: "desc" }, { points: "desc" }],
+    include: { rider: true },
+  });
+  const mostDnfs = await prisma.standing.findFirst({
+    orderBy: [{ dnfs: "desc" }, { starts: "desc" }],
+    include: { rider: true },
+  });
+  const ktm = await prisma.manufacturer.findUnique({ where: { slug: "ktm" } });
+  const ktmBike = await prisma.motorcycle.findUnique({
+    where: { slug: "ktm-300-exc-2026" },
+  });
+
+  await prisma.championshipRecord.createMany({
+    data: [
+      {
+        type: "MOST_WINS",
+        title: "Most demo wins",
+        description: DEMO_NOTE,
+        entityType: "RIDER",
+        entityId: topStanding?.riderId,
+        valueNumber: topStanding?.wins ?? 0,
+        valueText: topStanding
+          ? `${topStanding.rider.firstName} ${topStanding.rider.lastName}`
+          : "Pending",
+        metadata: { demo: true },
+      },
+      {
+        type: "MOST_DNFS",
+        title: "Most demo DNFs",
+        description: DEMO_NOTE,
+        entityType: "RIDER",
+        entityId: mostDnfs?.riderId,
+        valueNumber: mostDnfs?.dnfs ?? 0,
+        valueText: mostDnfs
+          ? `${mostDnfs.rider.firstName} ${mostDnfs.rider.lastName}`
+          : "Pending",
+        metadata: { demo: true },
+      },
+      {
+        type: "CUSTOM",
+        title: "Most successful demo manufacturer",
+        description: DEMO_NOTE,
+        entityType: "MANUFACTURER",
+        entityId: ktm?.id,
+        valueNumber: 4,
+        valueText: "KTM",
+        metadata: { demo: true },
+      },
+      {
+        type: "CUSTOM",
+        title: "Most successful demo motorcycle",
+        description: DEMO_NOTE,
+        entityType: "MOTORCYCLE",
+        entityId: ktmBike?.id,
+        valueNumber: 4,
+        valueText: "KTM 300 EXC 2026",
+        metadata: { demo: true },
+      },
+    ],
+  });
+
+  await prisma.hallOfFameEntry.createMany({
+    data: [
+      {
+        type: "WORLD_CHAMPION",
+        title: "Demo world champion archive",
+        slug: "demo-world-champion-archive",
+        entityType: "RIDER",
+        entityId: topStanding?.riderId,
+        rank: 1,
+        summary: DEMO_NOTE,
+        metadata: { demo: true },
+      },
+      {
+        type: "LEGENDARY_EVENT",
+        title: "Erzbergrodeo demo archive",
+        slug: "erzbergrodeo-demo-archive",
+        entityType: "EVENT",
+        summary: DEMO_NOTE,
+        metadata: { demo: true },
+      },
+      {
+        type: "ICONIC_MOTORCYCLE",
+        title: "KTM 300 EXC demo archive",
+        slug: "ktm-300-exc-demo-archive",
+        entityType: "MOTORCYCLE",
+        entityId: ktmBike?.id,
+        summary: DEMO_NOTE,
+        metadata: { demo: true },
+      },
+    ],
+  });
+}
+
+async function seedSourcesAndAudit(
+  eventMap: Map<string, { id: string; slug: string; name: string }>,
+) {
+  const sources = await Promise.all([
+    prisma.dataSource.create({
+      data: {
+        name: "Manual admin source",
+        type: "MANUAL",
+        reliability: "OFFICIAL",
+        baseUrl: "https://example.com/demo/admin",
+      },
+    }),
+    prisma.dataSource.create({
+      data: {
+        name: "FIM official source",
+        type: "OFFICIAL_WEBSITE",
+        reliability: "OFFICIAL",
+        baseUrl: "https://www.fim-moto.com",
+      },
+    }),
+    prisma.dataSource.create({
+      data: {
+        name: "Official timing system source",
+        type: "TIMING_SYSTEM",
+        reliability: "OFFICIAL",
+        baseUrl: "https://example.com/demo/timing",
+      },
+    }),
+    prisma.dataSource.create({
+      data: {
+        name: "Hard Enduro World Championship official source",
+        type: "OFFICIAL_WEBSITE",
+        reliability: "OFFICIAL",
+        baseUrl: "https://example.com/demo/championship",
+      },
+    }),
+    prisma.dataSource.create({
+      data: {
+        name: "YouTube official channel source",
+        type: "YOUTUBE",
+        reliability: "TRUSTED",
+        baseUrl: "https://www.youtube.com",
+      },
+    }),
+    prisma.dataSource.create({
+      data: {
+        name: "Weather provider source",
+        type: "WEATHER",
+        reliability: "TRUSTED",
+        baseUrl: "https://open-meteo.com",
+      },
+    }),
+  ]);
+  const [
+    manualSource,
+    fimSource,
+    timingSource,
+    championshipSource,
+    youtubeSource,
+    weatherSource,
+  ] = sources;
+  const sampleEvent =
+    eventMap.get("erzbergrodeo-2026") ?? Array.from(eventMap.values())[0];
+
+  for (const event of eventMap.values()) {
+    await prisma.sourceLink.create({
+      data: {
+        dataSourceId: championshipSource.id,
+        url: `https://example.com/demo/events/${event.slug}`,
+        entityType: "EVENT",
+        entityId: event.id,
+        note: DEMO_NOTE,
+      },
+    });
+  }
+
+  const [
+    fimSnapshot,
+    timingSnapshot,
+    championshipSnapshot,
+    youtubeSnapshot,
+    weatherSnapshot,
+  ] = await Promise.all([
+    prisma.sourceSnapshot.create({
+      data: {
+        dataSourceId: fimSource.id,
+        url: "https://www.fim-moto.com/demo-hard-enduro-results",
+        contentHash: "demo-fim-results-expanded-001",
+        rawContent: "Expanded demo FIM-style payload. No external website was fetched.",
+        fetchedAt: new Date("2026-06-04T08:00:00.000Z"),
+        statusCode: 200,
+      },
+    }),
+    prisma.sourceSnapshot.create({
+      data: {
+        dataSourceId: timingSource.id,
+        url: "https://example.com/demo/timing/results",
+        contentHash: "demo-timing-expanded-001",
+        rawContent: "Expanded demo official timing payload. Review-only.",
+        fetchedAt: new Date("2026-06-04T08:40:00.000Z"),
+        statusCode: 200,
+      },
+    }),
+    prisma.sourceSnapshot.create({
+      data: {
+        dataSourceId: championshipSource.id,
+        url: "https://example.com/demo/championship/calendar",
+        contentHash: "demo-calendar-expanded-001",
+        rawContent: "Expanded demo event calendar payload. Review-only.",
+        fetchedAt: new Date("2026-06-04T08:10:00.000Z"),
+        statusCode: 200,
+      },
+    }),
+    prisma.sourceSnapshot.create({
+      data: {
+        dataSourceId: youtubeSource.id,
+        url: "https://www.youtube.com/@HardEnduroWorld/demo",
+        contentHash: "demo-youtube-expanded-001",
+        rawContent: "Expanded demo YouTube payload. No external API call was made.",
+        fetchedAt: new Date("2026-06-04T08:30:00.000Z"),
+        statusCode: 200,
+      },
+    }),
+    prisma.sourceSnapshot.create({
+      data: {
+        dataSourceId: weatherSource.id,
+        url: "https://open-meteo.com/demo-hard-enduro-weather",
+        contentHash: "demo-weather-expanded-001",
+        rawContent: "Expanded demo weather payload. No external API call was made.",
+        fetchedAt: new Date("2026-06-04T08:20:00.000Z"),
+        statusCode: 200,
+      },
+    }),
+  ]);
+
+  const completedImportRun = await prisma.importRun.create({
+    data: {
+      sourceSnapshotId: fimSnapshot.id,
+      jobName: "demo-expanded-results-import",
+      status: "COMPLETED",
+      startedAt: new Date("2026-06-04T08:01:00.000Z"),
+      finishedAt: new Date("2026-06-04T08:02:00.000Z"),
+      recordsFound: 96,
+      recordsCreated: 0,
+      recordsUpdated: 12,
+      recordsSkipped: 84,
+      metadata: { demo: true, note: DEMO_NOTE },
+    },
+  });
+
+  await prisma.importRun.createMany({
+    data: [
+      {
+        sourceSnapshotId: championshipSnapshot.id,
+        jobName: "official-events-demo-calendar-import",
+        status: "NEEDS_REVIEW",
+        startedAt: new Date("2026-06-04T08:13:00.000Z"),
+        recordsFound: 10,
+        recordsCreated: 2,
+        recordsUpdated: 8,
+        recordsSkipped: 0,
+        metadata: {
+          demo: true,
+          jobId: "official-events",
+          autoPublish: false,
+          reviewRequired: true,
+        },
+      },
+      {
+        sourceSnapshotId: timingSnapshot.id,
+        jobName: "official-results-demo-classification-import",
+        status: "NEEDS_REVIEW",
+        startedAt: new Date("2026-06-04T08:41:00.000Z"),
+        recordsFound: 48,
+        recordsCreated: 4,
+        recordsUpdated: 9,
+        recordsSkipped: 35,
+        metadata: {
+          demo: true,
+          jobId: "official-results",
+          riskLevel: "high",
+          reviewRequired: true,
+          autoPublish: false,
+        },
+      },
+      {
+        sourceSnapshotId: youtubeSnapshot.id,
+        jobName: "youtube-videos-demo-import",
+        status: "NEEDS_REVIEW",
+        startedAt: new Date("2026-06-04T08:31:00.000Z"),
+        recordsFound: 6,
+        recordsCreated: 0,
+        recordsUpdated: 0,
+        recordsSkipped: 0,
+        metadata: { demo: true, jobId: "youtube-videos", autoPublish: false },
+      },
+      {
+        sourceSnapshotId: weatherSnapshot.id,
+        jobName: "demo-weather-import",
+        status: "FAILED",
+        startedAt: new Date("2026-06-04T08:21:00.000Z"),
+        finishedAt: new Date("2026-06-04T08:22:00.000Z"),
+        recordsFound: 1,
+        recordsSkipped: 1,
+        errorMessage: "Demo failure for failed-import dashboard state.",
+      },
+    ],
+  });
+
+  await prisma.dataVersion.createMany({
+    data: [
+      {
+        entityType: "RESULT",
+        entityId: sampleEvent.id,
+        importRunId: completedImportRun.id,
+        action: "UPDATE",
+        previous: { points: 20, status: "pending demo review" },
+        next: { points: 25, status: "approved demo row" },
+        sourceUrl: fimSnapshot.url,
+        createdBy: "demo-importer",
+        createdAt: new Date("2026-06-04T08:02:30.000Z"),
+      },
+      {
+        entityType: "EVENT",
+        entityId: sampleEvent.id,
+        action: "UPDATE",
+        previous: { description: "Short demo description" },
+        next: { description: "Expanded terrain and elevation demo description" },
+        sourceUrl: championshipSnapshot.url,
+        createdBy: "demo-admin",
+        createdAt: new Date("2026-06-04T08:12:30.000Z"),
+      },
+      {
+        entityType: "EVENT",
+        entityId: "demo-new-event-found",
+        importRunId: completedImportRun.id,
+        action: "CREATE",
+        previous: Prisma.JsonNull,
+        next: {
+          changeType: "new event found",
+          name: "Demo future event",
+          reviewRequired: true,
+        },
+        sourceUrl: championshipSnapshot.url,
+        createdBy: "demo-importer",
+        createdAt: new Date("2026-06-04T08:14:00.000Z"),
+      },
+    ],
+  });
+
+  await prisma.mediaItem.createMany({
+    data: [
+      {
+        type: "YOUTUBE",
+        title: "Demo Hard Enduro season preview",
+        description: DEMO_NOTE,
+        url: "https://www.youtube.com/watch?v=demo-preview",
+        thumbnailUrl: "https://example.com/demo/youtube/season-preview.jpg",
+        source: "demo YouTube connector",
+        provider: "youtube",
+        providerId: "demo-preview",
+        publishedAt: new Date("2026-06-01T18:00:00.000Z"),
+        tags: ["demo", "video", "preview"],
+      },
+      {
+        type: "YOUTUBE",
+        title: "Demo Erzbergrodeo highlights",
+        description: DEMO_NOTE,
+        url: "https://www.youtube.com/watch?v=demo-erzberg",
+        thumbnailUrl: "https://example.com/demo/youtube/erzberg.jpg",
+        source: "demo YouTube connector",
+        provider: "youtube",
+        providerId: "demo-erzberg",
+        publishedAt: new Date("2026-06-08T18:00:00.000Z"),
+        tags: ["demo", "video", "erzbergrodeo"],
+      },
+    ],
+  });
+
+  await prisma.sourceLink.create({
+    data: {
+      dataSourceId: manualSource.id,
+      url: "https://example.com/demo/manual-seed",
+      entityType: "SEED_DATA",
+      entityId: "expanded-demo-dataset",
+      note: DEMO_NOTE,
+    },
+  });
+}
+
+function riderNameBySlug(slug: string) {
+  const rider = riders.find((item) => item.slug === slug);
+  return rider ? riderName(rider) : "Demo winner pending";
+}
+
+function riderName(rider: RiderSeed) {
+  return `${rider.firstName} ${rider.lastName}`;
+}
+
+function rotateArray<T>(items: T[], startIndex: number) {
+  const normalized = ((startIndex % items.length) + items.length) % items.length;
+  return [...items.slice(normalized), ...items.slice(0, normalized)];
+}
+
+function rotateResults<T>(items: T[], startIndex: number) {
+  return rotateArray(items, startIndex);
+}
+
+function formatDuration(ms: number) {
+  const totalSeconds = Math.floor(ms / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
+function formatGap(ms: number) {
+  const totalSeconds = Math.floor(ms / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `+${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
+function averageFinish(results: Array<{ overallPosition: number | null }>) {
+  const positions = results
+    .map((result) => result.overallPosition)
+    .filter((position): position is number => typeof position === "number");
+
+  if (positions.length === 0) {
+    return null;
+  }
+
+  return positions.reduce((total, position) => total + position, 0) / positions.length;
+}
+
 main()
-  .then(async () => {
-    await prisma.$disconnect();
-  })
-  .catch(async (error) => {
+  .catch((error) => {
     console.error(error);
-    await prisma.$disconnect();
     process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
   });
