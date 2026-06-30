@@ -54,6 +54,7 @@ export type VerifiedEventFact = {
   verifiedFinisherCount: number | null;
   factsNote: string;
   sourceIds: string[];
+  review?: VerifiedReviewMetadata;
   eventDescription?: VerifiedSourcedValue<string>;
   historySummary?: VerifiedSourcedValue<string>;
   terrainDescription?: VerifiedSourcedValue<string>;
@@ -72,6 +73,12 @@ export type VerifiedEventFact = {
   officialPdfPlaceholders?: VerifiedSourcedLink[];
   officialMediaGalleryPlaceholders?: VerifiedSourcedLink[];
   officialDocumentPlaceholders?: VerifiedSourcedLink[];
+  participants?: VerifiedParticipantSnapshot;
+  manufacturerContext?: VerifiedManufacturerContext;
+  teamContext?: VerifiedTeamContext;
+  motorcycleContext?: VerifiedMotorcycleContext;
+  raceStatistics?: VerifiedRaceStatistics;
+  eventTimeline?: VerifiedTimelineItem[];
 };
 
 export type VerifiedSourcedValue<T> = {
@@ -80,9 +87,63 @@ export type VerifiedSourcedValue<T> = {
   notes: string;
 };
 
+export type VerifiedReviewMetadata = {
+  lastReviewed: string | null;
+  confidence: VerifiedConfidence;
+  sourceIds: string[];
+  notes: string;
+};
+
 export type VerifiedSourcedLink = {
   label: string;
   url: string | null;
+  sourceIds: string[];
+  notes: string;
+};
+
+export type VerifiedParticipantSnapshot = {
+  registeredRiders: VerifiedSourcedValue<string>;
+  confirmedStarters: VerifiedSourcedValue<string>;
+  verifiedFinishers: VerifiedSourcedValue<string>;
+  dnf: VerifiedSourcedValue<string>;
+  dns: VerifiedSourcedValue<string>;
+  dsq: VerifiedSourcedValue<string>;
+};
+
+export type VerifiedManufacturerContext = {
+  factoryParticipation: VerifiedSourcedValue<string>;
+  participatingManufacturers: VerifiedSourcedValue<string>;
+  factoryRiders: VerifiedSourcedValue<string>;
+  privateRiders: VerifiedSourcedValue<string>;
+};
+
+export type VerifiedTeamContext = {
+  factoryTeams: VerifiedSourcedValue<string>;
+  independentTeams: VerifiedSourcedValue<string>;
+  supportTeams: VerifiedSourcedValue<string>;
+};
+
+export type VerifiedMotorcycleContext = {
+  motorcycleModels: VerifiedSourcedValue<string>;
+  engineSize: VerifiedSourcedValue<string>;
+  manufacturer: VerifiedSourcedValue<string>;
+};
+
+export type VerifiedRaceStatistics = {
+  starters: VerifiedSourcedValue<string>;
+  finishers: VerifiedSourcedValue<string>;
+  finishRate: VerifiedSourcedValue<string>;
+  longestStage: VerifiedSourcedValue<string>;
+  totalDistance: VerifiedSourcedValue<string>;
+  elevationGain: VerifiedSourcedValue<string>;
+  checkpointCount: VerifiedSourcedValue<string>;
+};
+
+export type VerifiedTimelineItem = {
+  label: string;
+  date: string | null;
+  status: string;
+  description: string | null;
   sourceIds: string[];
   notes: string;
 };

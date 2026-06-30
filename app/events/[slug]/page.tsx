@@ -48,18 +48,27 @@ type EventDetailPageProps = {
 type EventDetail = Awaited<ReturnType<typeof getEventDetail>>;
 type Stage = EventDetail["stages"][number];
 type Result = EventDetail["results"][number];
+type CrossLink = {
+  label: string;
+  href: string;
+  detail: string;
+};
 
 const eventTabs = [
   "Overview",
   "About The Race",
   "Race Format",
   "Course",
+  "Participants",
+  "Race Statistics",
+  "Timeline",
   "Schedule",
   "Stages",
   "Results",
   "Riders",
   "Manufacturers",
   "Teams",
+  "Motorcycles",
   "History",
   "Verified Facts",
   "Official Links",
@@ -127,6 +136,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
   const documents = buildDocuments(event);
   const mediaStats = buildMediaStats(event.mediaItems);
   const verifiedOfficialLinks = buildOfficialLinks(verifiedFact);
+  const crossNavigation = buildCrossNavigation(event);
 
   return (
     <main className="min-h-screen bg-surface text-foreground">
@@ -318,6 +328,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                   notes={verifiedFact.weather?.notes}
                 />
               </div>
+              <SectionSourceNote eventFact={verifiedFact} />
             </section>
 
             <section id="race-format" className="scroll-mt-32">
@@ -346,6 +357,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                   notes={verifiedFact.mainRaceExplanation?.notes}
                 />
               </div>
+              <SectionSourceNote eventFact={verifiedFact} />
             </section>
 
             <section id="course" className="scroll-mt-32">
@@ -384,6 +396,149 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                   compact
                 />
               </div>
+              <SectionSourceNote eventFact={verifiedFact} />
+            </section>
+
+            <section id="participants" className="scroll-mt-32">
+              <SectionTitle
+                eyebrow="Participants"
+                title="Verified participant control"
+                description="Registered riders, starters, finishers, and race-status buckets stay source-tracked and incomplete until official lists are verified."
+              />
+              <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                <VerifiedInfoCard
+                  title="Registered riders"
+                  value={verifiedFact.participants?.registeredRiders.value}
+                  sourceIds={verifiedFact.participants?.registeredRiders.sourceIds}
+                  notes={verifiedFact.participants?.registeredRiders.notes}
+                  compact
+                />
+                <VerifiedInfoCard
+                  title="Confirmed starters"
+                  value={verifiedFact.participants?.confirmedStarters.value}
+                  sourceIds={verifiedFact.participants?.confirmedStarters.sourceIds}
+                  notes={verifiedFact.participants?.confirmedStarters.notes}
+                  compact
+                />
+                <VerifiedInfoCard
+                  title="Verified finishers"
+                  value={verifiedFact.participants?.verifiedFinishers.value}
+                  sourceIds={verifiedFact.participants?.verifiedFinishers.sourceIds}
+                  notes={verifiedFact.participants?.verifiedFinishers.notes}
+                  compact
+                />
+                <VerifiedInfoCard
+                  title="DNF"
+                  value={verifiedFact.participants?.dnf.value}
+                  sourceIds={verifiedFact.participants?.dnf.sourceIds}
+                  notes={verifiedFact.participants?.dnf.notes}
+                  compact
+                />
+                <VerifiedInfoCard
+                  title="DNS"
+                  value={verifiedFact.participants?.dns.value}
+                  sourceIds={verifiedFact.participants?.dns.sourceIds}
+                  notes={verifiedFact.participants?.dns.notes}
+                  compact
+                />
+                <VerifiedInfoCard
+                  title="DSQ"
+                  value={verifiedFact.participants?.dsq.value}
+                  sourceIds={verifiedFact.participants?.dsq.sourceIds}
+                  notes={verifiedFact.participants?.dsq.notes}
+                  compact
+                />
+              </div>
+              <div className="mt-6 grid gap-4 lg:grid-cols-4">
+                <CrossLinkGroup
+                  title="Verified rider links"
+                  links={crossNavigation.riders}
+                />
+                <CrossLinkGroup
+                  title="Manufacturer links"
+                  links={crossNavigation.manufacturers}
+                />
+                <CrossLinkGroup title="Team links" links={crossNavigation.teams} />
+                <CrossLinkGroup
+                  title="Motorcycle links"
+                  links={crossNavigation.motorcycles}
+                />
+              </div>
+              <SectionSourceNote eventFact={verifiedFact} />
+            </section>
+
+            <section id="race-statistics" className="scroll-mt-32">
+              <SectionTitle
+                eyebrow="Statistics"
+                title="Race statistics"
+                description="Only verified statistics are populated. Unknown race metrics remain visible as review-ready placeholders."
+              />
+              <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <VerifiedInfoCard
+                  title="Starters"
+                  value={verifiedFact.raceStatistics?.starters.value}
+                  sourceIds={verifiedFact.raceStatistics?.starters.sourceIds}
+                  notes={verifiedFact.raceStatistics?.starters.notes}
+                  compact
+                />
+                <VerifiedInfoCard
+                  title="Finishers"
+                  value={verifiedFact.raceStatistics?.finishers.value}
+                  sourceIds={verifiedFact.raceStatistics?.finishers.sourceIds}
+                  notes={verifiedFact.raceStatistics?.finishers.notes}
+                  compact
+                />
+                <VerifiedInfoCard
+                  title="Finish rate"
+                  value={verifiedFact.raceStatistics?.finishRate.value}
+                  sourceIds={verifiedFact.raceStatistics?.finishRate.sourceIds}
+                  notes={verifiedFact.raceStatistics?.finishRate.notes}
+                  compact
+                />
+                <VerifiedInfoCard
+                  title="Longest stage"
+                  value={verifiedFact.raceStatistics?.longestStage.value}
+                  sourceIds={verifiedFact.raceStatistics?.longestStage.sourceIds}
+                  notes={verifiedFact.raceStatistics?.longestStage.notes}
+                  compact
+                />
+                <VerifiedInfoCard
+                  title="Total distance"
+                  value={verifiedFact.raceStatistics?.totalDistance.value}
+                  sourceIds={verifiedFact.raceStatistics?.totalDistance.sourceIds}
+                  notes={verifiedFact.raceStatistics?.totalDistance.notes}
+                  compact
+                />
+                <VerifiedInfoCard
+                  title="Elevation gain"
+                  value={verifiedFact.raceStatistics?.elevationGain.value}
+                  sourceIds={verifiedFact.raceStatistics?.elevationGain.sourceIds}
+                  notes={verifiedFact.raceStatistics?.elevationGain.notes}
+                  compact
+                />
+                <VerifiedInfoCard
+                  title="Checkpoints"
+                  value={verifiedFact.raceStatistics?.checkpointCount.value}
+                  sourceIds={verifiedFact.raceStatistics?.checkpointCount.sourceIds}
+                  notes={verifiedFact.raceStatistics?.checkpointCount.notes}
+                  compact
+                />
+              </div>
+              <SectionSourceNote eventFact={verifiedFact} />
+            </section>
+
+            <section id="timeline" className="scroll-mt-32">
+              <SectionTitle
+                eyebrow="Timeline"
+                title="Official event timeline"
+                description="Registration, prologue, main race, awards, media, and results-publication milestones are ready for official dates."
+              />
+              <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {verifiedFact.eventTimeline?.map((item) => (
+                  <VerifiedTimelineCard key={item.label} item={item} />
+                ))}
+              </div>
+              <SectionSourceNote eventFact={verifiedFact} />
             </section>
           </>
         ) : null}
@@ -550,6 +705,46 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
               title="Factory performance"
               description="Bike counts, best result, wins, and podiums represented at this event."
             />
+            {verifiedFact?.manufacturerContext ? (
+              <div className="mt-8 grid gap-4 sm:grid-cols-2">
+                <VerifiedInfoCard
+                  title="Factory participation"
+                  value={verifiedFact.manufacturerContext.factoryParticipation.value}
+                  sourceIds={
+                    verifiedFact.manufacturerContext.factoryParticipation.sourceIds
+                  }
+                  notes={verifiedFact.manufacturerContext.factoryParticipation.notes}
+                  compact
+                />
+                <VerifiedInfoCard
+                  title="Participating manufacturers"
+                  value={
+                    verifiedFact.manufacturerContext.participatingManufacturers.value
+                  }
+                  sourceIds={
+                    verifiedFact.manufacturerContext.participatingManufacturers.sourceIds
+                  }
+                  notes={
+                    verifiedFact.manufacturerContext.participatingManufacturers.notes
+                  }
+                  compact
+                />
+                <VerifiedInfoCard
+                  title="Factory riders"
+                  value={verifiedFact.manufacturerContext.factoryRiders.value}
+                  sourceIds={verifiedFact.manufacturerContext.factoryRiders.sourceIds}
+                  notes={verifiedFact.manufacturerContext.factoryRiders.notes}
+                  compact
+                />
+                <VerifiedInfoCard
+                  title="Private riders"
+                  value={verifiedFact.manufacturerContext.privateRiders.value}
+                  sourceIds={verifiedFact.manufacturerContext.privateRiders.sourceIds}
+                  notes={verifiedFact.manufacturerContext.privateRiders.notes}
+                  compact
+                />
+              </div>
+            ) : null}
             <SummaryTable
               rows={manufacturerRows.map((row) => [
                 row.name,
@@ -567,6 +762,31 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
               title="Team representation"
               description="Seeded team summary derived from participating riders."
             />
+            {verifiedFact?.teamContext ? (
+              <div className="mt-8 grid gap-4">
+                <VerifiedInfoCard
+                  title="Factory teams"
+                  value={verifiedFact.teamContext.factoryTeams.value}
+                  sourceIds={verifiedFact.teamContext.factoryTeams.sourceIds}
+                  notes={verifiedFact.teamContext.factoryTeams.notes}
+                  compact
+                />
+                <VerifiedInfoCard
+                  title="Independent teams"
+                  value={verifiedFact.teamContext.independentTeams.value}
+                  sourceIds={verifiedFact.teamContext.independentTeams.sourceIds}
+                  notes={verifiedFact.teamContext.independentTeams.notes}
+                  compact
+                />
+                <VerifiedInfoCard
+                  title="Support teams"
+                  value={verifiedFact.teamContext.supportTeams.value}
+                  sourceIds={verifiedFact.teamContext.supportTeams.sourceIds}
+                  notes={verifiedFact.teamContext.supportTeams.notes}
+                  compact
+                />
+              </div>
+            ) : null}
             <SummaryTable
               rows={teamRows.map((row) => [
                 row.name,
@@ -578,7 +798,52 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
               headings={["Team", "Riders", "Best", "Wins", "Podiums"]}
             />
           </div>
+          {verifiedFact ? (
+            <div className="lg:col-span-2">
+              <SectionSourceNote eventFact={verifiedFact} />
+            </div>
+          ) : null}
         </section>
+
+        {verifiedFact?.motorcycleContext ? (
+          <section id="motorcycles" className="scroll-mt-32">
+            <SectionTitle
+              eyebrow="Motorcycles"
+              title="Motorcycle participation"
+              description="Model, engine, and manufacturer facts remain placeholders until verified source material confirms them."
+            />
+            <div className="mt-8 grid gap-4 md:grid-cols-3">
+              <VerifiedInfoCard
+                title="Motorcycle models"
+                value={verifiedFact.motorcycleContext.motorcycleModels.value}
+                sourceIds={verifiedFact.motorcycleContext.motorcycleModels.sourceIds}
+                notes={verifiedFact.motorcycleContext.motorcycleModels.notes}
+                compact
+              />
+              <VerifiedInfoCard
+                title="Engine size"
+                value={verifiedFact.motorcycleContext.engineSize.value}
+                sourceIds={verifiedFact.motorcycleContext.engineSize.sourceIds}
+                notes={verifiedFact.motorcycleContext.engineSize.notes}
+                compact
+              />
+              <VerifiedInfoCard
+                title="Manufacturer"
+                value={verifiedFact.motorcycleContext.manufacturer.value}
+                sourceIds={verifiedFact.motorcycleContext.manufacturer.sourceIds}
+                notes={verifiedFact.motorcycleContext.manufacturer.notes}
+                compact
+              />
+            </div>
+            <div className="mt-6">
+              <CrossLinkGroup
+                title="Linked motorcycles from verified rows"
+                links={crossNavigation.motorcycles}
+              />
+            </div>
+            <SectionSourceNote eventFact={verifiedFact} />
+          </section>
+        ) : null}
 
         <section id="history" className="scroll-mt-32">
           <SectionTitle
@@ -684,6 +949,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                   compact
                 />
               </div>
+              <SectionSourceNote eventFact={verifiedFact} />
             </section>
 
             <section id="official-links" className="scroll-mt-32">
@@ -697,6 +963,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                   <OfficialLinkCard key={`${link.group}-${link.label}`} link={link} />
                 ))}
               </div>
+              <SectionSourceNote eventFact={verifiedFact} />
             </section>
           </>
         ) : null}
@@ -739,6 +1006,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
               </div>
             </Card>
           </div>
+          {verifiedFact ? <SectionSourceNote eventFact={verifiedFact} /> : null}
         </section>
 
         <section id="documents" className="scroll-mt-32">
@@ -769,6 +1037,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
               </Card>
             ))}
           </div>
+          {verifiedFact ? <SectionSourceNote eventFact={verifiedFact} /> : null}
         </section>
       </Container>
     </main>
@@ -881,6 +1150,75 @@ function SourceTrail({ sourceIds }: { sourceIds?: string[] }) {
         </span>
       )}
     </div>
+  );
+}
+
+function SectionSourceNote({ eventFact }: { eventFact: VerifiedEventFact }) {
+  const review = eventFact.review;
+
+  return (
+    <Card className="mt-6 border-dashed p-4">
+      <div className="flex flex-wrap gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-foreground/[0.58]">
+        <span>Verified source support</span>
+        <span>/</span>
+        <span>Last reviewed: {review?.lastReviewed ?? UNKNOWN_VERIFIED_VALUE}</span>
+        <span>/</span>
+        <span>Confidence: {review?.confidence ?? UNKNOWN_VERIFIED_VALUE}</span>
+      </div>
+      {review?.notes ? (
+        <p className="mt-2 text-sm leading-6 text-foreground/[0.62]">{review.notes}</p>
+      ) : null}
+      <SourceTrail sourceIds={review?.sourceIds ?? eventFact.sourceIds} />
+    </Card>
+  );
+}
+
+function VerifiedTimelineCard({
+  item,
+}: {
+  item: NonNullable<VerifiedEventFact["eventTimeline"]>[number];
+}) {
+  return (
+    <Card className="p-5">
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">
+        {item.status}
+      </p>
+      <h3 className="mt-3 text-xl font-black">{item.label}</h3>
+      <p className="mt-3 text-sm leading-6 text-foreground/[0.62]">
+        {item.description ?? UNKNOWN_VERIFIED_VALUE}
+      </p>
+      <p className="mt-4 text-sm font-semibold">{item.date ?? UNKNOWN_VERIFIED_VALUE}</p>
+      <p className="mt-3 text-sm leading-6 text-foreground/[0.62]">{item.notes}</p>
+      <SourceTrail sourceIds={item.sourceIds} />
+    </Card>
+  );
+}
+
+function CrossLinkGroup({ title, links }: { title: string; links: CrossLink[] }) {
+  return (
+    <Card className="p-5">
+      <h3 className="text-lg font-black">{title}</h3>
+      <div className="mt-4 grid gap-2">
+        {links.length > 0 ? (
+          links.map((link) => (
+            <Link
+              key={`${link.href}-${link.label}`}
+              href={link.href}
+              className="rounded-md border border-border bg-surface-muted p-3 transition hover:border-accent hover:text-accent"
+            >
+              <span className="block text-sm font-semibold">{link.label}</span>
+              <span className="mt-1 block text-xs text-foreground/[0.54]">
+                {link.detail}
+              </span>
+            </Link>
+          ))
+        ) : (
+          <div className="rounded-md border border-dashed border-border bg-surface-muted p-3 text-sm text-foreground/[0.58]">
+            {UNKNOWN_VERIFIED_VALUE}
+          </div>
+        )}
+      </div>
+    </Card>
   );
 }
 
@@ -1181,6 +1519,61 @@ function buildRiderCards(event: EventDetail) {
       championshipPosition: standing?.position ? `P${standing.position}` : "Unranked",
     };
   });
+}
+
+function buildCrossNavigation(event: EventDetail) {
+  const riders: CrossLink[] = [];
+  const manufacturers: CrossLink[] = [];
+  const teams: CrossLink[] = [];
+  const motorcycles: CrossLink[] = [];
+  const seen = new Set<string>();
+
+  event.results.forEach((result) => {
+    addCrossLink(seen, riders, {
+      label: winnerName(result.rider),
+      href: `/riders/${result.rider.slug}`,
+      detail: `Verified row: ${formatOptional(result.overallPosition)}`,
+    });
+
+    const manufacturer = result.manufacturer ?? result.motorcycle?.manufacturer ?? null;
+    if (manufacturer) {
+      addCrossLink(seen, manufacturers, {
+        label: manufacturer.name,
+        href: `/manufacturers/${manufacturer.slug}`,
+        detail: "Linked from verified result row",
+      });
+    }
+
+    const team = result.rider.teamMemberships[0]?.team;
+    if (team) {
+      addCrossLink(seen, teams, {
+        label: team.name,
+        href: `/teams/${team.slug}`,
+        detail: "Linked through rider profile",
+      });
+    }
+
+    if (result.motorcycle) {
+      addCrossLink(seen, motorcycles, {
+        label: `${result.motorcycle.manufacturer.name} ${result.motorcycle.model}`,
+        href: `/motorcycles/${result.motorcycle.slug}`,
+        detail: result.motorcycle.year
+          ? `${result.motorcycle.year} model`
+          : "Linked from verified result row",
+      });
+    }
+  });
+
+  return { riders, manufacturers, teams, motorcycles };
+}
+
+function addCrossLink(seen: Set<string>, links: CrossLink[], link: CrossLink) {
+  if (seen.has(link.href)) {
+    return;
+  }
+
+  seen.add(link.href);
+  links.push(link);
 }
 
 function buildManufacturerRows(results: Result[]) {

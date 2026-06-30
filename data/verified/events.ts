@@ -10,6 +10,13 @@ export const verifiedEventFacts: VerifiedEventFact[] = [
     factsNote:
       "Red Bull Erzbergrodeo 2026 first-pass verified facts: Manuel Lettenbichler won, the podium was Manuel Lettenbichler, Trystan Hart, Mario Roman, 15 riders reached the finish, and Billy Bolt is not listed as a finisher. Exact timing, gaps, penalties, and points are not verified here.",
     sourceIds: ["red-bull-erzbergrodeo-official"],
+    review: {
+      lastReviewed: "2026-06-30",
+      confidence: "high",
+      sourceIds: ["red-bull-erzbergrodeo-official"],
+      notes:
+        "Reviewed as a first-pass verified event control center. Unknown fields remain placeholders until official source material is attached.",
+    },
     eventDescription: {
       value:
         "Red Bull Erzbergrodeo 2026 is the verified Erzbergrodeo event entry for Eisenerz, Austria. The current verified result scope is limited to the overall podium and finisher count.",
@@ -131,6 +138,187 @@ export const verifiedEventFacts: VerifiedEventFact[] = [
         url: null,
         sourceIds: ["red-bull-erzbergrodeo-official", "official-event-pdfs"],
         notes: "Document center placeholder for verified official links only.",
+      },
+    ],
+    participants: {
+      registeredRiders: {
+        value: null,
+        sourceIds: ["red-bull-erzbergrodeo-official"],
+        notes: "Registered rider count pending official entry-list verification.",
+      },
+      confirmedStarters: {
+        value: null,
+        sourceIds: ["red-bull-erzbergrodeo-official"],
+        notes: "Confirmed starters pending official start-list verification.",
+      },
+      verifiedFinishers: {
+        value: "15",
+        sourceIds: ["red-bull-erzbergrodeo-official"],
+        notes:
+          "Verified first-pass finisher count. Full finisher identities remain pending official classification verification.",
+      },
+      dnf: {
+        value: null,
+        sourceIds: ["red-bull-erzbergrodeo-official"],
+        notes: "DNF count pending official classification verification.",
+      },
+      dns: {
+        value: null,
+        sourceIds: ["red-bull-erzbergrodeo-official"],
+        notes: "DNS count pending official classification verification.",
+      },
+      dsq: {
+        value: null,
+        sourceIds: ["red-bull-erzbergrodeo-official"],
+        notes: "DSQ count pending official classification verification.",
+      },
+    },
+    manufacturerContext: {
+      factoryParticipation: {
+        value: null,
+        sourceIds: ["red-bull-erzbergrodeo-official"],
+        notes: "Factory participation requires official paddock or entry-list source.",
+      },
+      participatingManufacturers: {
+        value: null,
+        sourceIds: ["red-bull-erzbergrodeo-official"],
+        notes:
+          "Full manufacturer participation pending official entry-list verification. Podium-linked manufacturer records may appear separately when already connected to verified result rows.",
+      },
+      factoryRiders: {
+        value: null,
+        sourceIds: ["red-bull-erzbergrodeo-official"],
+        notes: "Factory rider classification pending official source verification.",
+      },
+      privateRiders: {
+        value: null,
+        sourceIds: ["red-bull-erzbergrodeo-official"],
+        notes: "Private rider classification pending official source verification.",
+      },
+    },
+    teamContext: {
+      factoryTeams: {
+        value: null,
+        sourceIds: ["red-bull-erzbergrodeo-official"],
+        notes: "Factory teams pending official entry-list verification.",
+      },
+      independentTeams: {
+        value: null,
+        sourceIds: ["red-bull-erzbergrodeo-official"],
+        notes: "Independent teams pending official entry-list verification.",
+      },
+      supportTeams: {
+        value: null,
+        sourceIds: ["red-bull-erzbergrodeo-official"],
+        notes: "Support teams pending official paddock/source verification.",
+      },
+    },
+    motorcycleContext: {
+      motorcycleModels: {
+        value: null,
+        sourceIds: ["red-bull-erzbergrodeo-official"],
+        notes:
+          "Motorcycle models require verified entry-list or official team/manufacturer source.",
+      },
+      engineSize: {
+        value: null,
+        sourceIds: ["red-bull-erzbergrodeo-official"],
+        notes: "Engine sizes pending verified motorcycle source data.",
+      },
+      manufacturer: {
+        value: null,
+        sourceIds: ["red-bull-erzbergrodeo-official"],
+        notes:
+          "Motorcycle manufacturer participation pending official source verification.",
+      },
+    },
+    raceStatistics: {
+      starters: {
+        value: null,
+        sourceIds: ["red-bull-erzbergrodeo-official"],
+        notes: "Starter count pending official start-list verification.",
+      },
+      finishers: {
+        value: "15",
+        sourceIds: ["red-bull-erzbergrodeo-official"],
+        notes: "Verified first-pass finisher count.",
+      },
+      finishRate: {
+        value: null,
+        sourceIds: ["red-bull-erzbergrodeo-official"],
+        notes:
+          "Finish rate requires both verified starter count and verified finisher count.",
+      },
+      longestStage: {
+        value: null,
+        sourceIds: ["red-bull-erzbergrodeo-official"],
+        notes: "Longest stage pending official course data.",
+      },
+      totalDistance: {
+        value: null,
+        sourceIds: ["red-bull-erzbergrodeo-official"],
+        notes: "Total distance pending official course data.",
+      },
+      elevationGain: {
+        value: null,
+        sourceIds: ["red-bull-erzbergrodeo-official"],
+        notes: "Elevation gain pending official course data.",
+      },
+      checkpointCount: {
+        value: null,
+        sourceIds: ["red-bull-erzbergrodeo-official"],
+        notes: "Checkpoint count pending official course data.",
+      },
+    },
+    eventTimeline: [
+      {
+        label: "Registration",
+        date: null,
+        status: "Pending verification",
+        description: null,
+        sourceIds: ["red-bull-erzbergrodeo-official"],
+        notes: "Registration dates pending official schedule verification.",
+      },
+      {
+        label: "Prologue",
+        date: null,
+        status: "Pending verification",
+        description: null,
+        sourceIds: ["red-bull-erzbergrodeo-official"],
+        notes: "Prologue schedule pending official verification.",
+      },
+      {
+        label: "Main Race",
+        date: null,
+        status: "Pending verification",
+        description: null,
+        sourceIds: ["red-bull-erzbergrodeo-official"],
+        notes: "Main-race schedule pending official verification.",
+      },
+      {
+        label: "Awards",
+        date: null,
+        status: "Pending verification",
+        description: null,
+        sourceIds: ["red-bull-erzbergrodeo-official"],
+        notes: "Awards timing pending official verification.",
+      },
+      {
+        label: "Official media release",
+        date: null,
+        status: "Pending verification",
+        description: null,
+        sourceIds: ["red-bull-erzbergrodeo-official"],
+        notes: "Official media release timing pending source verification.",
+      },
+      {
+        label: "Official results publication",
+        date: null,
+        status: "Pending verification",
+        description: null,
+        sourceIds: ["red-bull-erzbergrodeo-official", "official-event-pdfs"],
+        notes:
+          "Official results publication pending source URL and document verification.",
       },
     ],
   },
