@@ -184,6 +184,37 @@ export function getVerifiedCoverageSummary(): VerifiedCoverageSummary {
   const completedRows = verifiedCoverageMatrix.filter(
     (row) => row.status !== "scheduled",
   );
+  const confidenceDistribution = verifiedCoverageMatrix.reduce<
+    VerifiedCoverageSummary["confidenceDistribution"]
+  >(
+    (acc, row) => {
+      acc[row.confidence] += 1;
+      return acc;
+    },
+    {
+      verified: 0,
+      "source-needed": 0,
+      partial: 0,
+      scheduled: 0,
+    },
+  );
+  const nextRecommendedTargets = completedRows
+    .filter(
+      (row) => !row.hasOverallResults || !row.hasStageResults || !row.hasSourceLinks,
+    )
+    .sort((a, b) => a.priority - b.priority)
+    .slice(0, 8)
+    .map((row) => ({
+      season: row.season,
+      eventSlug: row.eventSlug,
+      eventName: row.eventName,
+      missing: [
+        !row.hasOverallResults ? "overall results" : null,
+        !row.hasStageResults ? "stage results" : null,
+        !row.hasSourceLinks ? "source links" : null,
+      ].filter((item) => item !== null),
+      priority: row.priority,
+    }));
 
   return {
     totalTargetSeasons: targetSeasons.size,
@@ -192,5 +223,12 @@ export function getVerifiedCoverageSummary(): VerifiedCoverageSummary {
     missingOverallResults: completedRows.filter((row) => !row.hasOverallResults).length,
     missingStageResults: completedRows.filter((row) => !row.hasStageResults).length,
     missingSourceLinks: completedRows.filter((row) => !row.hasSourceLinks).length,
+    sourceCoverage: {
+      withSourceLinks: verifiedCoverageMatrix.filter((row) => row.hasSourceLinks).length,
+      withoutSourceLinks: verifiedCoverageMatrix.filter((row) => !row.hasSourceLinks)
+        .length,
+    },
+    confidenceDistribution,
+    nextRecommendedTargets,
   };
 }

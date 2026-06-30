@@ -112,4 +112,16 @@ export type VerifiedCoverageSummary = {
   missingOverallResults: number;
   missingStageResults: number;
   missingSourceLinks: number;
+  sourceCoverage: {
+    withSourceLinks: number;
+    withoutSourceLinks: number;
+  };
+  confidenceDistribution: Record<VerifiedCoverageConfidence, number>;
+  nextRecommendedTargets: Array<{
+    season: number;
+    eventSlug: string;
+    eventName: string;
+    missing: string[];
+    priority: number;
+  }>;
 };
