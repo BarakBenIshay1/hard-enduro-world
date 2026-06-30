@@ -1137,10 +1137,11 @@ function VerifiedRaceDashboard({
   crossNavigation: ReturnType<typeof buildCrossNavigation>;
 }) {
   const coverage = calculateVerifiedCoverage(verifiedFact);
+  const stagesWithTiming = event.stages.filter((stage) => stage.stageResults.length > 0);
 
   return (
     <>
-      <Container className="grid gap-10 py-10">
+      <Container className="grid gap-8 py-8">
         <section className="grid gap-4 lg:grid-cols-[1fr_360px]">
           <SourceStatusCard eventFact={verifiedFact} />
           <CoverageCard coverage={coverage} />
@@ -1151,15 +1152,15 @@ function VerifiedRaceDashboard({
             <SectionTitle
               eyebrow="Results"
               title="Erzbergrodeo 2026 classification"
-              description="Verified podium and first-pass overall rows appear first. Timing remains blank where not yet verified."
+              description="Verified podium and first-pass overall rows. Stage timing stays hidden until official rows are verified."
             />
             <ButtonLink href="/results" variant="secondary">
               Open Results Module
             </ButtonLink>
           </div>
 
-          <div className="mt-8 grid gap-6">
-            <div className="grid gap-4 md:grid-cols-3">
+          <div className="mt-6 grid gap-4">
+            <div className="grid gap-3 md:grid-cols-3">
               {event.results
                 .filter((result) => result.overallPosition !== null)
                 .sort((a, b) => (a.overallPosition ?? 999) - (b.overallPosition ?? 999))
@@ -1170,70 +1171,58 @@ function VerifiedRaceDashboard({
             </div>
 
             <Card className="overflow-hidden border-white/12 bg-black text-white">
-              <div className="border-b border-white/10 p-5">
+              <div className="flex flex-col gap-2 border-b border-white/10 p-4 sm:flex-row sm:items-center sm:justify-between">
                 <h3 className="text-xl font-black">Overall results</h3>
-                <p className="mt-2 text-sm text-white/[0.58]">
-                  Full verified timing, gaps, penalties, and status rows will remain empty
-                  until official source rows are attached.
-                </p>
+                <span className="text-xs font-semibold uppercase tracking-[0.14em] text-white/[0.52]">
+                  Timing fields pending source rows
+                </span>
               </div>
               <OverallResultsTable results={event.results} />
             </Card>
 
-            <Card className="p-5">
-              <div
-                className="flex flex-wrap gap-2"
-                role="tablist"
-                aria-label="Stage results"
-              >
-                {event.stages.map((stage) => (
-                  <a
-                    key={stage.id}
-                    href={`#stage-${stage.slug}`}
-                    className="rounded-md border border-border bg-surface-muted px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] transition hover:border-accent hover:text-accent"
-                    role="tab"
-                  >
-                    {stage.name}
-                  </a>
-                ))}
+            <Card className="p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">
+                    Stage results
+                  </p>
+                  <h3 className="mt-1 text-lg font-black">Timing tables</h3>
+                </div>
+                {stagesWithTiming.length === 0 ? (
+                  <CompactMessage text="Stage timing pending official verification." />
+                ) : null}
               </div>
-              <div className="mt-6 grid gap-6">
-                {event.stages.map((stage) => (
-                  <section
-                    key={stage.id}
-                    id={`stage-${stage.slug}`}
-                    className="scroll-mt-32"
-                  >
-                    <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">
-                          {stage.stageType}
-                        </p>
-                        <h3 className="text-xl font-black">{stage.name}</h3>
-                      </div>
-                      <CompactUnknown label="Stage timing pending verification" />
-                    </div>
-                    <StageTimingTable results={mapTimingResults(stage.stageResults)} />
-                  </section>
-                ))}
-              </div>
+              {stagesWithTiming.length > 0 ? (
+                <div className="mt-5 grid gap-5">
+                  {stagesWithTiming.map((stage) => (
+                    <section
+                      key={stage.id}
+                      id={`stage-${stage.slug}`}
+                      className="scroll-mt-32"
+                    >
+                      <h3 className="mb-3 text-lg font-black">{stage.name}</h3>
+                      <StageTimingTable results={mapTimingResults(stage.stageResults)} />
+                    </section>
+                  ))}
+                </div>
+              ) : null}
             </Card>
 
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-3 md:grid-cols-3">
               <MetricCard
                 label="DNF"
                 value={verifiedFact.participants?.dnf.value}
-                fallback="Pending"
+                fallback="TBC"
               />
               <MetricCard
                 label="DNS"
                 value={verifiedFact.participants?.dns.value}
-                fallback="Pending"
+                fallback="TBC"
               />
               <MetricCard
                 label="DSQ"
                 value={verifiedFact.participants?.dsq.value}
-                fallback="Pending"
+                fallback="TBC"
               />
             </div>
           </div>
@@ -1245,7 +1234,7 @@ function VerifiedRaceDashboard({
             title="Race overview"
             description="About, format, course, verified facts, and statistics are grouped into one compact dashboard."
           />
-          <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             <MetricCard
               label="Winner"
               value={verifiedFact.verifiedWinner}
@@ -1260,27 +1249,27 @@ function VerifiedRaceDashboard({
             <MetricCard
               label="Finish rate"
               value={verifiedFact.raceStatistics?.finishRate.value}
-              fallback="Pending"
+              fallback="TBC"
             />
             <MetricCard
               label="Terrain"
               value={verifiedFact.terrainDescription?.value ?? terrain}
-              fallback="Pending"
+              fallback="TBC"
             />
             <MetricCard
               label="Elevation"
               value={verifiedFact.elevation?.value ?? elevation}
-              fallback="Pending"
+              fallback="TBC"
             />
             <MetricCard
               label="Distance"
               value={verifiedFact.raceStatistics?.totalDistance.value}
-              fallback="Pending"
+              fallback="TBC"
             />
             <MetricCard
               label="Checkpoints"
               value={verifiedFact.raceStatistics?.checkpointCount.value}
-              fallback="Pending"
+              fallback="TBC"
             />
           </div>
           <Card className="mt-4 p-5">
@@ -1323,7 +1312,7 @@ function VerifiedRaceDashboard({
               </a>
             ))}
           </div>
-          <div className="mt-6 grid gap-6">
+          <div className="mt-6 grid gap-4">
             <DashboardPanel id="participants-riders" title="Riders">
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 {riderCards.slice(0, 8).map((rider) => (
@@ -1388,17 +1377,17 @@ function VerifiedRaceDashboard({
                   <MetricCard
                     label="Models"
                     value={verifiedFact.motorcycleContext?.motorcycleModels.value}
-                    fallback="Pending"
+                    fallback="TBC"
                   />
                   <MetricCard
                     label="Engine size"
                     value={verifiedFact.motorcycleContext?.engineSize.value}
-                    fallback="Pending"
+                    fallback="TBC"
                   />
                   <MetricCard
                     label="Manufacturer"
                     value={verifiedFact.motorcycleContext?.manufacturer.value}
-                    fallback="Pending"
+                    fallback="TBC"
                   />
                 </div>
                 <CrossLinkGroup
@@ -1416,10 +1405,10 @@ function VerifiedRaceDashboard({
             title="Race timeline"
             description="Schedule, milestones, and stage controls are merged into one operational view."
           />
-          <div className="mt-8 grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
+          <div className="mt-6 grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
             <Card className="p-5">
               <h3 className="text-xl font-black">Official milestones</h3>
-              <div className="mt-5 grid gap-3">
+              <div className="mt-4 grid gap-2">
                 {verifiedFact.eventTimeline?.map((item) => (
                   <CompactTimelineItem key={item.label} item={item} />
                 ))}
@@ -1427,28 +1416,22 @@ function VerifiedRaceDashboard({
             </Card>
             <Card className="p-5">
               <h3 className="text-xl font-black">Stage control</h3>
-              <div className="mt-5 grid gap-3">
+              <div className="mt-4 grid gap-2">
                 {stageCards.map((stage) => (
-                  <details
+                  <div
                     key={stage.id}
-                    className="group rounded-md border border-border bg-surface-muted p-4"
+                    className="grid gap-3 rounded-md border border-border bg-surface-muted p-3 sm:grid-cols-[1fr_repeat(3,110px)] sm:items-center"
                   >
-                    <summary className="flex cursor-pointer list-none items-start justify-between gap-3">
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-accent">
-                          Stage {stage.order} / {stage.type}
-                        </p>
-                        <h4 className="mt-1 font-black">{stage.name}</h4>
-                      </div>
-                      <ChevronDown className="h-5 w-5 text-accent transition group-open:rotate-180" />
-                    </summary>
-                    <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                      <DetailRow label="Distance" value={stage.distance} compact />
-                      <DetailRow label="Winner" value={stage.winner} compact />
-                      <DetailRow label="Best time" value={stage.bestTime} compact />
-                      <DetailRow label="DNF count" value={stage.dnfCount} compact />
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-accent">
+                        Stage {stage.order} / {stage.type}
+                      </p>
+                      <h4 className="mt-1 font-black">{stage.name}</h4>
                     </div>
-                  </details>
+                    <p className="text-sm font-semibold">{stage.distance}</p>
+                    <p className="text-sm text-foreground/[0.62]">{stage.winner}</p>
+                    <p className="text-sm text-foreground/[0.62]">{stage.bestTime}</p>
+                  </div>
                 ))}
               </div>
             </Card>
@@ -1461,48 +1444,50 @@ function VerifiedRaceDashboard({
             title="Official links, media, and documents"
             description="One source-aware resource hub instead of separate media and document blocks."
           />
-          <div className="mt-8 grid gap-6 lg:grid-cols-3">
+          <div className="mt-6 grid gap-4 lg:grid-cols-3">
             <Card className="p-5">
               <h3 className="text-xl font-black">Official links</h3>
-              <div className="mt-4 grid gap-3">
+              <div className="mt-4 grid gap-2">
                 {verifiedOfficialLinks.map((link) => (
-                  <OfficialLinkCard key={`${link.group}-${link.label}`} link={link} />
+                  <ResourceRow
+                    key={`${link.group}-${link.label}`}
+                    label={link.label}
+                    meta={link.group}
+                    href={link.url}
+                  />
                 ))}
               </div>
             </Card>
             <Card className="p-5">
               <h3 className="text-xl font-black">Media</h3>
-              <div className="mt-4 grid gap-3">
-                <DetailRow
+              <div className="mt-4 grid gap-2">
+                <CompactMetricRow
                   label="Gallery items"
                   value={String(mediaStats.images)}
-                  compact
                 />
-                <DetailRow label="Videos" value={String(mediaStats.videos)} compact />
-                <DetailRow
+                <CompactMetricRow label="Videos" value={String(mediaStats.videos)} />
+                <CompactMetricRow
                   label="Official gallery"
                   value={
-                    verifiedFact.officialMediaGalleryPlaceholders?.[0]?.label ?? "Pending"
+                    verifiedFact.officialMediaGalleryPlaceholders?.[0]?.label ?? "TBC"
                   }
-                  compact
                 />
               </div>
             </Card>
             <Card className="p-5">
               <h3 className="text-xl font-black">Documents</h3>
-              <div className="mt-4 grid gap-3">
+              <div className="mt-4 grid gap-2">
                 {verifiedFact.officialPdfPlaceholders?.map((item) => (
-                  <OfficialPlaceholderCard
+                  <ResourceRow
                     key={item.label}
-                    icon={FileText}
-                    title={item.label}
-                    link={item}
+                    label={item.label}
+                    meta={item.url ? "Available" : "TBC"}
+                    href={item.url}
                   />
                 ))}
-                <DetailRow
+                <CompactMetricRow
                   label="Document rows"
                   value={String(documents.length)}
-                  compact
                 />
               </div>
             </Card>
@@ -1515,15 +1500,15 @@ function VerifiedRaceDashboard({
             title="History"
             description="Historical context stays last so users reach current results and controls first."
           />
-          <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_0.8fr]">
+          <div className="mt-6 grid gap-4 lg:grid-cols-[1fr_320px]">
             <div className="grid gap-3">
               {event.previousEditions.length > 0 ? (
-                event.previousEditions.map((edition) => {
+                event.previousEditions.slice(0, 4).map((edition) => {
                   const winner = edition.results[0]?.rider;
 
                   return (
                     <Link key={edition.id} href={`/events/${edition.slug}`}>
-                      <Card className="grid gap-3 p-5 sm:grid-cols-[120px_1fr_160px]">
+                      <Card className="grid gap-3 p-4 sm:grid-cols-[90px_1fr_140px]">
                         <p className="text-2xl font-black text-accent">
                           {edition.season.year}
                         </p>
@@ -1549,24 +1534,24 @@ function VerifiedRaceDashboard({
             <Card className="p-6">
               <Trophy className="h-5 w-5 text-accent" aria-hidden="true" />
               <h3 className="mt-5 text-xl font-black">Event records preview</h3>
-              <div className="mt-5 grid gap-3">
-                <DetailRow
+              <div className="mt-5 grid gap-2">
+                <CompactMetricRow
                   label="Fastest stage"
-                  value={fastestStage?.totalTimeText ?? "Pending"}
+                  value={fastestStage?.totalTimeText ?? "TBC"}
                 />
-                <DetailRow
+                <CompactMetricRow
                   label="Largest field"
                   value={
                     verifiedFact.verifiedFinisherCount
                       ? `${verifiedFact.verifiedFinisherCount} verified finishers`
-                      : "Pending"
+                      : "TBC"
                   }
                 />
-                <DetailRow
+                <CompactMetricRow
                   label="Best manufacturer"
-                  value={manufacturerRows[0]?.name ?? "Pending"}
+                  value={manufacturerRows[0]?.name ?? "TBC"}
                 />
-                <DetailRow
+                <CompactMetricRow
                   label="Previous winner"
                   value={previousWinner || winnerName(finalWinner)}
                 />
@@ -1633,7 +1618,7 @@ function DetailRow({
 function MetricCard({
   label,
   value,
-  fallback = "Pending",
+  fallback = "TBC",
 }: {
   label: string;
   value: string | number | null | undefined;
@@ -1657,9 +1642,53 @@ function MetricCard({
 
 function CompactUnknown({ label }: { label: string }) {
   return (
-    <span className="mt-2 inline-flex w-fit rounded-sm border border-dashed border-border bg-surface-muted px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground/[0.52]">
+    <span className="mt-2 inline-flex w-fit rounded-sm border border-dashed border-border bg-surface-muted px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-foreground/[0.52]">
       {label}
     </span>
+  );
+}
+
+function CompactMessage({ text }: { text: string }) {
+  return (
+    <span className="inline-flex w-fit rounded-sm border border-border bg-surface-muted px-3 py-2 text-xs font-semibold text-foreground/[0.62]">
+      {text}
+    </span>
+  );
+}
+
+function CompactMetricRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-md border border-border bg-surface-muted px-3 py-2 text-sm">
+      <span className="text-foreground/[0.56]">{label}</span>
+      <span className="font-semibold">{value}</span>
+    </div>
+  );
+}
+
+function ResourceRow({
+  label,
+  meta,
+  href,
+}: {
+  label: string;
+  meta: string;
+  href: string | null;
+}) {
+  const content = (
+    <div className="flex items-center justify-between gap-3 rounded-md border border-border bg-surface-muted px-3 py-2 text-sm transition hover:border-accent">
+      <span className="font-semibold">{label}</span>
+      <span className="shrink-0 rounded-sm border border-border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-foreground/[0.52]">
+        {meta}
+      </span>
+    </div>
+  );
+
+  return href ? (
+    <a href={href} target="_blank" rel="noreferrer">
+      {content}
+    </a>
+  ) : (
+    content
   );
 }
 
@@ -1670,7 +1699,7 @@ function CompactTextBlock({ title, text }: { title: string; text?: string | null
       {text ? (
         <p className="mt-2 text-sm leading-6 text-foreground/[0.64]">{text}</p>
       ) : (
-        <CompactUnknown label="Pending" />
+        <CompactUnknown label="TBC" />
       )}
     </div>
   );
@@ -1686,9 +1715,9 @@ function DashboardPanel({
   children: ReactNode;
 }) {
   return (
-    <Card id={id} className="scroll-mt-32 p-5">
+    <Card id={id} className="scroll-mt-32 p-4">
       <h3 className="text-xl font-black">{title}</h3>
-      <div className="mt-5">{children}</div>
+      <div className="mt-4">{children}</div>
     </Card>
   );
 }
@@ -1699,25 +1728,21 @@ function PodiumCard({ result }: { result: Result }) {
 
   return (
     <Link href={`/riders/${result.rider.slug}`}>
-      <Card className="h-full p-5">
+      <Card className="h-full p-4">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">
           {labels[position - 1] ?? `P${formatOptional(position)}`}
         </p>
-        <h3 className="mt-3 text-2xl font-black">{winnerName(result.rider)}</h3>
+        <h3 className="mt-2 text-xl font-black">{winnerName(result.rider)}</h3>
         <p className="mt-1 text-sm text-foreground/[0.58]">
           {result.rider.country?.name ?? "Country TBC"}
         </p>
-        <div className="mt-4 grid gap-2">
+        <div className="mt-3 grid gap-2">
           <DetailRow
             label="Manufacturer"
             value={result.manufacturer?.name ?? "TBC"}
             compact
           />
-          <DetailRow
-            label="Time"
-            value={result.totalTimeText ?? "Pending verification"}
-            compact
-          />
+          <DetailRow label="Time" value={result.totalTimeText ?? "TBC"} compact />
         </div>
       </Card>
     </Link>
@@ -1787,14 +1812,14 @@ function CompactTimelineItem({
       <div className="flex items-start justify-between gap-3">
         <div>
           <h4 className="font-black">{item.label}</h4>
-          <p className="mt-1 text-sm text-foreground/[0.58]">
-            {item.description ?? "Pending"}
-          </p>
+          {item.description ? (
+            <p className="mt-1 text-sm text-foreground/[0.58]">{item.description}</p>
+          ) : null}
         </div>
-        <Badge>{item.status}</Badge>
+        <Badge>TBC</Badge>
       </div>
       <p className="mt-2 text-xs font-semibold uppercase tracking-[0.14em] text-accent">
-        {item.date ?? "Date pending"}
+        {item.date ?? "Date TBC"}
       </p>
     </div>
   );
