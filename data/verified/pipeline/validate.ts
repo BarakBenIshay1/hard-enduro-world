@@ -1,9 +1,11 @@
 import { verifiedCoverageMatrix } from "../coverage";
+import { getOfficialSource } from "../source-registry";
 import type {
   VerifiedEventFact,
   VerifiedOverallResult,
   VerifiedSourceReference,
   VerifiedStageResult,
+  VerifiedAllowedDataType,
 } from "../types";
 import type { NormalizedVerifiedPackage } from "./normalize";
 
@@ -52,6 +54,7 @@ export function validateVerifiedPackage(
 
 function validateSource(source: VerifiedSourceReference): VerifiedValidationIssue[] {
   const issues: VerifiedValidationIssue[] = [];
+  const registrySource = getOfficialSource(source.id);
 
   if (!source.id || !source.name || !source.url) {
     issues.push({
@@ -60,6 +63,26 @@ function validateSource(source: VerifiedSourceReference): VerifiedValidationIssu
       message: "Verified source must include id, name, and URL.",
       entityType: "source",
       entityKey: source.id || "unknown-source",
+    });
+  }
+
+  if (!registrySource) {
+    issues.push({
+      severity: "error",
+      code: "source-not-in-official-registry",
+      message: "Verified source id is not configured in the official source registry.",
+      entityType: "source",
+      entityKey: source.id || "unknown-source",
+    });
+  }
+
+  if (registrySource && !registrySource.requiresReview) {
+    issues.push({
+      severity: "error",
+      code: "source-must-require-review",
+      message: "All source-derived facts must require review.",
+      entityType: "source",
+      entityKey: source.id,
     });
   }
 
@@ -98,6 +121,7 @@ function validateEventFact(
       sourceIds,
       "event",
       eventFact.eventSlug,
+      "events",
     ),
   );
   issues.push(
@@ -169,6 +193,7 @@ function validateOverallResults(
         sourceIds,
         "overall-result",
         entityKey,
+        "results",
       ),
     );
     issues.push(...validateFutureSeason(result.eventSlug, sourceIds, result.sourceIds));
@@ -209,7 +234,13 @@ function validateStageResults(
     stageRiderKeys.add(entityKey);
 
     issues.push(
-      ...validateSourceReferences(result.sourceIds, sourceIds, "stage-result", entityKey),
+      ...validateSourceReferences(
+        result.sourceIds,
+        sourceIds,
+        "stage-result",
+        entityKey,
+        "timing",
+      ),
     );
     issues.push(...validateFutureSeason(result.eventSlug, sourceIds, result.sourceIds));
   });
@@ -222,6 +253,7 @@ function validateSourceReferences(
   availableSourceIds: Set<string>,
   entityType: VerifiedValidationIssue["entityType"],
   entityKey: string,
+  dataType: VerifiedAllowedDataType,
 ): VerifiedValidationIssue[] {
   if (referencedSourceIds.length === 0) {
     return [
@@ -235,15 +267,64 @@ function validateSourceReferences(
     ];
   }
 
-  return referencedSourceIds
-    .filter((sourceId) => !availableSourceIds.has(sourceId))
-    .map((sourceId) => ({
-      severity: "error" as const,
-      code: "unknown-source-reference",
-      message: `Referenced source '${sourceId}' is not present in the intake package.`,
-      entityType,
-      entityKey,
-    }));
+  return referencedSourceIds.flatMap((sourceId) => {
+    const issues: VerifiedValidationIssue[] = [];
+    const registrySource = getOfficialSource(sourceId);
+
+    if (!availableSourceIds.has(sourceId)) {
+      issues.push({
+        severity: "error",
+        code: "unknown-source-reference",
+        message: `Referenced source '${sourceId}' is not present in the intake package.`,
+        entityType,
+        entityKey,
+      });
+    }
+
+    if (!registrySource) {
+      issues.push({
+        severity: "error",
+        code: "source-not-in-official-registry",
+        message: `Referenced source '${sourceId}' is not configured in the official source registry.`,
+        entityType,
+        entityKey,
+      });
+      return issues;
+    }
+
+    if (!registrySource.allowedDataTypes.includes(dataType)) {
+      issues.push({
+        severity: "error",
+        code: "source-not-allowed-for-data-type",
+        message: `Source '${sourceId}' is not allowed to provide ${dataType}.`,
+        entityType,
+        entityKey,
+      });
+    }
+
+    if (registrySource.trustLevel === "media-only" && dataType !== "media") {
+      issues.push({
+        severity: "error",
+        code: "media-source-cannot-create-official-data",
+        message:
+          "Trusted media sources may create media references only, not official results, standings, timing, or records.",
+        entityType,
+        entityKey,
+      });
+    }
+
+    if (!registrySource.requiresReview) {
+      issues.push({
+        severity: "error",
+        code: "source-derived-facts-require-review",
+        message: "All source-derived facts must remain review-required.",
+        entityType,
+        entityKey,
+      });
+    }
+
+    return issues;
+  });
 }
 
 function validateFutureSeason(

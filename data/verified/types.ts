@@ -1,5 +1,33 @@
 export type VerifiedConfidence = "official" | "high" | "medium" | "low";
 
+export type OfficialSourceType =
+  | "official"
+  | "trusted-media"
+  | "official-document"
+  | "official-timing";
+
+export type OfficialSourceTrustLevel = "primary" | "secondary" | "media-only";
+
+export type VerifiedAllowedDataType =
+  | "events"
+  | "results"
+  | "standings"
+  | "media"
+  | "documents"
+  | "timing";
+
+export type OfficialSourceRegistryEntry = {
+  id: string;
+  name: string;
+  type: OfficialSourceType;
+  baseUrl: string | null;
+  channelUrl: string | null;
+  allowedDataTypes: VerifiedAllowedDataType[];
+  trustLevel: OfficialSourceTrustLevel;
+  requiresReview: true;
+  notes: string;
+};
+
 export type VerifiedCoverageConfidence =
   | "verified"
   | "source-needed"
@@ -116,6 +144,12 @@ export type VerifiedCoverageSummary = {
     withSourceLinks: number;
     withoutSourceLinks: number;
   };
+  registryCoverage: {
+    configuredSources: number;
+    primarySources: number;
+    mediaOnlySources: number;
+  };
+  unsupportedSourceWarnings: string[];
   confidenceDistribution: Record<VerifiedCoverageConfidence, number>;
   nextRecommendedTargets: Array<{
     season: number;

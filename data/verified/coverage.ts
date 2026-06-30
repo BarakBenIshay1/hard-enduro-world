@@ -1,3 +1,4 @@
+import { officialSourceRegistry } from "./source-registry";
 import type { VerifiedCoverageSummary, VerifiedEventCoverage } from "./types";
 
 const defaultNeededResultTypes: VerifiedEventCoverage["neededResultTypes"] = [
@@ -228,6 +229,22 @@ export function getVerifiedCoverageSummary(): VerifiedCoverageSummary {
       withoutSourceLinks: verifiedCoverageMatrix.filter((row) => !row.hasSourceLinks)
         .length,
     },
+    registryCoverage: {
+      configuredSources: officialSourceRegistry.length,
+      primarySources: officialSourceRegistry.filter(
+        (source) => source.trustLevel === "primary",
+      ).length,
+      mediaOnlySources: officialSourceRegistry.filter(
+        (source) => source.trustLevel === "media-only",
+      ).length,
+    },
+    unsupportedSourceWarnings: officialSourceRegistry
+      .filter((source) => source.trustLevel === "media-only")
+      .flatMap((source) =>
+        source.allowedDataTypes.some((dataType) => dataType !== "media")
+          ? [`${source.id} is media-only but allows non-media data.`]
+          : [],
+      ),
     confidenceDistribution,
     nextRecommendedTargets,
   };
