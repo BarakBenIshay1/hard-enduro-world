@@ -89,9 +89,13 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
     event.description,
     "Previous winner marker",
   );
+  const verifiedFinisherCount = parseOptionalInt(
+    extractDescriptionField(event.description, "Verified finisher count"),
+  );
   const finalWinner = event.results.find((result) => result.overallPosition === 1)?.rider;
   const allStageResults = event.stages.flatMap((stage) => stage.stageResults);
   const finishers = event.results.filter((result) => result.status === "FINISHED").length;
+  const displayedFinishers = verifiedFinisherCount ?? finishers;
   const dnfCount = event.results.filter((result) => result.status === "DNF").length;
   const dnsCount = event.results.filter((result) => result.status === "DNS").length;
   const dsqCount = event.results.filter((result) => result.status === "DSQ").length;
@@ -165,7 +169,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
             <div className="grid gap-3 sm:grid-cols-2">
               <QuickStat label="Riders" value={String(event.results.length)} />
               <QuickStat label="Stages" value={String(event.stages.length)} />
-              <QuickStat label="Finishers" value={String(finishers)} />
+              <QuickStat label="Finishers" value={String(displayedFinishers)} />
               <QuickStat
                 label="DNF / DNS / DSQ"
                 value={`${dnfCount}/${dnsCount}/${dsqCount}`}
@@ -491,7 +495,11 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                 />
                 <DetailRow
                   label="Largest field"
-                  value={`${event.results.length} demo riders`}
+                  value={
+                    verifiedFinisherCount
+                      ? `${verifiedFinisherCount} verified finishers`
+                      : `${event.results.length} classified rows`
+                  }
                 />
                 <DetailRow
                   label="Best manufacturer"
@@ -967,6 +975,11 @@ function extractDescriptionField(description: string | null, label: string) {
 
   const match = description.match(new RegExp(`${label}:\\s*([^.]*)`, "i"));
   return match?.[1]?.trim() ?? "";
+}
+
+function parseOptionalInt(value: string) {
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 function getDifficultyLabel(seed: number | null | undefined) {
