@@ -2,7 +2,7 @@ import type { VerifiedSourceReference } from "./types";
 
 export const verifiedSources: VerifiedSourceReference[] = [
   {
-    id: "erzbergrodeo-2026-manual-first-pass",
+    id: "red-bull-erzbergrodeo-official",
     name: "Red Bull Erzbergrodeo 2026 verified first-pass result note",
     url: "https://example.com/source-placeholder/red-bull-erzbergrodeo-2026-results",
     sourceType: "manual_verified",

@@ -1,6 +1,6 @@
 import type { VerifiedOverallResult, VerifiedStageResult } from "./types";
 
-const erzbergrodeo2026SourceIds = ["erzbergrodeo-2026-manual-first-pass"];
+const erzbergrodeo2026SourceIds = ["red-bull-erzbergrodeo-official"];
 
 export const verifiedOverallResults: VerifiedOverallResult[] = [
   {

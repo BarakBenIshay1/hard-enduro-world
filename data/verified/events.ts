@@ -9,7 +9,7 @@ export const verifiedEventFacts: VerifiedEventFact[] = [
     verifiedFinisherCount: 15,
     factsNote:
       "Red Bull Erzbergrodeo 2026 first-pass verified facts: Manuel Lettenbichler won, the podium was Manuel Lettenbichler, Trystan Hart, Mario Roman, 15 riders reached the finish, and Billy Bolt is not listed as a finisher. Exact timing, gaps, penalties, and points are not verified here.",
-    sourceIds: ["erzbergrodeo-2026-manual-first-pass"],
+    sourceIds: ["red-bull-erzbergrodeo-official"],
   },
 ];
 
