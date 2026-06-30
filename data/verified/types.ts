@@ -1,5 +1,13 @@
 export type VerifiedConfidence = "official" | "high" | "medium" | "low";
 
+export type VerifiedCoverageConfidence =
+  | "verified"
+  | "source-needed"
+  | "partial"
+  | "scheduled";
+
+export type VerifiedCoverageStatus = "completed" | "scheduled" | "live";
+
 export type VerifiedSourceReference = {
   id: string;
   name: string;
@@ -70,4 +78,38 @@ export type VerifiedStageResult = {
   status: "FINISHED" | "DNF" | "DNS" | "DSQ" | "UNKNOWN";
   sourceIds: string[];
   notes: string;
+};
+
+export type VerifiedEventCoverage = {
+  season: 2022 | 2023 | 2024 | 2025 | 2026;
+  eventSlug: string;
+  eventName: string;
+  country: string;
+  status: VerifiedCoverageStatus;
+  hasEventMetadata: boolean;
+  hasOverallResults: boolean;
+  hasStageResults: boolean;
+  hasStandingsImpact: boolean;
+  hasSourceLinks: boolean;
+  confidence: VerifiedCoverageConfidence;
+  neededResultTypes: Array<
+    | "overall-results"
+    | "stage-results"
+    | "standings"
+    | "finishers"
+    | "dns-dnf-dsq"
+    | "points"
+  >;
+  requiredSources: string[];
+  priority: number;
+  notes: string;
+};
+
+export type VerifiedCoverageSummary = {
+  totalTargetSeasons: number;
+  totalTargetEvents: number;
+  verifiedEvents: number;
+  missingOverallResults: number;
+  missingStageResults: number;
+  missingSourceLinks: number;
 };
