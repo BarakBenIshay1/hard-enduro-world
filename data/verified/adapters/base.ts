@@ -113,35 +113,35 @@ export class PlaceholderOfficialSourceAdapter implements OfficialSourceAdapter {
     };
   }
 
-  async parseSourceReferences() {
+  async parseSourceReferences(): Promise<VerifiedSourceReference[]> {
     return [];
   }
 
-  async parseEventMetadata() {
+  async parseEventMetadata(): Promise<VerifiedEventFact[]> {
     return [];
   }
 
-  async parseRiderMetadata() {
+  async parseRiderMetadata(): Promise<VerifiedRiderEntry[]> {
     return [];
   }
 
-  async parseOverallResults() {
+  async parseOverallResults(): Promise<VerifiedOverallResult[]> {
     return [];
   }
 
-  async parseStageResults() {
+  async parseStageResults(): Promise<VerifiedStageResult[]> {
     return [];
   }
 
-  async parseStandings() {
+  async parseStandings(): Promise<ParsedStandingsRow[]> {
     return [];
   }
 
-  async parseMedia() {
+  async parseMedia(): Promise<ParsedMediaReference[]> {
     return [];
   }
 
-  async parseDocuments() {
+  async parseDocuments(): Promise<ParsedDocumentReference[]> {
     return [];
   }
 }

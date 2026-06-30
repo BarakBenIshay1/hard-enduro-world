@@ -9,6 +9,7 @@ import {
   type AdapterValidationIssue,
   type OfficialSourceAdapter,
 } from "./base";
+import { OfficialHtmlAdapter } from "./html/adapter";
 import { getAdapterRegistryEntry } from "./registry";
 
 export type AdapterFactoryRequest = {
@@ -125,7 +126,10 @@ export function createOfficialSourceAdapter(
     };
   }
 
-  const adapter = new PlaceholderOfficialSourceAdapter(registryEntry.adapterId, source);
+  const adapter =
+    registryEntry.adapterKind === "OfficialHTMLAdapter"
+      ? new OfficialHtmlAdapter(registryEntry.adapterId, source)
+      : new PlaceholderOfficialSourceAdapter(registryEntry.adapterId, source);
   const validation = adapter.validateSource();
 
   return {

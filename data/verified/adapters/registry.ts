@@ -7,6 +7,7 @@ import type {
 } from "../types";
 
 export type AdapterKind =
+  | "OfficialHTMLAdapter"
   | "FIMAdapter"
   | "RedBullAdapter"
   | "ErzbergrodeoAdapter"
@@ -51,23 +52,23 @@ export function listAdapterRegistryEntries() {
 
 function getAdapterKind(source: OfficialSourceRegistryEntry): AdapterKind {
   if (source.id === "fim-official") {
-    return "FIMAdapter";
+    return "OfficialHTMLAdapter";
   }
 
   if (source.id === "red-bull-erzbergrodeo-official") {
-    return "ErzbergrodeoAdapter";
+    return "OfficialHTMLAdapter";
   }
 
   if (source.id === "red-bull-romaniacs-official") {
-    return "RomaniacsAdapter";
+    return "OfficialHTMLAdapter";
   }
 
   if (source.id === "sea-to-sky-official") {
-    return "SeaToSkyAdapter";
+    return "OfficialHTMLAdapter";
   }
 
   if (source.id === "us-hard-enduro-official") {
-    return "USHardEnduroAdapter";
+    return "OfficialHTMLAdapter";
   }
 
   if (source.type === "official-document") {
@@ -82,5 +83,5 @@ function getAdapterKind(source: OfficialSourceRegistryEntry): AdapterKind {
     return "MediaAdapter";
   }
 
-  return "RedBullAdapter";
+  return "OfficialHTMLAdapter";
 }
