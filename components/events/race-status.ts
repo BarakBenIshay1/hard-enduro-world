@@ -48,14 +48,14 @@ export function getRaceStatus(
 
 export function getRaceDashboardTabs(phase: RacePhase) {
   if (phase === "coming-soon") {
-    return ["Race Overview", "Race Timeline", "Participants", "Results", "History"];
+    return ["Race Overview", "Results", "History"];
   }
 
   if (phase === "live-now") {
-    return ["Live Now", "Race Timeline", "Participants", "Results", "History"];
+    return ["Live Now", "Results", "History"];
   }
 
-  return ["Results", "Race Overview", "Participants", "Race Timeline", "History"];
+  return ["Results", "Race Overview", "History"];
 }
 
 export function getRaceStatusPriority(phase: RacePhase) {

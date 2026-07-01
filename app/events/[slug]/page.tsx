@@ -126,7 +126,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
 
       <nav className="sticky top-16 z-30 border-y border-border bg-black/[0.94] text-white shadow-xl shadow-black/20 backdrop-blur-xl">
         <Container className="overflow-x-auto py-3">
-          <div className="grid min-w-[680px] grid-cols-5 gap-2 lg:min-w-0">
+          <div className="grid min-w-[420px] grid-cols-3 gap-2 lg:min-w-0">
             {pageTabs.map((tab, index) => (
               <Link
                 key={tab}

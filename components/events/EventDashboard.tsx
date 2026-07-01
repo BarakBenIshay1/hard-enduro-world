@@ -1,20 +1,11 @@
 import { Container } from "@/components/ui/container";
 import type { VerifiedEventFact } from "@/data/verified/types";
 import { Card } from "@/components/ui/card";
-import {
-  buildCrossNavigation,
-  buildManufacturerRows,
-  buildRiderCards,
-  buildStageCard,
-  buildTeamRows,
-  winnerName,
-} from "./helpers";
+import { buildManufacturerRows, winnerName } from "./helpers";
 import { HistoryPanel } from "./HistoryPanel";
-import { ParticipantsPanel } from "./ParticipantsPanel";
 import { RaceOverviewPanel } from "./RaceOverviewPanel";
 import { RaceStatusBadge } from "./RaceStatusBadge";
 import { ResultsPanel } from "./ResultsPanel";
-import { TimelinePanel } from "./TimelinePanel";
 import type { RaceStatusView } from "./race-status";
 import type { EventDetail, EventResult } from "./types";
 
@@ -39,15 +30,7 @@ export function EventDashboard({
   finalWinner: EventResult["rider"] | undefined;
   fastestStage: EventDetail["stages"][number]["stageResults"][number] | undefined;
 }) {
-  const stageCards = event.stages.map((stage) =>
-    buildStageCard(stage, terrain, elevation),
-  );
-  const riderCards = isVerified ? buildRiderCards(event) : [];
   const manufacturerRows = isVerified ? buildManufacturerRows(event.results) : [];
-  const teamRows = isVerified ? buildTeamRows(event.results) : [];
-  const crossNavigation = isVerified
-    ? buildCrossNavigation(event)
-    : { riders: [], manufacturers: [], teams: [], motorcycles: [] };
 
   const resultsPanel = (
     <ResultsPanel event={event} verifiedFact={verifiedFact} isVerified={isVerified} />
@@ -59,18 +42,6 @@ export function EventDashboard({
       terrain={terrain}
       elevation={elevation}
     />
-  );
-  const participantsPanel = (
-    <ParticipantsPanel
-      verifiedFact={verifiedFact}
-      riderCards={riderCards}
-      manufacturerRows={manufacturerRows}
-      teamRows={teamRows}
-      crossNavigation={crossNavigation}
-    />
-  );
-  const timelinePanel = (
-    <TimelinePanel verifiedFact={verifiedFact} stageCards={stageCards} />
   );
   const historyPanel = (
     <HistoryPanel
@@ -87,8 +58,6 @@ export function EventDashboard({
     return (
       <Container className="grid gap-8 py-8">
         {overviewPanel}
-        {timelinePanel}
-        {participantsPanel}
         {resultsPanel}
         {historyPanel}
       </Container>
@@ -99,8 +68,6 @@ export function EventDashboard({
     return (
       <Container className="grid gap-8 py-8">
         <LiveStatusPanel raceStatus={raceStatus} />
-        {timelinePanel}
-        {participantsPanel}
         {resultsPanel}
         {historyPanel}
       </Container>
@@ -111,8 +78,6 @@ export function EventDashboard({
     <Container className="grid gap-8 py-8">
       {resultsPanel}
       {overviewPanel}
-      {participantsPanel}
-      {timelinePanel}
       {historyPanel}
     </Container>
   );
