@@ -29,6 +29,7 @@ export type EventStageCard = {
   bestTime: string;
   dnfCount: string;
   difficulty: string;
+  resultCount: number;
 };
 
 export type RiderCardItem = {

@@ -5,18 +5,24 @@ import { Card } from "@/components/ui/card";
 import { SectionTitle } from "@/components/ui/section-title";
 import type { VerifiedEventFact } from "@/data/verified/types";
 import { formatOptional } from "@/lib/format";
+import { CourseMapsBlock } from "./CourseMapsBlock";
 import { CompactMessage, MetricCard } from "./dashboard-ui";
 import { mapTimingResults, winnerName } from "./helpers";
-import type { EventDetail, EventResult } from "./types";
+import type { RacePhase } from "./race-status";
+import type { EventDetail, EventResult, EventStageCard } from "./types";
 
 export function ResultsPanel({
   event,
   verifiedFact,
   isVerified,
+  stageCards,
+  racePhase,
 }: {
   event: EventDetail;
   verifiedFact: VerifiedEventFact;
   isVerified: boolean;
+  stageCards: EventStageCard[];
+  racePhase: RacePhase;
 }) {
   const stagesWithTiming = isVerified
     ? event.stages.filter((stage) => stage.stageResults.length > 0)
@@ -42,6 +48,7 @@ export function ResultsPanel({
 
       <div className="mt-6 grid gap-4">
         <TopClassificationTable results={topClassificationRows} />
+        <CourseMapsBlock stages={stageCards} racePhase={racePhase} />
 
         <Card className="p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

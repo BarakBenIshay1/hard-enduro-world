@@ -36,7 +36,13 @@ export function EventDashboard({
   const manufacturerRows = isVerified ? buildManufacturerRows(event.results) : [];
 
   const resultsPanel = (
-    <ResultsPanel event={event} verifiedFact={verifiedFact} isVerified={isVerified} />
+    <ResultsPanel
+      event={event}
+      verifiedFact={verifiedFact}
+      isVerified={isVerified}
+      stageCards={stageCards}
+      racePhase={raceStatus.phase}
+    />
   );
   const overviewPanel = (
     <RaceOverviewPanel
@@ -44,7 +50,6 @@ export function EventDashboard({
       podiumLabel={isVerified ? getPodiumLabel(event.results) : null}
       terrain={terrain}
       elevation={elevation}
-      stageCards={stageCards}
     />
   );
   const historyPanel = (

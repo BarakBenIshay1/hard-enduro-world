@@ -3,21 +3,17 @@ import { SectionTitle } from "@/components/ui/section-title";
 import type { VerifiedEventFact } from "@/data/verified/types";
 import { CompactTextBlock, MetricCard } from "./dashboard-ui";
 import { UNKNOWN_VERIFIED_VALUE } from "./helpers";
-import { CourseMapsBlock } from "./CourseMapsBlock";
-import type { EventStageCard } from "./types";
 
 export function RaceOverviewPanel({
   verifiedFact,
   podiumLabel,
   terrain,
   elevation,
-  stageCards,
 }: {
   verifiedFact: VerifiedEventFact;
   podiumLabel: string | null;
   terrain: string;
   elevation: string;
-  stageCards: EventStageCard[];
 }) {
   return (
     <section id="race-overview" className="scroll-mt-32">
@@ -78,7 +74,6 @@ export function RaceOverviewPanel({
           />
         </div>
       </Card>
-      <CourseMapsBlock stages={stageCards} />
     </section>
   );
 }

@@ -146,6 +146,7 @@ export function buildStageCard(stage: EventStage, terrain: string, elevation: st
     bestTime: bestTime?.totalTimeText ?? "Pending",
     dnfCount: String(dnfCount),
     difficulty: getDifficultyLabel(stage.stageOrder),
+    resultCount: stage.stageResults.length,
   };
 }
 
