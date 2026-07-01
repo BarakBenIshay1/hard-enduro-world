@@ -30,63 +30,62 @@ type ManufacturersBrowserProps = {
 };
 
 const sortOptions = [
-  { label: "Factory Name", value: "name" },
-  { label: "Active models", value: "models" },
-  { label: "Riders", value: "riders" },
-  { label: "Factory connections", value: "teams" },
+  { label: "Alphabetical (A–Z)", value: "name-asc" },
+  { label: "Alphabetical (Z–A)", value: "name-desc" },
+  { label: "Most Riders", value: "riders" },
+  { label: "Most Factory Teams", value: "teams" },
 ] as const;
 
-const factoryNameGroups = [
-  {
-    label: "Manufacturers",
-    options: [
-      "KTM",
-      "Sherco",
-      "Beta",
-      "GASGAS",
-      "Husqvarna",
-      "Rieju",
-      "TM Racing",
-      "Honda",
-    ].map((label) => ({ label, value: `manufacturer:${label}` })),
-  },
-  {
-    label: "Riders",
-    options: [
-      "Manuel Lettenbichler",
-      "Billy Bolt",
-      "Mario Roman",
-      "Trystan Hart",
-      "Alfredo Gomez",
-    ].map((label) => ({ label, value: `rider:${label}` })),
-  },
-  {
-    label: "Motorcycle Models",
-    options: [
-      "KTM 300 EXC",
-      "Husqvarna TE 300",
-      "Sherco 300 SE Factory",
-      "Beta RR Racing",
-      "GASGAS EC 300",
-      "TM MC 300",
-    ].map((label) => ({ label, value: `motorcycle:${label}` })),
-  },
+const manufacturerOptions = [
+  "KTM",
+  "Sherco",
+  "Beta",
+  "GASGAS",
+  "Husqvarna",
+  "Rieju",
+  "TM Racing",
+  "Honda",
+];
+
+const riderOptions = [
+  "Manuel Lettenbichler",
+  "Billy Bolt",
+  "Mario Roman",
+  "Trystan Hart",
+  "Alfredo Gomez",
+];
+
+const motorcycleModelOptions = [
+  "KTM 300 EXC",
+  "Husqvarna TE 300",
+  "Sherco 300 SE Factory",
+  "Beta RR Racing",
+  "GASGAS EC 300",
+  "TM MC 300",
 ];
 
 export function ManufacturersBrowser({ manufacturers }: ManufacturersBrowserProps) {
-  const [factoryFilter, setFactoryFilter] = useState("all");
-  const [sort, setSort] = useState<(typeof sortOptions)[number]["value"]>("name");
+  const [manufacturerFilter, setManufacturerFilter] = useState("all");
+  const [riderFilter, setRiderFilter] = useState("all");
+  const [motorcycleFilter, setMotorcycleFilter] = useState("all");
+  const [sort, setSort] = useState<(typeof sortOptions)[number]["value"]>("name-asc");
 
   const visibleManufacturers = useMemo(() => {
     return manufacturers
-      .filter((manufacturer) => matchesFactoryFilter(manufacturer, factoryFilter))
+      .filter((manufacturer) =>
+        matchesManufacturerFilters(manufacturer, {
+          manufacturer: manufacturerFilter,
+          rider: riderFilter,
+          motorcycle: motorcycleFilter,
+        }),
+      )
       .sort((a, b) => {
-        if (sort === "name") {
+        if (sort === "name-asc") {
           return a.name.localeCompare(b.name);
         }
 
-        if (sort === "models") {
-          return b.motorcycleModels.length - a.motorcycleModels.length;
+        if (sort === "name-desc") {
+          return b.name.localeCompare(a.name);
         }
 
         if (sort === "riders") {
@@ -95,12 +94,12 @@ export function ManufacturersBrowser({ manufacturers }: ManufacturersBrowserProp
 
         return b.activeTeams - a.activeTeams;
       });
-  }, [factoryFilter, manufacturers, sort]);
+  }, [manufacturerFilter, manufacturers, motorcycleFilter, riderFilter, sort]);
 
   return (
     <div className="grid gap-8">
       <Card className="p-4">
-        <div className="grid gap-3 md:grid-cols-[220px_minmax(0,1fr)]">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <FilterSelect
             label="Sort"
             value={sort}
@@ -110,11 +109,26 @@ export function ManufacturersBrowser({ manufacturers }: ManufacturersBrowserProp
               sortOptions.map((option) => [option.value, option.label]),
             )}
           />
-          <GroupedFilterSelect
-            label="Factory Name"
-            value={factoryFilter}
-            onChange={setFactoryFilter}
-            groups={factoryNameGroups}
+          <FilterSelect
+            label="Manufacturers"
+            value={manufacturerFilter}
+            onChange={setManufacturerFilter}
+            options={manufacturerOptions}
+            includeAll
+          />
+          <FilterSelect
+            label="Riders"
+            value={riderFilter}
+            onChange={setRiderFilter}
+            options={riderOptions}
+            includeAll
+          />
+          <FilterSelect
+            label="Motorcycle Models"
+            value={motorcycleFilter}
+            onChange={setMotorcycleFilter}
+            options={motorcycleModelOptions}
+            includeAll
           />
         </div>
       </Card>
@@ -128,29 +142,25 @@ export function ManufacturersBrowser({ manufacturers }: ManufacturersBrowserProp
   );
 }
 
-function matchesFactoryFilter(manufacturer: ManufacturerCardData, filter: string) {
-  if (filter === "all") {
-    return true;
-  }
-
-  const [type, rawValue] = filter.split(":");
-  const value = normalize(rawValue ?? "");
-
-  if (type === "manufacturer") {
-    return normalize(manufacturer.name).includes(value);
-  }
-
-  if (type === "rider") {
-    return manufacturer.riderNames.some((name) => normalize(name).includes(value));
-  }
-
-  if (type === "motorcycle") {
-    return manufacturer.motorcycleModels.some((model) =>
-      normalize(`${manufacturer.name} ${model}`).includes(value),
+function matchesManufacturerFilters(
+  manufacturer: ManufacturerCardData,
+  filters: { manufacturer: string; rider: string; motorcycle: string },
+) {
+  const manufacturerMatches =
+    filters.manufacturer === "all" ||
+    normalize(manufacturer.name).includes(normalize(filters.manufacturer));
+  const riderMatches =
+    filters.rider === "all" ||
+    manufacturer.riderNames.some((name) =>
+      normalize(name).includes(normalize(filters.rider)),
     );
-  }
+  const motorcycleMatches =
+    filters.motorcycle === "all" ||
+    manufacturer.motorcycleModels.some((model) =>
+      normalize(`${manufacturer.name} ${model}`).includes(normalize(filters.motorcycle)),
+    );
 
-  return true;
+  return manufacturerMatches && riderMatches && motorcycleMatches;
 }
 
 function normalize(value: string) {
@@ -239,12 +249,14 @@ function FilterSelect({
   onChange,
   options,
   labels,
+  includeAll = false,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   options: string[];
   labels?: Record<string, string>;
+  includeAll?: boolean;
 }) {
   return (
     <label className="grid gap-2 text-sm">
@@ -257,47 +269,11 @@ function FilterSelect({
           "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
         )}
       >
+        {includeAll ? <option value="all">All</option> : null}
         {options.map((option) => (
           <option key={option} value={option}>
             {labels?.[option] ?? option}
           </option>
-        ))}
-      </select>
-    </label>
-  );
-}
-
-function GroupedFilterSelect({
-  label,
-  value,
-  onChange,
-  groups,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  groups: Array<{ label: string; options: Array<{ label: string; value: string }> }>;
-}) {
-  return (
-    <label className="grid gap-2 text-sm">
-      <span className="font-semibold text-foreground/[0.64]">{label}</span>
-      <select
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className={cn(
-          "h-11 rounded-md border border-border bg-surface px-3 text-sm font-semibold",
-          "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
-        )}
-      >
-        <option value="all">All</option>
-        {groups.map((group) => (
-          <optgroup key={group.label} label={group.label}>
-            {group.options.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </optgroup>
         ))}
       </select>
     </label>

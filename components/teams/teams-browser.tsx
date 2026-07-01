@@ -30,58 +30,57 @@ type TeamsBrowserProps = {
 };
 
 const sortOptions = [
-  { label: "Team Name", value: "name" },
-  { label: "Active riders", value: "riders" },
-  { label: "Team type", value: "teamType" },
-  { label: "Manufacturer", value: "manufacturer" },
+  { label: "Alphabetical (A–Z)", value: "name-asc" },
+  { label: "Alphabetical (Z–A)", value: "name-desc" },
+  { label: "Most Riders", value: "riders" },
 ] as const;
 
-const teamNameGroups = [
-  {
-    label: "Teams",
-    options: [
-      "Red Bull KTM Factory Racing",
-      "Factory Sherco Racing",
-      "FMF KTM Factory Racing",
-      "GASGAS Factory Racing",
-    ].map((label) => ({ label, value: `team:${label}` })),
-  },
-  {
-    label: "Riders",
-    options: [
-      "Manuel Lettenbichler",
-      "Billy Bolt",
-      "Mario Roman",
-      "Trystan Hart",
-      "Alfredo Gomez",
-    ].map((label) => ({ label, value: `rider:${label}` })),
-  },
+const teamOptions = [
+  "Red Bull KTM Factory Racing",
+  "Factory Sherco Racing",
+  "FMF KTM Factory Racing",
+  "GASGAS Factory Racing",
+];
+
+const riderOptions = [
+  "Manuel Lettenbichler",
+  "Billy Bolt",
+  "Mario Roman",
+  "Trystan Hart",
+  "Alfredo Gomez",
 ];
 
 export function TeamsBrowser({ teams }: TeamsBrowserProps) {
   const [teamFilter, setTeamFilter] = useState("all");
-  const [sort, setSort] = useState<(typeof sortOptions)[number]["value"]>("name");
+  const [riderFilter, setRiderFilter] = useState("all");
+  const [sort, setSort] = useState<(typeof sortOptions)[number]["value"]>("name-asc");
 
   const visibleTeams = useMemo(() => {
     return teams
-      .filter((team) => matchesTeamFilter(team, teamFilter))
+      .filter((team) =>
+        matchesTeamFilters(team, { team: teamFilter, rider: riderFilter }),
+      )
       .sort((a, b) => {
-        if (sort === "name") {
+        if (sort === "name-asc") {
           return a.name.localeCompare(b.name);
+        }
+
+        if (sort === "name-desc") {
+          return b.name.localeCompare(a.name);
         }
 
         if (sort === "riders") {
           return b.activeRiders - a.activeRiders;
         }
 
-        return a[sort].localeCompare(b[sort]);
+        return 0;
       });
-  }, [sort, teamFilter, teams]);
+  }, [riderFilter, sort, teamFilter, teams]);
 
   return (
     <div className="grid gap-8">
       <Card className="p-4">
-        <div className="grid gap-3 md:grid-cols-[220px_minmax(0,1fr)]">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <FilterSelect
             label="Sort"
             value={sort}
@@ -91,11 +90,19 @@ export function TeamsBrowser({ teams }: TeamsBrowserProps) {
               sortOptions.map((option) => [option.value, option.label]),
             )}
           />
-          <GroupedFilterSelect
-            label="Team Name"
+          <FilterSelect
+            label="Teams"
             value={teamFilter}
             onChange={setTeamFilter}
-            groups={teamNameGroups}
+            options={teamOptions}
+            includeAll
+          />
+          <FilterSelect
+            label="Riders"
+            value={riderFilter}
+            onChange={setRiderFilter}
+            options={riderOptions}
+            includeAll
           />
         </div>
       </Card>
@@ -109,23 +116,17 @@ export function TeamsBrowser({ teams }: TeamsBrowserProps) {
   );
 }
 
-function matchesTeamFilter(team: TeamCardData, filter: string) {
-  if (filter === "all") {
-    return true;
-  }
+function matchesTeamFilters(
+  team: TeamCardData,
+  filters: { team: string; rider: string },
+) {
+  const teamMatches =
+    filters.team === "all" || normalize(team.name).includes(normalize(filters.team));
+  const riderMatches =
+    filters.rider === "all" ||
+    team.riderRoster.some((name) => normalize(name).includes(normalize(filters.rider)));
 
-  const [type, rawValue] = filter.split(":");
-  const value = normalize(rawValue ?? "");
-
-  if (type === "team") {
-    return normalize(team.name).includes(value);
-  }
-
-  if (type === "rider") {
-    return team.riderRoster.some((name) => normalize(name).includes(value));
-  }
-
-  return true;
+  return teamMatches && riderMatches;
 }
 
 function normalize(value: string) {
@@ -207,12 +208,14 @@ function FilterSelect({
   onChange,
   options,
   labels,
+  includeAll = false,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   options: string[];
   labels?: Record<string, string>;
+  includeAll?: boolean;
 }) {
   return (
     <label className="grid gap-2 text-sm">
@@ -225,47 +228,11 @@ function FilterSelect({
           "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
         )}
       >
+        {includeAll ? <option value="all">All</option> : null}
         {options.map((option) => (
           <option key={option} value={option}>
             {labels?.[option] ?? option}
           </option>
-        ))}
-      </select>
-    </label>
-  );
-}
-
-function GroupedFilterSelect({
-  label,
-  value,
-  onChange,
-  groups,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  groups: Array<{ label: string; options: Array<{ label: string; value: string }> }>;
-}) {
-  return (
-    <label className="grid gap-2 text-sm">
-      <span className="font-semibold text-foreground/[0.64]">{label}</span>
-      <select
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className={cn(
-          "h-11 rounded-md border border-border bg-surface px-3 text-sm font-semibold",
-          "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
-        )}
-      >
-        <option value="all">All</option>
-        {groups.map((group) => (
-          <optgroup key={group.label} label={group.label}>
-            {group.options.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </optgroup>
         ))}
       </select>
     </label>
