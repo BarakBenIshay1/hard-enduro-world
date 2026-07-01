@@ -17,11 +17,16 @@ import type { EventDetail, EventResult } from "./types";
 export function ResultsPanel({
   event,
   verifiedFact,
+  isVerified,
 }: {
   event: EventDetail;
   verifiedFact: VerifiedEventFact;
+  isVerified: boolean;
 }) {
-  const stagesWithTiming = event.stages.filter((stage) => stage.stageResults.length > 0);
+  const stagesWithTiming = isVerified
+    ? event.stages.filter((stage) => stage.stageResults.length > 0)
+    : [];
+  const classifiedRows = isVerified ? event.results : [];
 
   return (
     <section id="results" className="scroll-mt-32">
@@ -38,13 +43,14 @@ export function ResultsPanel({
 
       <div className="mt-6 grid gap-4">
         <div className="grid gap-3 md:grid-cols-3">
-          {event.results
+          {classifiedRows
             .filter((result) => result.overallPosition !== null)
             .sort((a, b) => (a.overallPosition ?? 999) - (b.overallPosition ?? 999))
             .slice(0, 3)
             .map((result) => (
               <PodiumCard key={result.id} result={result} />
             ))}
+          {classifiedRows.length === 0 ? <PodiumComingSoon /> : null}
         </div>
 
         <Card className="overflow-hidden border-white/12 bg-black text-white">
@@ -54,7 +60,13 @@ export function ResultsPanel({
               Timing fields pending source rows
             </span>
           </div>
-          <OverallResultsTable results={event.results} />
+          {classifiedRows.length > 0 ? (
+            <OverallResultsTable results={classifiedRows} />
+          ) : (
+            <div className="p-5">
+              <CompactMessage text="Overall results coming soon." />
+            </div>
+          )}
         </Card>
 
         <Card className="p-4">
@@ -105,6 +117,20 @@ export function ResultsPanel({
       </div>
     </section>
   );
+}
+
+function PodiumComingSoon() {
+  return [1, 2, 3].map((position) => (
+    <Card key={position} className="h-full p-4">
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">
+        Position {position}
+      </p>
+      <h3 className="mt-2 text-xl font-black">Coming Soon</h3>
+      <p className="mt-1 text-sm text-foreground/[0.58]">
+        Official result pending verification.
+      </p>
+    </Card>
+  ));
 }
 
 function PodiumCard({ result }: { result: EventResult }) {

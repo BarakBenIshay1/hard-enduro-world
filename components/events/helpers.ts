@@ -12,6 +12,89 @@ import type {
 
 export const UNKNOWN_VERIFIED_VALUE = "Verified data coming soon";
 
+export function buildEventDashboardPlaceholderFact(
+  event: EventDetail,
+): VerifiedEventFact {
+  const pending = (notes: string) => ({
+    value: null,
+    sourceIds: [],
+    notes,
+  });
+
+  return {
+    eventSlug: event.slug,
+    displayName: event.name,
+    previousWinner: null,
+    verifiedWinner: null,
+    verifiedFinisherCount: null,
+    factsNote:
+      "Public dashboard placeholder only. Verified event facts have not been attached yet.",
+    sourceIds: [],
+    eventDescription: {
+      value: event.description,
+      sourceIds: [],
+      notes:
+        "Existing event description shown as page context; official verification pending.",
+    },
+    historySummary: pending("Event history pending official verification."),
+    terrainDescription: pending("Terrain details pending official verification."),
+    elevation: pending("Elevation pending official verification."),
+    distance: pending("Distance pending official verification."),
+    checkpointCount: pending("Checkpoint count pending official verification."),
+    eventFormat: pending("Event format pending official verification."),
+    prologueExplanation: pending("Prologue details pending official verification."),
+    mainRaceExplanation: pending("Main race details pending official verification."),
+    finishRate: pending("Finish rate pending verified starters and finishers."),
+    weather: pending("Weather pending official or provider verification."),
+    officialOrganizer: pending("Official organizer pending verification."),
+    participants: {
+      registeredRiders: pending("Registered riders pending official entry list."),
+      confirmedStarters: pending("Confirmed starters pending official start list."),
+      verifiedFinishers: pending("Finishers pending official classification."),
+      dnf: pending("DNF count pending official classification."),
+      dns: pending("DNS count pending official classification."),
+      dsq: pending("DSQ count pending official classification."),
+    },
+    manufacturerContext: {
+      factoryParticipation: pending("Factory participation pending official source."),
+      participatingManufacturers: pending(
+        "Participating manufacturers pending official entry list.",
+      ),
+      factoryRiders: pending("Factory riders pending official verification."),
+      privateRiders: pending("Private riders pending official verification."),
+    },
+    teamContext: {
+      factoryTeams: pending("Factory teams pending official verification."),
+      independentTeams: pending("Independent teams pending official verification."),
+      supportTeams: pending("Support teams pending official verification."),
+    },
+    motorcycleContext: {
+      motorcycleModels: pending("Motorcycle models pending official verification."),
+      engineSize: pending("Engine sizes pending official verification."),
+      manufacturer: pending("Motorcycle manufacturers pending official verification."),
+    },
+    raceStatistics: {
+      starters: pending("Starters pending official verification."),
+      finishers: pending("Finishers pending official verification."),
+      finishRate: pending("Finish rate pending official verification."),
+      longestStage: pending("Longest stage pending official verification."),
+      totalDistance: pending("Total distance pending official verification."),
+      elevationGain: pending("Elevation gain pending official verification."),
+      checkpointCount: pending("Checkpoint count pending official verification."),
+    },
+    eventTimeline: [
+      {
+        label: "Schedule",
+        date: null,
+        status: "TBC",
+        description: null,
+        sourceIds: [],
+        notes: "Official schedule pending verification.",
+      },
+    ],
+  };
+}
+
 export function mapTimingResults(
   results: EventStage["stageResults"],
 ): StageTimingResult[] {

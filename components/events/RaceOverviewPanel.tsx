@@ -6,10 +6,12 @@ import { UNKNOWN_VERIFIED_VALUE } from "./helpers";
 
 export function RaceOverviewPanel({
   verifiedFact,
+  podiumLabel,
   terrain,
   elevation,
 }: {
   verifiedFact: VerifiedEventFact;
+  podiumLabel: string | null;
   terrain: string;
   elevation: string;
 }) {
@@ -26,7 +28,11 @@ export function RaceOverviewPanel({
           value={verifiedFact.verifiedWinner}
           fallback={UNKNOWN_VERIFIED_VALUE}
         />
-        <MetricCard label="Podium" value="Lettenbichler / Hart / Roman" />
+        <MetricCard
+          label="Podium"
+          value={podiumLabel}
+          fallback={UNKNOWN_VERIFIED_VALUE}
+        />
         <MetricCard
           label="Finishers"
           value={verifiedFact.raceStatistics?.finishers.value}

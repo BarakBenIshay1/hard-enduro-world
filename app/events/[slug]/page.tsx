@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { EventDashboard } from "@/components/events/EventDashboard";
 import { EventHero } from "@/components/events/EventHero";
+import { buildEventDashboardPlaceholderFact } from "@/components/events/helpers";
 import {
   StageTimingTable,
   type StageTimingResult,
@@ -50,28 +51,6 @@ type CrossLink = {
   href: string;
   detail: string;
 };
-
-const eventTabs = [
-  "Overview",
-  "About The Race",
-  "Race Format",
-  "Course",
-  "Participants",
-  "Race Statistics",
-  "Timeline",
-  "Schedule",
-  "Stages",
-  "Results",
-  "Riders",
-  "Manufacturers",
-  "Teams",
-  "Motorcycles",
-  "History",
-  "Verified Facts",
-  "Official Links",
-  "Media",
-  "Documents",
-];
 
 const raceDashboardTabs = [
   "Results",
@@ -113,6 +92,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
   const { slug } = await params;
   const event = await getEventDetail(slug);
   const verifiedFact = getVerifiedEventFact(event.slug);
+  const dashboardFact = verifiedFact ?? buildEventDashboardPlaceholderFact(event);
   const terrain = extractDescriptionField(event.description, "Terrain");
   const elevation = extractDescriptionField(event.description, "Elevation");
   const previousWinner = extractDescriptionField(
@@ -124,11 +104,6 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
   );
   const finalWinner = event.results.find((result) => result.overallPosition === 1)?.rider;
   const allStageResults = event.stages.flatMap((stage) => stage.stageResults);
-  const finishers = event.results.filter((result) => result.status === "FINISHED").length;
-  const displayedFinishers = verifiedFinisherCount ?? finishers;
-  const dnfCount = event.results.filter((result) => result.status === "DNF").length;
-  const dnsCount = event.results.filter((result) => result.status === "DNS").length;
-  const dsqCount = event.results.filter((result) => result.status === "DSQ").length;
   const fastestStage = allStageResults
     .filter((result) => result.totalTimeMs !== null)
     .sort((a, b) => (a.totalTimeMs ?? 0) - (b.totalTimeMs ?? 0))[0];
@@ -142,19 +117,15 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
   const mediaStats = buildMediaStats(event.mediaItems);
   const verifiedOfficialLinks = buildOfficialLinks(verifiedFact);
   const crossNavigation = buildCrossNavigation(event);
-  const pageTabs = verifiedFact ? raceDashboardTabs : eventTabs;
+  const pageTabs = raceDashboardTabs;
 
   return (
     <main className="min-h-screen bg-surface text-foreground">
       <EventHero
         event={event}
-        verifiedFact={verifiedFact}
+        verifiedFact={dashboardFact}
         terrain={terrain}
         elevation={elevation}
-        displayedFinishers={displayedFinishers}
-        dnfCount={dnfCount}
-        dnsCount={dnsCount}
-        dsqCount={dsqCount}
       />
 
       <nav className="sticky top-16 z-30 border-y border-border bg-black/[0.94] text-white shadow-xl shadow-black/20 backdrop-blur-xl">
@@ -187,19 +158,18 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
         </Container>
       </nav>
 
-      {verifiedFact ? (
-        <EventDashboard
-          event={event}
-          verifiedFact={verifiedFact}
-          terrain={terrain}
-          elevation={elevation}
-          previousWinner={previousWinner}
-          finalWinner={finalWinner}
-          fastestStage={fastestStage}
-        />
-      ) : null}
+      <EventDashboard
+        event={event}
+        verifiedFact={dashboardFact}
+        isVerified={Boolean(verifiedFact)}
+        terrain={terrain}
+        elevation={elevation}
+        previousWinner={previousWinner}
+        finalWinner={finalWinner}
+        fastestStage={fastestStage}
+      />
 
-      <div className={verifiedFact ? "hidden" : undefined}>
+      <div className="hidden">
         <Container className="grid gap-12 py-12">
           <section id="overview" className="scroll-mt-32">
             <SectionTitle

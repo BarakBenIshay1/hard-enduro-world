@@ -12,22 +12,17 @@ export function EventHero({
   verifiedFact,
   terrain,
   elevation,
-  displayedFinishers,
-  dnfCount,
-  dnsCount,
-  dsqCount,
 }: {
   event: EventDetail;
   verifiedFact: VerifiedEventFact | null;
   terrain: string;
   elevation: string;
-  displayedFinishers: number;
-  dnfCount: number;
-  dnsCount: number;
-  dsqCount: number;
 }) {
   const podium = event.results
-    .filter((result) => result.overallPosition !== null && result.overallPosition <= 3)
+    .filter(
+      (result) =>
+        verifiedFact && result.overallPosition !== null && result.overallPosition <= 3,
+    )
     .sort((a, b) => (a.overallPosition ?? 999) - (b.overallPosition ?? 999));
 
   return (
@@ -76,19 +71,7 @@ export function EventHero({
           <Card className="overflow-hidden border-white/14 bg-white/[0.06] text-white shadow-2xl shadow-black/30">
             <RaceImagePlaceholder eventName={event.name} />
           </Card>
-          {verifiedFact ? (
-            <HeroPodiumBlock podium={podium} />
-          ) : (
-            <div className="grid gap-3 sm:grid-cols-2">
-              <QuickStat label="Riders" value={String(event.results.length)} />
-              <QuickStat label="Stages" value={String(event.stages.length)} />
-              <QuickStat label="Finishers" value={String(displayedFinishers)} />
-              <QuickStat
-                label="DNF / DNS / DSQ"
-                value={`${dnfCount}/${dnsCount}/${dsqCount}`}
-              />
-            </div>
-          )}
+          <HeroPodiumBlock podium={podium} />
         </div>
       </Container>
     </section>
@@ -120,6 +103,8 @@ function RaceImagePlaceholder({ eventName }: { eventName: string }) {
 }
 
 function HeroPodiumBlock({ podium }: { podium: EventResult[] }) {
+  const slots = [1, 2, 3];
+
   return (
     <Card className="border-white/12 bg-white/[0.06] p-5 text-white shadow-2xl shadow-black/20">
       <div className="flex items-center justify-between gap-4">
@@ -129,34 +114,43 @@ function HeroPodiumBlock({ podium }: { podium: EventResult[] }) {
         <Medal className="h-5 w-5 text-accent" aria-hidden="true" />
       </div>
       <div className="mt-5 grid gap-3 sm:grid-cols-3">
-        {podium.map((result) => (
-          <PodiumRider key={result.id} result={result} />
+        {slots.map((position) => (
+          <PodiumRider
+            key={position}
+            position={position}
+            result={podium.find((item) => item.overallPosition === position) ?? null}
+          />
         ))}
       </div>
     </Card>
   );
 }
 
-function PodiumRider({ result }: { result: EventResult }) {
-  const medal =
-    result.overallPosition === 1 ? "🥇" : result.overallPosition === 2 ? "🥈" : "🥉";
+function PodiumRider({
+  position,
+  result,
+}: {
+  position: number;
+  result: EventResult | null;
+}) {
+  const medal = position === 1 ? "🥇" : position === 2 ? "🥈" : "🥉";
   const manufacturer =
-    result.manufacturer?.name ?? result.motorcycle?.manufacturer.name ?? "TBC";
+    result?.manufacturer?.name ?? result?.motorcycle?.manufacturer.name ?? "TBC";
 
   return (
     <div className="rounded-md border border-white/10 bg-black/26 p-4 text-center">
       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/[0.5]">
-        {medal} Position {result.overallPosition}
+        {medal} Position {position}
       </p>
       <div className="mx-auto mt-4 flex h-20 w-20 items-center justify-center rounded-full border border-white/14 bg-[radial-gradient(circle_at_35%_25%,hsl(24_85%_45%/0.55),hsl(0_0%_13%)_58%,hsl(0_0%_4%))] text-2xl font-black text-white shadow-xl shadow-black/30">
-        {getInitials(result.rider)}
+        {result ? getInitials(result.rider) : "TBC"}
       </div>
       <h3 className="mt-4 min-h-[44px] text-base font-black leading-tight">
-        {winnerName(result.rider)}
+        {result ? winnerName(result.rider) : "Coming Soon"}
       </h3>
       <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
         <span className="rounded-sm border border-white/10 bg-white/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/[0.64]">
-          {result.rider.country?.isoCode ?? "TBC"}
+          {result?.rider.country?.isoCode ?? "TBC"}
         </span>
         <span className="rounded-sm border border-accent/30 bg-accent/12 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-accent">
           {manufacturer}
@@ -172,15 +166,6 @@ function HeroFact({ icon: Icon, value }: { icon: typeof MapPin; value: string })
       <Icon className="h-4 w-4 text-accent" aria-hidden="true" />
       {value}
     </span>
-  );
-}
-
-function QuickStat({ label, value }: { label: string; value: string }) {
-  return (
-    <Card className="border-white/12 bg-white/[0.06] p-4 text-white">
-      <p className="text-xs uppercase tracking-[0.18em] text-white/[0.5]">{label}</p>
-      <p className="mt-2 text-2xl font-black">{value}</p>
-    </Card>
   );
 }
 
