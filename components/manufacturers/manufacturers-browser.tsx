@@ -16,6 +16,7 @@ export type ManufacturerCardData = {
   status: string;
   season: string;
   motorcycleModels: string[];
+  riderNames: string[];
   activeTeams: number;
   activeRiders: number;
   championships: number;
@@ -35,18 +36,50 @@ const sortOptions = [
   { label: "Factory connections", value: "teams" },
 ] as const;
 
+const factoryNameGroups = [
+  {
+    label: "Manufacturers",
+    options: [
+      "KTM",
+      "Sherco",
+      "Beta",
+      "GASGAS",
+      "Husqvarna",
+      "Rieju",
+      "TM Racing",
+      "Honda",
+    ].map((label) => ({ label, value: `manufacturer:${label}` })),
+  },
+  {
+    label: "Riders",
+    options: [
+      "Manuel Lettenbichler",
+      "Billy Bolt",
+      "Mario Roman",
+      "Trystan Hart",
+      "Alfredo Gomez",
+    ].map((label) => ({ label, value: `rider:${label}` })),
+  },
+  {
+    label: "Motorcycle Models",
+    options: [
+      "KTM 300 EXC",
+      "Husqvarna TE 300",
+      "Sherco 300 SE Factory",
+      "Beta RR Racing",
+      "GASGAS EC 300",
+      "TM MC 300",
+    ].map((label) => ({ label, value: `motorcycle:${label}` })),
+  },
+];
+
 export function ManufacturersBrowser({ manufacturers }: ManufacturersBrowserProps) {
-  const [query, setQuery] = useState("");
+  const [factoryFilter, setFactoryFilter] = useState("all");
   const [sort, setSort] = useState<(typeof sortOptions)[number]["value"]>("name");
 
   const visibleManufacturers = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
-
     return manufacturers
-      .filter(
-        (manufacturer) =>
-          !normalizedQuery || manufacturer.name.toLowerCase().includes(normalizedQuery),
-      )
+      .filter((manufacturer) => matchesFactoryFilter(manufacturer, factoryFilter))
       .sort((a, b) => {
         if (sort === "name") {
           return a.name.localeCompare(b.name);
@@ -62,7 +95,7 @@ export function ManufacturersBrowser({ manufacturers }: ManufacturersBrowserProp
 
         return b.activeTeams - a.activeTeams;
       });
-  }, [manufacturers, query, sort]);
+  }, [factoryFilter, manufacturers, sort]);
 
   return (
     <div className="grid gap-8">
@@ -77,15 +110,12 @@ export function ManufacturersBrowser({ manufacturers }: ManufacturersBrowserProp
               sortOptions.map((option) => [option.value, option.label]),
             )}
           />
-          <label className="grid gap-2 text-sm">
-            <span className="font-semibold text-foreground/[0.64]">Factory Name</span>
-            <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Type a factory name"
-              className="h-11 w-full rounded-md border border-border bg-surface px-3 text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-            />
-          </label>
+          <GroupedFilterSelect
+            label="Factory Name"
+            value={factoryFilter}
+            onChange={setFactoryFilter}
+            groups={factoryNameGroups}
+          />
         </div>
       </Card>
 
@@ -96,6 +126,35 @@ export function ManufacturersBrowser({ manufacturers }: ManufacturersBrowserProp
       </div>
     </div>
   );
+}
+
+function matchesFactoryFilter(manufacturer: ManufacturerCardData, filter: string) {
+  if (filter === "all") {
+    return true;
+  }
+
+  const [type, rawValue] = filter.split(":");
+  const value = normalize(rawValue ?? "");
+
+  if (type === "manufacturer") {
+    return normalize(manufacturer.name).includes(value);
+  }
+
+  if (type === "rider") {
+    return manufacturer.riderNames.some((name) => normalize(name).includes(value));
+  }
+
+  if (type === "motorcycle") {
+    return manufacturer.motorcycleModels.some((model) =>
+      normalize(`${manufacturer.name} ${model}`).includes(value),
+    );
+  }
+
+  return true;
+}
+
+function normalize(value: string) {
+  return value.toLowerCase().replace(/\s+/g, " ").trim();
 }
 
 function ManufacturerCard({ manufacturer }: { manufacturer: ManufacturerCardData }) {
@@ -198,11 +257,47 @@ function FilterSelect({
           "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
         )}
       >
-        <option value="all">All</option>
         {options.map((option) => (
           <option key={option} value={option}>
             {labels?.[option] ?? option}
           </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function GroupedFilterSelect({
+  label,
+  value,
+  onChange,
+  groups,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  groups: Array<{ label: string; options: Array<{ label: string; value: string }> }>;
+}) {
+  return (
+    <label className="grid gap-2 text-sm">
+      <span className="font-semibold text-foreground/[0.64]">{label}</span>
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className={cn(
+          "h-11 rounded-md border border-border bg-surface px-3 text-sm font-semibold",
+          "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
+        )}
+      >
+        <option value="all">All</option>
+        {groups.map((group) => (
+          <optgroup key={group.label} label={group.label}>
+            {group.options.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </optgroup>
         ))}
       </select>
     </label>

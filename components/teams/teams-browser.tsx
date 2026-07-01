@@ -36,17 +36,35 @@ const sortOptions = [
   { label: "Manufacturer", value: "manufacturer" },
 ] as const;
 
+const teamNameGroups = [
+  {
+    label: "Teams",
+    options: [
+      "Red Bull KTM Factory Racing",
+      "Factory Sherco Racing",
+      "FMF KTM Factory Racing",
+      "GASGAS Factory Racing",
+    ].map((label) => ({ label, value: `team:${label}` })),
+  },
+  {
+    label: "Riders",
+    options: [
+      "Manuel Lettenbichler",
+      "Billy Bolt",
+      "Mario Roman",
+      "Trystan Hart",
+      "Alfredo Gomez",
+    ].map((label) => ({ label, value: `rider:${label}` })),
+  },
+];
+
 export function TeamsBrowser({ teams }: TeamsBrowserProps) {
-  const [query, setQuery] = useState("");
+  const [teamFilter, setTeamFilter] = useState("all");
   const [sort, setSort] = useState<(typeof sortOptions)[number]["value"]>("name");
 
   const visibleTeams = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
-
     return teams
-      .filter(
-        (team) => !normalizedQuery || team.name.toLowerCase().includes(normalizedQuery),
-      )
+      .filter((team) => matchesTeamFilter(team, teamFilter))
       .sort((a, b) => {
         if (sort === "name") {
           return a.name.localeCompare(b.name);
@@ -58,7 +76,7 @@ export function TeamsBrowser({ teams }: TeamsBrowserProps) {
 
         return a[sort].localeCompare(b[sort]);
       });
-  }, [query, sort, teams]);
+  }, [sort, teamFilter, teams]);
 
   return (
     <div className="grid gap-8">
@@ -73,15 +91,12 @@ export function TeamsBrowser({ teams }: TeamsBrowserProps) {
               sortOptions.map((option) => [option.value, option.label]),
             )}
           />
-          <label className="grid gap-2 text-sm">
-            <span className="font-semibold text-foreground/[0.64]">Team Name</span>
-            <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Type a team name"
-              className="h-11 w-full rounded-md border border-border bg-surface px-3 text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-            />
-          </label>
+          <GroupedFilterSelect
+            label="Team Name"
+            value={teamFilter}
+            onChange={setTeamFilter}
+            groups={teamNameGroups}
+          />
         </div>
       </Card>
 
@@ -92,6 +107,29 @@ export function TeamsBrowser({ teams }: TeamsBrowserProps) {
       </div>
     </div>
   );
+}
+
+function matchesTeamFilter(team: TeamCardData, filter: string) {
+  if (filter === "all") {
+    return true;
+  }
+
+  const [type, rawValue] = filter.split(":");
+  const value = normalize(rawValue ?? "");
+
+  if (type === "team") {
+    return normalize(team.name).includes(value);
+  }
+
+  if (type === "rider") {
+    return team.riderRoster.some((name) => normalize(name).includes(value));
+  }
+
+  return true;
+}
+
+function normalize(value: string) {
+  return value.toLowerCase().replace(/\s+/g, " ").trim();
 }
 
 function TeamCard({ team }: { team: TeamCardData }) {
@@ -187,11 +225,47 @@ function FilterSelect({
           "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
         )}
       >
-        <option value="all">All</option>
         {options.map((option) => (
           <option key={option} value={option}>
             {labels?.[option] ?? option}
           </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function GroupedFilterSelect({
+  label,
+  value,
+  onChange,
+  groups,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  groups: Array<{ label: string; options: Array<{ label: string; value: string }> }>;
+}) {
+  return (
+    <label className="grid gap-2 text-sm">
+      <span className="font-semibold text-foreground/[0.64]">{label}</span>
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className={cn(
+          "h-11 rounded-md border border-border bg-surface px-3 text-sm font-semibold",
+          "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
+        )}
+      >
+        <option value="all">All</option>
+        {groups.map((group) => (
+          <optgroup key={group.label} label={group.label}>
+            {group.options.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </optgroup>
         ))}
       </select>
     </label>

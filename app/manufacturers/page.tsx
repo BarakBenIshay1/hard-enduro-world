@@ -29,6 +29,16 @@ export default async function ManufacturersPage() {
         motorcycle.currentRiders.map((rider) => rider.id),
       ),
     ]);
+    const riderNames = uniqueValues([
+      ...manufacturer.riderCareerSeasons.map((career) =>
+        formatRiderName(career.rider.firstName, career.rider.lastName),
+      ),
+      ...manufacturer.motorcycles.flatMap((motorcycle) =>
+        motorcycle.currentRiders.map((rider) =>
+          formatRiderName(rider.firstName, rider.lastName),
+        ),
+      ),
+    ]);
     const totals = manufacturer.riderCareerSeasons.reduce(
       (acc, career) => ({
         championships: acc.championships + (career.championshipPosition === 1 ? 1 : 0),
@@ -54,6 +64,7 @@ export default async function ManufacturersPage() {
       status,
       season: primarySeason ?? "Manufacturer archive",
       motorcycleModels: manufacturer.motorcycles.map((motorcycle) => motorcycle.model),
+      riderNames,
       activeTeams: teams.length,
       activeRiders: riders.length,
       championships: totals.championships,
@@ -88,4 +99,12 @@ export default async function ManufacturersPage() {
 
 function uniqueIds(values: string[]) {
   return Array.from(new Set(values));
+}
+
+function uniqueValues(values: string[]) {
+  return Array.from(new Set(values.filter(Boolean)));
+}
+
+function formatRiderName(firstName: string, lastName: string) {
+  return [firstName, lastName].filter(Boolean).join(" ");
 }
