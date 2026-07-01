@@ -46,16 +46,8 @@ export function getRaceStatus(
   return { phase: "coming-soon", label: "Coming Soon" };
 }
 
-export function getRaceDashboardTabs(phase: RacePhase) {
-  if (phase === "coming-soon") {
-    return ["Race Overview", "Results", "History"];
-  }
-
-  if (phase === "live-now") {
-    return ["Live Now", "Results", "History"];
-  }
-
-  return ["Results", "Race Overview", "History"];
+export function getRaceDashboardTabs() {
+  return ["Results", "Route Maps", "Race Overview", "History"];
 }
 
 export function getRaceStatusPriority(phase: RacePhase) {

@@ -111,7 +111,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
   const mediaStats = buildMediaStats(event.mediaItems);
   const verifiedOfficialLinks = buildOfficialLinks(verifiedFact);
   const crossNavigation = buildCrossNavigation(event);
-  const pageTabs = getRaceDashboardTabs(raceStatus.phase);
+  const pageTabs = getRaceDashboardTabs();
 
   return (
     <main className="min-h-screen bg-surface text-foreground">
@@ -126,11 +126,11 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
 
       <nav className="sticky top-16 z-30 border-y border-border bg-black/[0.94] text-white shadow-xl shadow-black/20 backdrop-blur-xl">
         <Container className="overflow-x-auto py-3">
-          <div className="grid min-w-[420px] grid-cols-3 gap-2 lg:min-w-0">
+          <div className="grid min-w-[560px] grid-cols-4 gap-2 lg:min-w-0">
             {pageTabs.map((tab, index) => (
               <Link
                 key={tab}
-                href={`#${tab.toLowerCase().replaceAll(" ", "-")}`}
+                href={`#${getDashboardTabId(tab)}`}
                 className={cn(
                   "rounded-md border px-3 py-3 text-center text-xs font-semibold uppercase tracking-[0.14em] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
                   "border-white/10 bg-white/[0.04] hover:border-accent hover:bg-accent/10 hover:text-accent",
@@ -1623,6 +1623,14 @@ function getTeamName(rider: Result["rider"]) {
 
 function winnerName(rider: { firstName: string; lastName: string } | null | undefined) {
   return rider ? `${rider.firstName} ${rider.lastName}` : "Pending";
+}
+
+function getDashboardTabId(tab: string) {
+  if (tab === "Route Maps") {
+    return "course-maps";
+  }
+
+  return tab.toLowerCase().replaceAll(" ", "-");
 }
 
 function buildOverview(event: EventDetail, terrain: string, elevation: string) {

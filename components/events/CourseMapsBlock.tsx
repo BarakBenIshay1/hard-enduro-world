@@ -36,7 +36,7 @@ export function CourseMapsBlock({ stages, racePhase }: CourseMapsBlockProps) {
   ].filter((item) => hasVerifiedValue(item.value));
 
   return (
-    <Card className="overflow-hidden p-5">
+    <Card id="course-maps" className="scroll-mt-32 overflow-hidden p-5">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">
