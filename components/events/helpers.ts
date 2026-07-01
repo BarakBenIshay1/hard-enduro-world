@@ -140,7 +140,7 @@ export function buildStageCard(stage: EventStage, terrain: string, elevation: st
     type: stage.stageType,
     name: stage.name,
     distance: stage.distanceKm ? `${stage.distanceKm.toString()} km` : "Distance TBC",
-    terrain: terrain || "Demo technical hard enduro terrain",
+    terrain: terrain || "TBC",
     elevation: elevation || "Elevation TBC",
     winner: winner ? winnerName(winner.rider) : "Pending",
     bestTime: bestTime?.totalTimeText ?? "Pending",

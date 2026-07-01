@@ -1,7 +1,7 @@
 import { Container } from "@/components/ui/container";
 import type { VerifiedEventFact } from "@/data/verified/types";
 import { Card } from "@/components/ui/card";
-import { buildManufacturerRows, winnerName } from "./helpers";
+import { buildManufacturerRows, buildStageCard, winnerName } from "./helpers";
 import { HistoryPanel } from "./HistoryPanel";
 import { RaceOverviewPanel } from "./RaceOverviewPanel";
 import { RaceStatusBadge } from "./RaceStatusBadge";
@@ -30,6 +30,9 @@ export function EventDashboard({
   finalWinner: EventResult["rider"] | undefined;
   fastestStage: EventDetail["stages"][number]["stageResults"][number] | undefined;
 }) {
+  const stageCards = event.stages.map((stage) =>
+    buildStageCard(stage, terrain, elevation),
+  );
   const manufacturerRows = isVerified ? buildManufacturerRows(event.results) : [];
 
   const resultsPanel = (
@@ -41,6 +44,7 @@ export function EventDashboard({
       podiumLabel={isVerified ? getPodiumLabel(event.results) : null}
       terrain={terrain}
       elevation={elevation}
+      stageCards={stageCards}
     />
   );
   const historyPanel = (
