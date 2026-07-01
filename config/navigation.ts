@@ -11,11 +11,14 @@ export type NavigationGroup = {
 
 export const primaryNavigation: NavigationItem[] = [
   { label: "Home", href: "/" },
-  { label: "Championship", href: "/championship" },
+  { label: "Race Live Center", href: "/future-events" },
   { label: "Events", href: "/events" },
-  { label: "Riders", href: "/riders" },
   { label: "Standings", href: "/standings" },
+  { label: "Riders", href: "/riders" },
+  { label: "Manufacturers", href: "/manufacturers" },
+  { label: "Teams", href: "/teams" },
   { label: "Media", href: "/gallery" },
+  { label: "History", href: "/history" },
 ];
 
 export const megaNavigation: NavigationGroup[] = [
@@ -71,4 +74,4 @@ export const megaNavigation: NavigationGroup[] = [
   },
 ];
 
-export const allNavigationItems = megaNavigation.flatMap((group) => group.items);
+export const allNavigationItems = primaryNavigation;

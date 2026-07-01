@@ -1,8 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronDown, Globe2, Menu, Search, X } from "lucide-react";
+import { Globe2, Menu, Search, X } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Logo } from "@/components/logo";
@@ -10,16 +9,11 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { ButtonLink } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
 import { NavigationItem } from "@/components/ui/navigation-item";
-import {
-  allNavigationItems,
-  megaNavigation,
-  primaryNavigation,
-} from "@/config/navigation";
+import { allNavigationItems, primaryNavigation } from "@/config/navigation";
 import { cn } from "@/lib/cn";
 
-export function SiteHeader() {
+export function SiteHeader({ hasLiveRace = false }: { hasLiveRace?: boolean }) {
   const [isScrolled, setIsScrolled] = useState(false);
-  const [isMegaOpen, setIsMegaOpen] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const pathname = usePathname();
 
@@ -32,7 +26,6 @@ export function SiteHeader() {
 
   useEffect(() => {
     setIsMobileOpen(false);
-    setIsMegaOpen(false);
   }, [pathname]);
 
   if (pathname.startsWith("/admin")) {
@@ -53,26 +46,19 @@ export function SiteHeader() {
 
         <nav
           aria-label="Primary navigation"
-          className="hidden items-center gap-1 xl:flex"
+          className="hidden items-center gap-0 xl:flex"
         >
           {primaryNavigation.map((item) => (
-            <NavigationItem key={item.href} href={item.href} label={item.label} />
-          ))}
-          <button
-            type="button"
-            onClick={() => setIsMegaOpen((current) => !current)}
-            aria-expanded={isMegaOpen}
-            className="inline-flex items-center gap-1 rounded-md px-3 py-2 text-sm font-semibold text-current/70 transition hover:bg-surface-muted hover:text-current focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-          >
-            More
-            <ChevronDown
-              className={cn("h-4 w-4 transition", isMegaOpen && "rotate-180")}
-              aria-hidden="true"
+            <NavigationItem
+              key={item.href}
+              href={item.href}
+              label={item.label}
+              showLiveIndicator={hasLiveRace && item.href === "/future-events"}
             />
-          </button>
+          ))}
         </nav>
 
-        <div className="hidden items-center gap-2 lg:flex">
+        <div className="hidden items-center gap-2 2xl:flex">
           <button
             type="button"
             aria-label="Search"
@@ -103,42 +89,6 @@ export function SiteHeader() {
           <Menu className="h-5 w-5" />
         </button>
       </Container>
-
-      <AnimatePresence>
-        {isMegaOpen ? (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.18 }}
-            className="hidden border-t border-border bg-surface/[0.96] text-foreground shadow-[0_24px_80px_hsl(0_0%_0%/0.2)] backdrop-blur-xl xl:block"
-          >
-            <Container className="grid grid-cols-5 gap-6 py-7">
-              {megaNavigation.map((group) => (
-                <div key={group.label}>
-                  <p className="mb-3 text-xs font-semibold uppercase tracking-[0.22em] text-accent">
-                    {group.label}
-                  </p>
-                  <div className="grid gap-1">
-                    {group.items.map((item) => (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        className="rounded-md p-3 transition hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
-                      >
-                        <span className="font-semibold">{item.label}</span>
-                        <span className="mt-1 block text-sm text-foreground/56">
-                          {item.description}
-                        </span>
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </Container>
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
 
       <AnimatePresence>
         {isMobileOpen ? (
@@ -182,6 +132,7 @@ export function SiteHeader() {
                     href={item.href}
                     label={item.label}
                     onClick={() => setIsMobileOpen(false)}
+                    showLiveIndicator={hasLiveRace && item.href === "/future-events"}
                   />
                 </motion.div>
               ))}

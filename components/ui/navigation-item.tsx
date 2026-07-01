@@ -8,9 +8,15 @@ type NavigationItemProps = {
   href: string;
   label: string;
   onClick?: () => void;
+  showLiveIndicator?: boolean;
 };
 
-export function NavigationItem({ href, label, onClick }: NavigationItemProps) {
+export function NavigationItem({
+  href,
+  label,
+  onClick,
+  showLiveIndicator,
+}: NavigationItemProps) {
   const pathname = usePathname();
   const isActive = href === "/" ? pathname === "/" : pathname.startsWith(href);
 
@@ -24,7 +30,15 @@ export function NavigationItem({ href, label, onClick }: NavigationItemProps) {
         isActive && "bg-current/10 text-accent",
       )}
     >
-      {label}
+      <span className="inline-flex items-center gap-2">
+        {label}
+        {showLiveIndicator ? (
+          <span
+            className="h-2 w-2 rounded-full bg-red-500 shadow-[0_0_14px_hsl(0_84%_60%/0.85)] motion-safe:animate-pulse"
+            aria-label="Live now"
+          />
+        ) : null}
+      </span>
     </Link>
   );
 }
