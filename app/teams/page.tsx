@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 export const metadata = {
   title: "Teams",
   description:
-    "Premium Hard Enduro team index connecting riders, countries, manufacturers, motorcycles, and championship records.",
+    "Hard Enduro team index covering factory and independent racing organizations, riders, achievements, and season history.",
 };
 
 export default async function TeamsPage() {
@@ -55,8 +55,8 @@ export default async function TeamsPage() {
       <PageHero
         compact
         eyebrow="Teams"
-        title="The factory structures behind the fight."
-        description="Explore the organizations connecting riders, countries, manufacturers, motorcycles, and future championship statistics."
+        title="Teams"
+        description="Discover the factory and independent teams competing throughout the championship, their riders, achievements, and season history."
       />
 
       <Container className="py-12">
@@ -64,7 +64,7 @@ export default async function TeamsPage() {
           <SectionTitle
             eyebrow="Team Index"
             title="Filter the paddock organizations"
-            description="This module is powered by Prisma team, membership, rider career, manufacturer, motorcycle, and country relationships."
+            description="Browse racing organizations by country, manufacturer relationship, active riders, and championship-era profile data."
           />
         </div>
         <TeamsBrowser teams={teamCards} />

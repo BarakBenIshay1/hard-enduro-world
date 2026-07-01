@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 export const metadata = {
   title: "Manufacturers",
   description:
-    "Premium Hard Enduro manufacturer index connecting teams, riders, motorcycles, results, and championship records.",
+    "Hard Enduro motorcycle manufacturer index covering factory programs, technical evolution, rider line-ups, and championship history.",
 };
 
 export default async function ManufacturersPage() {
@@ -67,16 +67,16 @@ export default async function ManufacturersPage() {
       <PageHero
         compact
         eyebrow="Manufacturers"
-        title="The machines behind the championship."
-        description="Explore factory brands, motorcycle lines, team links, rider programs, and championship records."
+        title="Manufacturers"
+        description="Explore the motorcycle brands competing in Hard Enduro, their factory programs, championship history, technical evolution, and rider line-ups."
       />
 
       <Container className="py-12">
         <div className="mb-8">
           <SectionTitle
             eyebrow="Manufacturer Index"
-            title="Filter the factory landscape"
-            description="This module is powered by Prisma manufacturer, motorcycle, rider career, team, result, and country relationships."
+            title="Filter the motorcycle brands"
+            description="Browse manufacturer profiles centered on machines, factory programs, rider usage, and future verified performance history."
           />
         </div>
         <ManufacturersBrowser manufacturers={manufacturerCards} />

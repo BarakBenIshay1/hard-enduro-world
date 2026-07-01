@@ -20,20 +20,15 @@ const footerGroups = [
   {
     title: "Championship",
     links: [
+      { label: "Race Live Center", href: "/future-events" },
       { label: "Events", href: "/events" },
-      { label: "Standings", href: "/standings" },
-      { label: "Records", href: "/records" },
+      { label: "Riders", href: "/riders" },
       { label: "History", href: "/history" },
     ],
   },
   {
     title: "Media",
-    links: [
-      { label: "Gallery", href: "/gallery" },
-      { label: "Videos", href: "/videos" },
-      { label: "News", href: "/news" },
-      { label: "Sponsors", href: "/sponsors" },
-    ],
+    links: [{ label: "Media", href: "/videos" }],
   },
 ];
 
