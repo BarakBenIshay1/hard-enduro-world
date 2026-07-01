@@ -1,15 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import {
-  ArrowRight,
-  Building2,
-  Flag,
-  Search,
-  ShieldCheck,
-  Trophy,
-  Users,
-} from "lucide-react";
+import { ArrowRight, Building2, Flag, ShieldCheck, Trophy, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -38,97 +30,33 @@ type TeamsBrowserProps = {
 };
 
 const sortOptions = [
-  { label: "Name", value: "name" },
+  { label: "Team Name", value: "name" },
   { label: "Active riders", value: "riders" },
   { label: "Team type", value: "teamType" },
   { label: "Manufacturer", value: "manufacturer" },
 ] as const;
 
 export function TeamsBrowser({ teams }: TeamsBrowserProps) {
-  const [query, setQuery] = useState("");
-  const [country, setCountry] = useState("all");
-  const [manufacturer, setManufacturer] = useState("all");
-  const [status, setStatus] = useState("all");
-  const [season, setSeason] = useState("all");
   const [sort, setSort] = useState<(typeof sortOptions)[number]["value"]>("name");
 
-  const countries = useMemo(() => unique(teams.map((team) => team.country)), [teams]);
-  const manufacturers = useMemo(
-    () => unique(teams.map((team) => team.manufacturer)),
-    [teams],
-  );
-  const statuses = useMemo(() => unique(teams.map((team) => team.status)), [teams]);
-  const seasons = useMemo(() => unique(teams.map((team) => team.season)), [teams]);
-
   const visibleTeams = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
+    return [...teams].sort((a, b) => {
+      if (sort === "name") {
+        return a.name.localeCompare(b.name);
+      }
 
-    return teams
-      .filter(
-        (team) => !normalizedQuery || team.name.toLowerCase().includes(normalizedQuery),
-      )
-      .filter((team) => country === "all" || team.country === country)
-      .filter((team) => manufacturer === "all" || team.manufacturer === manufacturer)
-      .filter((team) => status === "all" || team.status === status)
-      .filter((team) => season === "all" || team.season === season)
-      .sort((a, b) => {
-        if (sort === "name") {
-          return a.name.localeCompare(b.name);
-        }
+      if (sort === "riders") {
+        return b.activeRiders - a.activeRiders;
+      }
 
-        if (sort === "riders") {
-          return b.activeRiders - a.activeRiders;
-        }
-
-        return a[sort].localeCompare(b[sort]);
-      });
-  }, [country, manufacturer, query, season, sort, status, teams]);
+      return a[sort].localeCompare(b[sort]);
+    });
+  }, [sort, teams]);
 
   return (
     <div className="grid gap-8">
-      <Card className="p-4">
-        <div className="grid gap-3 lg:grid-cols-[1.4fr_repeat(4,1fr)]">
-          <label className="grid gap-2 text-sm">
-            <span className="font-semibold text-foreground/[0.64]">Search</span>
-            <span className="relative">
-              <Search
-                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground/[0.42]"
-                aria-hidden="true"
-              />
-              <input
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search team"
-                className="h-11 w-full rounded-md border border-border bg-surface pl-9 pr-3 text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-              />
-            </span>
-          </label>
-          <FilterSelect
-            label="Country"
-            value={country}
-            onChange={setCountry}
-            options={countries}
-          />
-          <FilterSelect
-            label="Manufacturer"
-            value={manufacturer}
-            onChange={setManufacturer}
-            options={manufacturers}
-          />
-          <FilterSelect
-            label="Status"
-            value={status}
-            onChange={setStatus}
-            options={statuses}
-          />
-          <FilterSelect
-            label="Season"
-            value={season}
-            onChange={setSeason}
-            options={seasons}
-          />
-        </div>
-        <div className="mt-3 max-w-xs">
+      <Card className="p-4 sm:max-w-xs">
+        <div>
           <FilterSelect
             label="Sort"
             value={sort}
@@ -252,8 +180,4 @@ function FilterSelect({
       </select>
     </label>
   );
-}
-
-function unique(values: string[]) {
-  return Array.from(new Set(values.filter(Boolean))).sort((a, b) => a.localeCompare(b));
 }
