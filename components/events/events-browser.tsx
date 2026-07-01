@@ -6,7 +6,11 @@ import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/cn";
 import { RaceStatusBadge } from "./RaceStatusBadge";
-import type { RacePhase, RaceStatusView } from "./race-status";
+import {
+  getRaceStatusPriority,
+  type RacePhase,
+  type RaceStatusView,
+} from "./race-status";
 
 export type EventCardData = {
   id: string;
@@ -31,19 +35,12 @@ type EventsBrowserProps = {
   events: EventCardData[];
 };
 
-const sortOptions = [
-  { label: "Soonest", value: "soonest" },
-  { label: "Latest", value: "latest" },
-  { label: "Name", value: "name" },
-] as const;
-
 export function EventsBrowser({ events }: EventsBrowserProps) {
   const defaultYear = events.some((event) => event.year === 2026) ? "2026" : "all";
   const [year, setYear] = useState(defaultYear);
   const [country, setCountry] = useState("all");
   const [season, setSeason] = useState("all");
   const [status, setStatus] = useState("all");
-  const [sort, setSort] = useState<(typeof sortOptions)[number]["value"]>("soonest");
 
   const years = useMemo(
     () => unique(events.map((event) => String(event.year))),
@@ -60,22 +57,21 @@ export function EventsBrowser({ events }: EventsBrowserProps) {
       .filter((event) => season === "all" || event.season === season)
       .filter((event) => status === "all" || event.status === status)
       .sort((a, b) => {
-        if (sort === "latest") {
-          return b.startTimestamp - a.startTimestamp;
-        }
+        const priority =
+          getRaceStatusPriority(a.statusPhase) - getRaceStatusPriority(b.statusPhase);
 
-        if (sort === "name") {
-          return a.name.localeCompare(b.name);
+        if (priority !== 0) {
+          return priority;
         }
 
         return a.startTimestamp - b.startTimestamp;
       });
-  }, [country, events, season, sort, status, year]);
+  }, [country, events, season, status, year]);
 
   return (
     <div className="grid gap-8">
       <Card className="p-4">
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           <FilterSelect label="Year" value={year} onChange={setYear} options={years} />
           <FilterSelect
             label="Country"
@@ -94,15 +90,6 @@ export function EventsBrowser({ events }: EventsBrowserProps) {
             value={status}
             onChange={setStatus}
             options={statuses}
-          />
-          <FilterSelect
-            label="Sort"
-            value={sort}
-            onChange={(value) => setSort(value as typeof sort)}
-            options={sortOptions.map((option) => option.value)}
-            labels={Object.fromEntries(
-              sortOptions.map((option) => [option.value, option.label]),
-            )}
           />
         </div>
       </Card>

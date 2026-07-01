@@ -33,7 +33,7 @@ export async function generateMetadata({ params }: PlaceholderPageProps) {
 
   return {
     title,
-    description: `${title} will be built in a future approved step.`,
+    description: `${title} is planned for a later release.`,
   };
 }
 
@@ -45,14 +45,14 @@ export default async function PlaceholderPage({ params }: PlaceholderPageProps) 
     <main className="min-h-screen bg-surface text-foreground">
       <PageHero
         compact
-        eyebrow="Future module"
+        eyebrow="Planned section"
         title={title}
-        description="This navigation destination is reserved in the global product shell. Its feature implementation will wait for a future approved step."
+        description="This section is planned for a later release. Current championship coverage is available through the active event areas."
       />
       <Container className="py-12">
         <EmptyState
-          title="Not built in Step 4"
-          description="The global navigation is ready, but this section has intentionally not been implemented yet."
+          title="Section coming later"
+          description="Use the current calendar, race center, and championship data pages for the live product experience."
         />
         <div className="mt-6 flex justify-center">
           <ButtonLink href="/events" variant="secondary">

@@ -163,7 +163,7 @@ export default async function TeamProfilePage({ params }: TeamProfilePageProps) 
           <SectionTitle
             eyebrow="History"
             title="Organization profile"
-            description={`${team.name} is represented with seeded/demo records and a page structure ready for official biographies, historic partnerships, and automated result imports in future approved steps.`}
+            description={`${team.name} is represented with seeded/demo records and a page structure ready for official biographies, historic partnerships, and automated result imports in a later release.`}
           />
           <div className="mt-8 grid gap-3 sm:grid-cols-2">
             <InfoCard label="Country" value={team.country?.name ?? "TBC"} icon={Flag} />

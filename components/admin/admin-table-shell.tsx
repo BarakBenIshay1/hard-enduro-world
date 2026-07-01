@@ -78,7 +78,7 @@ export function AdminTableShell({
         <div className="p-5">
           <AdminEmptyState
             title="No rows yet"
-            description="CRUD and imported-data review will be connected in a future approved step."
+            description="CRUD and imported-data review will be connected in a later release."
           />
         </div>
       )}

@@ -57,3 +57,15 @@ export function getRaceDashboardTabs(phase: RacePhase) {
 
   return ["Results", "Race Overview", "Participants", "Race Timeline", "History"];
 }
+
+export function getRaceStatusPriority(phase: RacePhase) {
+  if (phase === "live-now") {
+    return 0;
+  }
+
+  if (phase === "coming-soon") {
+    return 1;
+  }
+
+  return 2;
+}

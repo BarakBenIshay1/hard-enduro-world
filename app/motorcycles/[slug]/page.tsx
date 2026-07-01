@@ -175,7 +175,7 @@ export default async function MotorcycleProfilePage({
             title="Built for extreme terrain data."
             description={
               motorcycle.description ??
-              "This seeded/demo motorcycle profile is ready for official specifications, setup notes, rider usage, and performance analytics in future approved steps."
+              "This seeded/demo motorcycle profile is ready for official specifications, setup notes, rider usage, and performance analytics in a later release."
             }
           />
           <div className="mt-8 grid gap-3 sm:grid-cols-2">

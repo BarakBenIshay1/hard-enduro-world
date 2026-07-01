@@ -33,7 +33,11 @@ export const megaNavigation: NavigationGroup[] = [
     label: "Racing",
     items: [
       { label: "Events", href: "/events", description: "Event calendar" },
-      { label: "Future Events", href: "/future-events", description: "Upcoming races" },
+      {
+        label: "Race Live Center",
+        href: "/future-events",
+        description: "Live and next race",
+      },
       {
         label: "Interactive Map",
         href: "/interactive-map",

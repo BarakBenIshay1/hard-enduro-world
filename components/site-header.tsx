@@ -90,7 +90,7 @@ export function SiteHeader() {
           </button>
           <ThemeToggle />
           <ButtonLink href="/future-events" className="h-10">
-            Next Event
+            Race Live Center
           </ButtonLink>
         </div>
 
@@ -186,7 +186,7 @@ export function SiteHeader() {
                 </motion.div>
               ))}
               <div className="mt-5 grid grid-cols-[1fr_auto] gap-3">
-                <ButtonLink href="/future-events">Next Event</ButtonLink>
+                <ButtonLink href="/future-events">Race Live Center</ButtonLink>
                 <ThemeToggle />
               </div>
             </motion.nav>

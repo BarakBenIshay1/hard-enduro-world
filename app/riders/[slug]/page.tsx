@@ -123,7 +123,7 @@ export default async function RiderProfilePage({ params }: RiderProfilePageProps
           <SectionTitle
             eyebrow="Biography"
             title="Built for the complete career arc."
-            description={`${name} is represented here with seeded/demo data. The profile is ready for automated official imports, verified biography text, media, and AI-generated editorial summaries in future approved steps.`}
+            description={`${name} is represented here with seeded/demo data. The profile is ready for automated official imports, verified biography text, media, and editorial summaries in a later release.`}
           />
 
           <div className="mt-8 grid gap-3 sm:grid-cols-2">
