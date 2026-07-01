@@ -40,13 +40,17 @@ export default async function TeamsPage() {
       country: team.country?.name ?? "International",
       countryCode: team.country?.isoCode ?? "TBC",
       manufacturer,
+      teamType: getTeamType(team.name),
+      riderRoster: team.memberships.map((membership) =>
+        [membership.rider.firstName, membership.rider.lastName].filter(Boolean).join(" "),
+      ),
       status: team.memberships.length > 0 ? "Active" : "Historic",
       season,
       activeRiders: team.memberships.length,
       championships: totals.championships,
       wins: totals.wins,
       podiums: totals.podiums,
-      overview: `${team.name} is connected to seeded/demo rider, manufacturer, motorcycle, and championship records for the Step 8 Teams module foundation.`,
+      overview: `${team.name} is a racing structure built around rider support, manufacturer partnership, and Hard Enduro event participation.`,
     };
   });
 
@@ -71,4 +75,22 @@ export default async function TeamsPage() {
       </Container>
     </main>
   );
+}
+
+function getTeamType(name: string) {
+  const normalized = name.toLowerCase();
+
+  if (normalized.includes("academy") || normalized.includes("junior")) {
+    return "Academy";
+  }
+
+  if (normalized.includes("factory") || normalized.includes("racing")) {
+    return "Factory team";
+  }
+
+  if (normalized.includes("privateer") || normalized.includes("independent")) {
+    return "Privateer team";
+  }
+
+  return "Independent team";
 }

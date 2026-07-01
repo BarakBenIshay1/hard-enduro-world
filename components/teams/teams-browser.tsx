@@ -1,7 +1,15 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ArrowRight, Building2, Flag, Medal, Search, Trophy, Users } from "lucide-react";
+import {
+  ArrowRight,
+  Building2,
+  Flag,
+  Search,
+  ShieldCheck,
+  Trophy,
+  Users,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -14,6 +22,8 @@ export type TeamCardData = {
   country: string;
   countryCode: string;
   manufacturer: string;
+  teamType: string;
+  riderRoster: string[];
   status: string;
   season: string;
   activeRiders: number;
@@ -29,9 +39,9 @@ type TeamsBrowserProps = {
 
 const sortOptions = [
   { label: "Name", value: "name" },
-  { label: "Championships", value: "championships" },
-  { label: "Wins", value: "wins" },
-  { label: "Podiums", value: "podiums" },
+  { label: "Active riders", value: "riders" },
+  { label: "Team type", value: "teamType" },
+  { label: "Manufacturer", value: "manufacturer" },
 ] as const;
 
 export function TeamsBrowser({ teams }: TeamsBrowserProps) {
@@ -66,7 +76,11 @@ export function TeamsBrowser({ teams }: TeamsBrowserProps) {
           return a.name.localeCompare(b.name);
         }
 
-        return b[sort] - a[sort];
+        if (sort === "riders") {
+          return b.activeRiders - a.activeRiders;
+        }
+
+        return a[sort].localeCompare(b[sort]);
       });
   }, [country, manufacturer, query, season, sort, status, teams]);
 
@@ -142,8 +156,8 @@ function TeamCard({ team }: { team: TeamCardData }) {
       <div className="relative min-h-64 bg-black">
         <div className="absolute inset-0 bg-[linear-gradient(135deg,hsl(0_0%_4%),hsl(220_10%_12%)_46%,hsl(18_82%_20%))]" />
         <div className="absolute left-5 top-5 flex h-16 w-16 items-center justify-center rounded-md border border-white/[0.16] bg-white/[0.08] text-white backdrop-blur">
-          <Building2 className="h-7 w-7 text-accent" aria-hidden="true" />
-          <span className="sr-only">Team logo placeholder</span>
+          <ShieldCheck className="h-7 w-7 text-accent" aria-hidden="true" />
+          <span className="sr-only">Team crest placeholder</span>
         </div>
         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/62 to-transparent p-5 text-white">
           <Badge className="border-white/[0.16] bg-white/10 text-white">
@@ -160,8 +174,12 @@ function TeamCard({ team }: { team: TeamCardData }) {
       <div className="grid gap-5 p-5">
         <div className="grid gap-2 text-sm text-foreground/[0.68]">
           <span className="inline-flex items-center gap-2">
+            <Building2 className="h-4 w-4 text-accent" />
+            {team.teamType}
+          </span>
+          <span className="inline-flex items-center gap-2">
             <Trophy className="h-4 w-4 text-accent" />
-            {team.manufacturer}
+            {team.manufacturer} partner
           </span>
           <span className="inline-flex items-center gap-2">
             <Users className="h-4 w-4 text-accent" />
@@ -171,11 +189,19 @@ function TeamCard({ team }: { team: TeamCardData }) {
 
         <p className="text-sm leading-6 text-foreground/[0.64]">{team.overview}</p>
 
-        <div className="grid grid-cols-3 gap-2">
-          <MiniStat label="Titles" value={team.championships} />
-          <MiniStat label="Wins" value={team.wins} />
-          <MiniStat label="Podiums" value={team.podiums} />
-        </div>
+        {team.riderRoster.length > 0 ? (
+          <div className="rounded-md border border-border bg-surface-muted p-3">
+            <p className="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-foreground/[0.48]">
+              Rider roster
+            </p>
+            <p className="mt-2 text-sm font-semibold text-foreground/[0.74]">
+              {team.riderRoster.slice(0, 3).join(" / ")}
+              {team.riderRoster.length > 3 ? " / more" : ""}
+            </p>
+          </div>
+        ) : null}
+
+        <PerformanceSummary />
 
         <ButtonLink href={`/teams/${team.slug}`} className="w-full">
           Explore Team <ArrowRight className="ml-2 h-4 w-4" />
@@ -185,14 +211,10 @@ function TeamCard({ team }: { team: TeamCardData }) {
   );
 }
 
-function MiniStat({ label, value }: { label: string; value: number }) {
+function PerformanceSummary() {
   return (
-    <div className="rounded-md border border-border bg-surface-muted p-3">
-      <Medal className="h-4 w-4 text-accent" aria-hidden="true" />
-      <p className="mt-3 text-xl font-black">{value}</p>
-      <p className="text-[0.68rem] uppercase tracking-[0.16em] text-foreground/[0.48]">
-        {label}
-      </p>
+    <div className="rounded-md border border-border bg-surface-muted p-3 text-sm font-semibold text-foreground/[0.62]">
+      Verified team results coming soon
     </div>
   );
 }

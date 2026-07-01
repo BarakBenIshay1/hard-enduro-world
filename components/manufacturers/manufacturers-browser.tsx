@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ArrowRight, Bike, Factory, Flag, Medal, Search, Users } from "lucide-react";
+import { ArrowRight, Bike, Factory, Flag, Search, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -15,6 +15,7 @@ export type ManufacturerCardData = {
   countryCode: string;
   status: string;
   season: string;
+  motorcycleModels: string[];
   activeTeams: number;
   activeRiders: number;
   championships: number;
@@ -29,9 +30,9 @@ type ManufacturersBrowserProps = {
 
 const sortOptions = [
   { label: "Name", value: "name" },
-  { label: "Championships", value: "championships" },
-  { label: "Wins", value: "wins" },
-  { label: "Podiums", value: "podiums" },
+  { label: "Active models", value: "models" },
+  { label: "Riders", value: "riders" },
+  { label: "Factory connections", value: "teams" },
 ] as const;
 
 export function ManufacturersBrowser({ manufacturers }: ManufacturersBrowserProps) {
@@ -70,7 +71,15 @@ export function ManufacturersBrowser({ manufacturers }: ManufacturersBrowserProp
           return a.name.localeCompare(b.name);
         }
 
-        return b[sort] - a[sort];
+        if (sort === "models") {
+          return b.motorcycleModels.length - a.motorcycleModels.length;
+        }
+
+        if (sort === "riders") {
+          return b.activeRiders - a.activeRiders;
+        }
+
+        return b.activeTeams - a.activeTeams;
       });
   }, [country, manufacturers, query, season, sort, status]);
 
@@ -141,7 +150,7 @@ function ManufacturerCard({ manufacturer }: { manufacturer: ManufacturerCardData
         <div className="absolute inset-0 bg-[linear-gradient(135deg,hsl(0_0%_4%),hsl(220_10%_12%)_44%,hsl(20_86%_18%))]" />
         <div className="absolute left-5 top-5 flex h-16 w-16 items-center justify-center rounded-md border border-white/[0.16] bg-white/[0.08] text-white backdrop-blur">
           <Factory className="h-7 w-7 text-accent" aria-hidden="true" />
-          <span className="sr-only">Manufacturer logo placeholder</span>
+          <span className="sr-only">Manufacturer brand badge placeholder</span>
         </div>
         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/62 to-transparent p-5 text-white">
           <Badge className="border-white/[0.16] bg-white/10 text-white">
@@ -159,13 +168,20 @@ function ManufacturerCard({ manufacturer }: { manufacturer: ManufacturerCardData
       <div className="grid gap-5 p-5">
         <div className="grid gap-2 text-sm text-foreground/[0.68]">
           <span className="inline-flex items-center gap-2">
-            <Users className="h-4 w-4 text-accent" />
-            {manufacturer.activeTeams} team{manufacturer.activeTeams === 1 ? "" : "s"}
+            <Bike className="h-4 w-4 text-accent" />
+            {manufacturer.motorcycleModels.length} active model
+            {manufacturer.motorcycleModels.length === 1 ? "" : "s"}
           </span>
           <span className="inline-flex items-center gap-2">
-            <Bike className="h-4 w-4 text-accent" />
+            <Users className="h-4 w-4 text-accent" />
             {manufacturer.activeRiders} rider
             {manufacturer.activeRiders === 1 ? "" : "s"}
+            {" using the brand"}
+          </span>
+          <span className="inline-flex items-center gap-2">
+            <Factory className="h-4 w-4 text-accent" />
+            {manufacturer.activeTeams} factory connection
+            {manufacturer.activeTeams === 1 ? "" : "s"}
           </span>
         </div>
 
@@ -173,11 +189,19 @@ function ManufacturerCard({ manufacturer }: { manufacturer: ManufacturerCardData
           {manufacturer.overview}
         </p>
 
-        <div className="grid grid-cols-3 gap-2">
-          <MiniStat label="Titles" value={manufacturer.championships} />
-          <MiniStat label="Wins" value={manufacturer.wins} />
-          <MiniStat label="Podiums" value={manufacturer.podiums} />
-        </div>
+        {manufacturer.motorcycleModels.length > 0 ? (
+          <div className="rounded-md border border-border bg-surface-muted p-3">
+            <p className="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-foreground/[0.48]">
+              Models
+            </p>
+            <p className="mt-2 text-sm font-semibold text-foreground/[0.74]">
+              {manufacturer.motorcycleModels.slice(0, 3).join(" / ")}
+              {manufacturer.motorcycleModels.length > 3 ? " / more" : ""}
+            </p>
+          </div>
+        ) : null}
+
+        <PerformanceSummary />
 
         <ButtonLink href={`/manufacturers/${manufacturer.slug}`} className="w-full">
           Explore Manufacturer <ArrowRight className="ml-2 h-4 w-4" />
@@ -187,14 +211,10 @@ function ManufacturerCard({ manufacturer }: { manufacturer: ManufacturerCardData
   );
 }
 
-function MiniStat({ label, value }: { label: string; value: number }) {
+function PerformanceSummary() {
   return (
-    <div className="rounded-md border border-border bg-surface-muted p-3">
-      <Medal className="h-4 w-4 text-accent" aria-hidden="true" />
-      <p className="mt-3 text-xl font-black">{value}</p>
-      <p className="text-[0.68rem] uppercase tracking-[0.16em] text-foreground/[0.48]">
-        {label}
-      </p>
+    <div className="rounded-md border border-border bg-surface-muted p-3 text-sm font-semibold text-foreground/[0.62]">
+      Verified performance data coming soon
     </div>
   );
 }

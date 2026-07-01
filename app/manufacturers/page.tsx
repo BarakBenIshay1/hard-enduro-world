@@ -53,12 +53,13 @@ export default async function ManufacturersPage() {
       countryCode: manufacturer.country?.isoCode ?? "TBC",
       status,
       season: primarySeason ?? "Manufacturer archive",
+      motorcycleModels: manufacturer.motorcycles.map((motorcycle) => motorcycle.model),
       activeTeams: teams.length,
       activeRiders: riders.length,
       championships: totals.championships,
       wins: totals.wins,
       podiums: totals.podiums,
-      overview: `${manufacturer.name} is connected to seeded/demo motorcycles, riders, teams, results, and championship records for the Step 9 Manufacturers module foundation.`,
+      overview: `${manufacturer.name} is a motorcycle brand represented by riders and teams across Hard Enduro events, with technical model history ready for verified expansion.`,
     };
   });
 
