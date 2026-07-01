@@ -36,30 +36,38 @@ const sortOptions = [
 ] as const;
 
 export function ManufacturersBrowser({ manufacturers }: ManufacturersBrowserProps) {
+  const [query, setQuery] = useState("");
   const [sort, setSort] = useState<(typeof sortOptions)[number]["value"]>("name");
 
   const visibleManufacturers = useMemo(() => {
-    return [...manufacturers].sort((a, b) => {
-      if (sort === "name") {
-        return a.name.localeCompare(b.name);
-      }
+    const normalizedQuery = query.trim().toLowerCase();
 
-      if (sort === "models") {
-        return b.motorcycleModels.length - a.motorcycleModels.length;
-      }
+    return manufacturers
+      .filter(
+        (manufacturer) =>
+          !normalizedQuery || manufacturer.name.toLowerCase().includes(normalizedQuery),
+      )
+      .sort((a, b) => {
+        if (sort === "name") {
+          return a.name.localeCompare(b.name);
+        }
 
-      if (sort === "riders") {
-        return b.activeRiders - a.activeRiders;
-      }
+        if (sort === "models") {
+          return b.motorcycleModels.length - a.motorcycleModels.length;
+        }
 
-      return b.activeTeams - a.activeTeams;
-    });
-  }, [manufacturers, sort]);
+        if (sort === "riders") {
+          return b.activeRiders - a.activeRiders;
+        }
+
+        return b.activeTeams - a.activeTeams;
+      });
+  }, [manufacturers, query, sort]);
 
   return (
     <div className="grid gap-8">
-      <Card className="p-4 sm:max-w-xs">
-        <div>
+      <Card className="p-4">
+        <div className="grid gap-3 md:grid-cols-[220px_minmax(0,1fr)]">
           <FilterSelect
             label="Sort"
             value={sort}
@@ -69,6 +77,15 @@ export function ManufacturersBrowser({ manufacturers }: ManufacturersBrowserProp
               sortOptions.map((option) => [option.value, option.label]),
             )}
           />
+          <label className="grid gap-2 text-sm">
+            <span className="font-semibold text-foreground/[0.64]">Factory Name</span>
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Type a factory name"
+              className="h-11 w-full rounded-md border border-border bg-surface px-3 text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            />
+          </label>
         </div>
       </Card>
 

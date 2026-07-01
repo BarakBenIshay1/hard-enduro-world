@@ -37,26 +37,33 @@ const sortOptions = [
 ] as const;
 
 export function TeamsBrowser({ teams }: TeamsBrowserProps) {
+  const [query, setQuery] = useState("");
   const [sort, setSort] = useState<(typeof sortOptions)[number]["value"]>("name");
 
   const visibleTeams = useMemo(() => {
-    return [...teams].sort((a, b) => {
-      if (sort === "name") {
-        return a.name.localeCompare(b.name);
-      }
+    const normalizedQuery = query.trim().toLowerCase();
 
-      if (sort === "riders") {
-        return b.activeRiders - a.activeRiders;
-      }
+    return teams
+      .filter(
+        (team) => !normalizedQuery || team.name.toLowerCase().includes(normalizedQuery),
+      )
+      .sort((a, b) => {
+        if (sort === "name") {
+          return a.name.localeCompare(b.name);
+        }
 
-      return a[sort].localeCompare(b[sort]);
-    });
-  }, [sort, teams]);
+        if (sort === "riders") {
+          return b.activeRiders - a.activeRiders;
+        }
+
+        return a[sort].localeCompare(b[sort]);
+      });
+  }, [query, sort, teams]);
 
   return (
     <div className="grid gap-8">
-      <Card className="p-4 sm:max-w-xs">
-        <div>
+      <Card className="p-4">
+        <div className="grid gap-3 md:grid-cols-[220px_minmax(0,1fr)]">
           <FilterSelect
             label="Sort"
             value={sort}
@@ -66,6 +73,15 @@ export function TeamsBrowser({ teams }: TeamsBrowserProps) {
               sortOptions.map((option) => [option.value, option.label]),
             )}
           />
+          <label className="grid gap-2 text-sm">
+            <span className="font-semibold text-foreground/[0.64]">Team Name</span>
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Type a team name"
+              className="h-11 w-full rounded-md border border-border bg-surface px-3 text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            />
+          </label>
         </div>
       </Card>
 
