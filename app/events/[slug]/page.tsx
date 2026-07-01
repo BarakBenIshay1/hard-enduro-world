@@ -157,17 +157,33 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
         dsqCount={dsqCount}
       />
 
-      <nav className="sticky top-16 z-30 border-b border-border bg-surface/[0.92] backdrop-blur-xl">
-        <Container className="flex gap-2 overflow-x-auto py-3">
-          {pageTabs.map((tab) => (
-            <Link
-              key={tab}
-              href={`#${tab.toLowerCase().replaceAll(" ", "-")}`}
-              className="shrink-0 rounded-md border border-border bg-card px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] transition hover:border-accent hover:text-accent"
-            >
-              {tab}
-            </Link>
-          ))}
+      <nav className="sticky top-16 z-30 border-y border-border bg-black/[0.94] text-white shadow-xl shadow-black/20 backdrop-blur-xl">
+        <Container className="overflow-x-auto py-3">
+          <div
+            className={cn(
+              verifiedFact
+                ? "grid min-w-[680px] grid-cols-5 gap-2 lg:min-w-0"
+                : "flex gap-2",
+            )}
+          >
+            {pageTabs.map((tab, index) => (
+              <Link
+                key={tab}
+                href={`#${tab.toLowerCase().replaceAll(" ", "-")}`}
+                className={cn(
+                  "rounded-md border px-3 py-3 text-center text-xs font-semibold uppercase tracking-[0.14em] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+                  verifiedFact
+                    ? "border-white/10 bg-white/[0.04] hover:border-accent hover:bg-accent/10 hover:text-accent"
+                    : "shrink-0 border-border bg-card py-2 text-foreground hover:border-accent hover:text-accent",
+                  verifiedFact &&
+                    index === 0 &&
+                    "border-accent/70 bg-accent/12 text-accent",
+                )}
+              >
+                {tab}
+              </Link>
+            ))}
+          </div>
         </Container>
       </nav>
 
