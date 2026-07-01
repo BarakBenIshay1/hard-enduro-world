@@ -78,7 +78,6 @@ const raceDashboardTabs = [
   "Race Overview",
   "Participants",
   "Race Timeline",
-  "Resources",
   "History",
 ];
 

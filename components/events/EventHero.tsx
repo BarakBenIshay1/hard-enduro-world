@@ -5,13 +5,8 @@ import { Card } from "@/components/ui/card";
 import { Container } from "@/components/ui/container";
 import type { VerifiedEventFact } from "@/data/verified/types";
 import { formatDateRange } from "@/lib/format";
-import {
-  buildManufacturerRows,
-  buildOverview,
-  getDifficultyLabel,
-  UNKNOWN_VERIFIED_VALUE,
-} from "./helpers";
-import type { EventDetail } from "./types";
+import { buildManufacturerRows, buildOverview, winnerName } from "./helpers";
+import type { EventDetail, EventResult } from "./types";
 
 export function EventHero({
   event,
@@ -33,6 +28,9 @@ export function EventHero({
   dsqCount: number;
 }) {
   const manufacturerRows = buildManufacturerRows(event.results);
+  const podium = event.results
+    .filter((result) => result.overallPosition !== null && result.overallPosition <= 3)
+    .sort((a, b) => (a.overallPosition ?? 999) - (b.overallPosition ?? 999));
 
   return (
     <section className="relative overflow-hidden border-b border-border bg-black text-white">
@@ -74,7 +72,7 @@ export function EventHero({
 
         <div className="grid gap-4">
           <Card className="overflow-hidden border-white/14 bg-white/[0.06] text-white">
-            <div className="aspect-[16/10] bg-[linear-gradient(135deg,hsl(0_0%_9%),hsl(24_90%_32%)_54%,hsl(42_74%_30%))]" />
+            <RaceImagePlaceholder eventName={event.name} />
             <div className="grid gap-4 p-5 sm:grid-cols-2">
               <BrandBlock
                 label="Event brand"
@@ -86,36 +84,72 @@ export function EventHero({
               />
             </div>
           </Card>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <QuickStat
-              label={verifiedFact ? "Winner" : "Riders"}
-              value={
-                verifiedFact
-                  ? (verifiedFact.verifiedWinner ?? UNKNOWN_VERIFIED_VALUE)
-                  : String(event.results.length)
-              }
-            />
-            <QuickStat
-              label={verifiedFact ? "Podium" : "Stages"}
-              value={
-                verifiedFact
-                  ? "Lettenbichler / Hart / Roman"
-                  : String(event.stages.length)
-              }
-            />
-            <QuickStat label="Finishers" value={String(displayedFinishers)} />
-            <QuickStat
-              label={verifiedFact ? "Difficulty" : "DNF / DNS / DSQ"}
-              value={
-                verifiedFact
-                  ? getDifficultyLabel(event.roundNumber)
-                  : `${dnfCount}/${dnsCount}/${dsqCount}`
-              }
-            />
-          </div>
+          {verifiedFact ? (
+            <HeroPodiumBlock podium={podium} />
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <QuickStat label="Riders" value={String(event.results.length)} />
+              <QuickStat label="Stages" value={String(event.stages.length)} />
+              <QuickStat label="Finishers" value={String(displayedFinishers)} />
+              <QuickStat
+                label="DNF / DNS / DSQ"
+                value={`${dnfCount}/${dnsCount}/${dsqCount}`}
+              />
+            </div>
+          )}
         </div>
       </Container>
     </section>
+  );
+}
+
+function RaceImagePlaceholder({ eventName }: { eventName: string }) {
+  return (
+    <div className="relative aspect-[16/10] overflow-hidden bg-black">
+      <div className="absolute inset-0 bg-[linear-gradient(145deg,hsl(0_0%_5%),hsl(0_0%_12%)_38%,hsl(24_70%_18%)_78%,hsl(42_58%_22%))]" />
+      <div className="absolute inset-0 opacity-70 [background-image:radial-gradient(circle_at_22%_18%,hsl(24_94%_52%/0.28),transparent_28%),radial-gradient(circle_at_78%_20%,hsl(0_0%_92%/0.12),transparent_22%),linear-gradient(160deg,transparent_0_46%,hsl(0_0%_0%/0.45)_46%_54%,transparent_54%)]" />
+      <div className="absolute inset-x-0 bottom-0 h-1/2 bg-[linear-gradient(172deg,transparent_0_40%,hsl(0_0%_0%/0.72)_41%),repeating-linear-gradient(104deg,hsl(0_0%_72%/0.12)_0_1px,transparent_1px_18px)]" />
+      <div className="absolute bottom-5 left-5 right-5">
+        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-accent">
+          Official media slot
+        </p>
+        <h2 className="mt-2 max-w-md text-2xl font-black leading-none">
+          {eventName.replace(/\s+\d{4}$/, "")}
+        </h2>
+        <p className="mt-2 max-w-sm text-sm leading-6 text-white/[0.62]">
+          Race image pending approved official media.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function HeroPodiumBlock({ podium }: { podium: EventResult[] }) {
+  return (
+    <Card className="border-white/12 bg-white/[0.06] p-5 text-white">
+      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-accent">
+        Podium
+      </p>
+      <div className="mt-4 grid gap-3">
+        {podium.map((result) => (
+          <div
+            key={result.id}
+            className="grid grid-cols-[32px_1fr_auto] items-center gap-3 rounded-md border border-white/10 bg-black/24 px-3 py-2"
+          >
+            <span className="text-lg font-black text-accent">
+              {result.overallPosition}.
+            </span>
+            <span className="font-semibold">{winnerName(result.rider)}</span>
+            <span className="text-xs font-semibold uppercase tracking-[0.12em] text-white/[0.52]">
+              {result.manufacturer?.name ??
+                result.motorcycle?.manufacturer.name ??
+                result.rider.country?.isoCode ??
+                "TBC"}
+            </span>
+          </div>
+        ))}
+      </div>
+    </Card>
   );
 }
 
