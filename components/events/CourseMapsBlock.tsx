@@ -26,7 +26,25 @@ export function CourseMapsBlock({ stages, racePhase }: CourseMapsBlockProps) {
   );
 
   if (stages.length === 0 || !selectedStage) {
-    return null;
+    return (
+      <Card id="course-maps" className="scroll-mt-32 p-5">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">
+              Course Maps
+            </p>
+            <h3 className="mt-1 text-xl font-black">Course Maps</h3>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-foreground/[0.62]">
+              Browse the official stages of this event. Official course maps will appear
+              here after verification.
+            </p>
+          </div>
+        </div>
+        <div className="mt-5 rounded-md border border-border bg-surface-muted px-4 py-3 text-sm font-semibold text-foreground/[0.66]">
+          Course maps will appear once official stage data is verified.
+        </div>
+      </Card>
+    );
   }
 
   const routeDetails = [
