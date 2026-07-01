@@ -2,10 +2,11 @@
 
 import { useMemo, useState } from "react";
 import { ArrowRight, CalendarDays, Flag, Mountain, Trophy } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/cn";
+import { RaceStatusBadge } from "./RaceStatusBadge";
+import type { RacePhase, RaceStatusView } from "./race-status";
 
 export type EventCardData = {
   id: string;
@@ -17,7 +18,8 @@ export type EventCardData = {
   year: number;
   dateLabel: string;
   startTimestamp: number;
-  status: string;
+  status: RaceStatusView["label"];
+  statusPhase: RacePhase;
   elevation: string;
   previousWinner: string;
   stageCount: number;
@@ -36,7 +38,8 @@ const sortOptions = [
 ] as const;
 
 export function EventsBrowser({ events }: EventsBrowserProps) {
-  const [year, setYear] = useState("all");
+  const defaultYear = events.some((event) => event.year === 2026) ? "2026" : "all";
+  const [year, setYear] = useState(defaultYear);
   const [country, setCountry] = useState("all");
   const [season, setSeason] = useState("all");
   const [status, setStatus] = useState("all");
@@ -114,6 +117,11 @@ export function EventsBrowser({ events }: EventsBrowserProps) {
 }
 
 function EventCard({ event }: { event: EventCardData }) {
+  const raceStatus: RaceStatusView = {
+    phase: event.statusPhase,
+    label: event.status as RaceStatusView["label"],
+  };
+
   return (
     <Card className="group overflow-hidden">
       <div className="relative min-h-64 overflow-hidden bg-black">
@@ -126,16 +134,7 @@ function EventCard({ event }: { event: EventCardData }) {
             {event.countryCode}
           </p>
         </div>
-        <Badge
-          className={cn(
-            "absolute right-5 top-5 border-white/[0.18] bg-white/10 text-white",
-            event.status === "Live Now" && "border-red-500/40 bg-red-500/15 text-red-100",
-            event.status === "Race Completed" &&
-              "border-accent/50 bg-accent/15 text-accent",
-          )}
-        >
-          {event.status}
-        </Badge>
+        <RaceStatusBadge raceStatus={raceStatus} className="absolute right-5 top-5" />
         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/60 to-transparent p-5 text-white">
           <p className="text-sm text-white/58">
             {event.season} • {event.dateLabel}

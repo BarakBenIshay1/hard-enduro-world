@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Container } from "@/components/ui/container";
 import type { VerifiedEventFact } from "@/data/verified/types";
 import { buildOverview, winnerName } from "./helpers";
+import { RaceStatusBadge } from "./RaceStatusBadge";
 import type { RaceStatusView } from "./race-status";
 import type { EventDetail, EventResult } from "./types";
 
@@ -87,17 +88,6 @@ export function EventHero({
   );
 }
 
-function RaceStatusBadge({ raceStatus }: { raceStatus: RaceStatusView }) {
-  const className =
-    raceStatus.phase === "live-now"
-      ? "border-red-500/40 bg-red-500/15 text-red-200"
-      : raceStatus.phase === "race-completed"
-        ? "border-accent/50 bg-accent/15 text-accent"
-        : "border-white/20 bg-white/10 text-white";
-
-  return <Badge className={className}>{raceStatus.label}</Badge>;
-}
-
 function HeroPhaseCard({
   event,
   raceStatus,
@@ -110,16 +100,12 @@ function HeroPhaseCard({
   return (
     <Card className="border-white/12 bg-white/[0.06] p-5 text-white shadow-2xl shadow-black/20">
       <div className="flex items-center justify-between gap-4">
-        <p
-          className={`text-xs font-semibold uppercase tracking-[0.2em] ${
-            live ? "text-red-300" : "text-accent"
-          }`}
-        >
-          {raceStatus.label}
-        </p>
+        <RaceStatusBadge raceStatus={raceStatus} />
         <span
           className={`h-3 w-3 rounded-full ${
-            live ? "bg-red-400 shadow-[0_0_18px_hsl(0_80%_58%)]" : "bg-accent"
+            live
+              ? "bg-red-400 shadow-[0_0_18px_hsl(0_80%_58%)]"
+              : "bg-sky-300 shadow-[0_0_18px_hsl(199_89%_48%/0.45)]"
           }`}
           aria-hidden="true"
         />

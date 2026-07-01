@@ -12,6 +12,8 @@ import {
   Trophy,
   Users,
 } from "lucide-react";
+import { RaceStatusBadge } from "@/components/events/RaceStatusBadge";
+import { getRaceStatus } from "@/components/events/race-status";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -278,7 +280,7 @@ export default async function SeasonHistoryPage({ params }: SeasonHistoryPagePro
                         {formatDateRange(event.startDate, event.endDate)}
                       </p>
                     </div>
-                    <p className="text-sm text-foreground/[0.58]">{event.liveStatus}</p>
+                    <RaceStatusBadge raceStatus={getRaceStatus(event)} />
                   </div>
                 </Card>
               </Link>
