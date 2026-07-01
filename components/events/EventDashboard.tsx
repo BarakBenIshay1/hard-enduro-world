@@ -1,5 +1,6 @@
 import { Container } from "@/components/ui/container";
 import type { VerifiedEventFact } from "@/data/verified/types";
+import { Card } from "@/components/ui/card";
 import {
   buildCrossNavigation,
   buildManufacturerRows,
@@ -13,12 +14,14 @@ import { ParticipantsPanel } from "./ParticipantsPanel";
 import { RaceOverviewPanel } from "./RaceOverviewPanel";
 import { ResultsPanel } from "./ResultsPanel";
 import { TimelinePanel } from "./TimelinePanel";
+import type { RaceStatusView } from "./race-status";
 import type { EventDetail, EventResult } from "./types";
 
 export function EventDashboard({
   event,
   verifiedFact,
   isVerified,
+  raceStatus,
   terrain,
   elevation,
   previousWinner,
@@ -28,6 +31,7 @@ export function EventDashboard({
   event: EventDetail;
   verifiedFact: VerifiedEventFact;
   isVerified: boolean;
+  raceStatus: RaceStatusView;
   terrain: string;
   elevation: string;
   previousWinner: string;
@@ -44,32 +48,92 @@ export function EventDashboard({
     ? buildCrossNavigation(event)
     : { riders: [], manufacturers: [], teams: [], motorcycles: [] };
 
+  const resultsPanel = (
+    <ResultsPanel event={event} verifiedFact={verifiedFact} isVerified={isVerified} />
+  );
+  const overviewPanel = (
+    <RaceOverviewPanel
+      verifiedFact={verifiedFact}
+      podiumLabel={isVerified ? getPodiumLabel(event.results) : null}
+      terrain={terrain}
+      elevation={elevation}
+    />
+  );
+  const participantsPanel = (
+    <ParticipantsPanel
+      verifiedFact={verifiedFact}
+      riderCards={riderCards}
+      manufacturerRows={manufacturerRows}
+      teamRows={teamRows}
+      crossNavigation={crossNavigation}
+    />
+  );
+  const timelinePanel = (
+    <TimelinePanel verifiedFact={verifiedFact} stageCards={stageCards} />
+  );
+  const historyPanel = (
+    <HistoryPanel
+      event={event}
+      verifiedFact={verifiedFact}
+      fastestStage={fastestStage}
+      manufacturerRows={manufacturerRows}
+      previousWinner={previousWinner}
+      finalWinner={finalWinner}
+    />
+  );
+
+  if (raceStatus.phase === "coming-soon") {
+    return (
+      <Container className="grid gap-8 py-8">
+        {overviewPanel}
+        {timelinePanel}
+        {participantsPanel}
+        {resultsPanel}
+        {historyPanel}
+      </Container>
+    );
+  }
+
+  if (raceStatus.phase === "live-now") {
+    return (
+      <Container className="grid gap-8 py-8">
+        <LiveStatusPanel />
+        {timelinePanel}
+        {participantsPanel}
+        {resultsPanel}
+        {historyPanel}
+      </Container>
+    );
+  }
+
   return (
     <Container className="grid gap-8 py-8">
-      <ResultsPanel event={event} verifiedFact={verifiedFact} isVerified={isVerified} />
-      <RaceOverviewPanel
-        verifiedFact={verifiedFact}
-        podiumLabel={isVerified ? getPodiumLabel(event.results) : null}
-        terrain={terrain}
-        elevation={elevation}
-      />
-      <ParticipantsPanel
-        verifiedFact={verifiedFact}
-        riderCards={riderCards}
-        manufacturerRows={manufacturerRows}
-        teamRows={teamRows}
-        crossNavigation={crossNavigation}
-      />
-      <TimelinePanel verifiedFact={verifiedFact} stageCards={stageCards} />
-      <HistoryPanel
-        event={event}
-        verifiedFact={verifiedFact}
-        fastestStage={fastestStage}
-        manufacturerRows={manufacturerRows}
-        previousWinner={previousWinner}
-        finalWinner={finalWinner}
-      />
+      {resultsPanel}
+      {overviewPanel}
+      {participantsPanel}
+      {timelinePanel}
+      {historyPanel}
     </Container>
+  );
+}
+
+function LiveStatusPanel() {
+  return (
+    <section id="live-now" className="scroll-mt-32">
+      <Card className="border-red-500/20 bg-red-500/[0.06] p-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-red-300">
+              Live Now
+            </p>
+            <h2 className="mt-2 text-2xl font-black">Live coverage coming soon</h2>
+          </div>
+          <span className="inline-flex w-fit rounded-sm border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs font-semibold text-red-200">
+            No live data connected
+          </span>
+        </div>
+      </Card>
+    </section>
   );
 }
 

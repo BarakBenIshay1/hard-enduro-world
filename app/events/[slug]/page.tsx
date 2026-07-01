@@ -17,6 +17,7 @@ import {
 import { EventDashboard } from "@/components/events/EventDashboard";
 import { EventHero } from "@/components/events/EventHero";
 import { buildEventDashboardPlaceholderFact } from "@/components/events/helpers";
+import { getRaceDashboardTabs, getRaceStatus } from "@/components/events/race-status";
 import {
   StageTimingTable,
   type StageTimingResult,
@@ -52,14 +53,6 @@ type CrossLink = {
   detail: string;
 };
 
-const raceDashboardTabs = [
-  "Results",
-  "Race Overview",
-  "Participants",
-  "Race Timeline",
-  "History",
-];
-
 const UNKNOWN_VERIFIED_VALUE = "Verified data coming soon";
 
 export async function generateMetadata({
@@ -93,6 +86,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
   const event = await getEventDetail(slug);
   const verifiedFact = getVerifiedEventFact(event.slug);
   const dashboardFact = verifiedFact ?? buildEventDashboardPlaceholderFact(event);
+  const raceStatus = getRaceStatus(event);
   const terrain = extractDescriptionField(event.description, "Terrain");
   const elevation = extractDescriptionField(event.description, "Elevation");
   const previousWinner = extractDescriptionField(
@@ -117,38 +111,30 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
   const mediaStats = buildMediaStats(event.mediaItems);
   const verifiedOfficialLinks = buildOfficialLinks(verifiedFact);
   const crossNavigation = buildCrossNavigation(event);
-  const pageTabs = raceDashboardTabs;
+  const pageTabs = getRaceDashboardTabs(raceStatus.phase);
 
   return (
     <main className="min-h-screen bg-surface text-foreground">
       <EventHero
         event={event}
         verifiedFact={dashboardFact}
+        isVerified={Boolean(verifiedFact)}
+        raceStatus={raceStatus}
         terrain={terrain}
         elevation={elevation}
       />
 
       <nav className="sticky top-16 z-30 border-y border-border bg-black/[0.94] text-white shadow-xl shadow-black/20 backdrop-blur-xl">
         <Container className="overflow-x-auto py-3">
-          <div
-            className={cn(
-              verifiedFact
-                ? "grid min-w-[680px] grid-cols-5 gap-2 lg:min-w-0"
-                : "flex gap-2",
-            )}
-          >
+          <div className="grid min-w-[680px] grid-cols-5 gap-2 lg:min-w-0">
             {pageTabs.map((tab, index) => (
               <Link
                 key={tab}
                 href={`#${tab.toLowerCase().replaceAll(" ", "-")}`}
                 className={cn(
                   "rounded-md border px-3 py-3 text-center text-xs font-semibold uppercase tracking-[0.14em] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
-                  verifiedFact
-                    ? "border-white/10 bg-white/[0.04] hover:border-accent hover:bg-accent/10 hover:text-accent"
-                    : "shrink-0 border-border bg-card py-2 text-foreground hover:border-accent hover:text-accent",
-                  verifiedFact &&
-                    index === 0 &&
-                    "border-accent/70 bg-accent/12 text-accent",
+                  "border-white/10 bg-white/[0.04] hover:border-accent hover:bg-accent/10 hover:text-accent",
+                  index === 0 && "border-accent/70 bg-accent/12 text-accent",
                 )}
               >
                 {tab}
@@ -162,6 +148,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
         event={event}
         verifiedFact={dashboardFact}
         isVerified={Boolean(verifiedFact)}
+        raceStatus={raceStatus}
         terrain={terrain}
         elevation={elevation}
         previousWinner={previousWinner}

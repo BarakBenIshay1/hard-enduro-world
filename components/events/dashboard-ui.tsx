@@ -337,6 +337,14 @@ export function SummaryTable({
   headings: string[];
   rows: string[][];
 }) {
+  if (rows.length === 0) {
+    return (
+      <Card className="mt-8 p-4">
+        <CompactMessage text="Verified data coming soon." />
+      </Card>
+    );
+  }
+
   return (
     <Card className="mt-8 overflow-hidden">
       <div className="overflow-x-auto">

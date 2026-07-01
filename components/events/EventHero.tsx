@@ -5,23 +5,28 @@ import { Card } from "@/components/ui/card";
 import { Container } from "@/components/ui/container";
 import type { VerifiedEventFact } from "@/data/verified/types";
 import { buildOverview, winnerName } from "./helpers";
+import type { RaceStatusView } from "./race-status";
 import type { EventDetail, EventResult } from "./types";
 
 export function EventHero({
   event,
   verifiedFact,
+  isVerified,
+  raceStatus,
   terrain,
   elevation,
 }: {
   event: EventDetail;
   verifiedFact: VerifiedEventFact | null;
+  isVerified: boolean;
+  raceStatus: RaceStatusView;
   terrain: string;
   elevation: string;
 }) {
   const podium = event.results
     .filter(
       (result) =>
-        verifiedFact && result.overallPosition !== null && result.overallPosition <= 3,
+        isVerified && result.overallPosition !== null && result.overallPosition <= 3,
     )
     .sort((a, b) => (a.overallPosition ?? 999) - (b.overallPosition ?? 999));
 
@@ -37,7 +42,7 @@ export function EventHero({
             />
           </div>
           <div className="flex flex-wrap gap-2">
-            <Badge>{event.liveStatus}</Badge>
+            <RaceStatusBadge raceStatus={raceStatus} />
             <Badge className="border-white/20 bg-white/10 text-white">
               Round {event.roundNumber ?? "TBC"}
             </Badge>
@@ -71,10 +76,86 @@ export function EventHero({
           <Card className="overflow-hidden border-white/14 bg-white/[0.06] text-white shadow-2xl shadow-black/30">
             <RaceImagePlaceholder eventName={event.name} />
           </Card>
-          <HeroPodiumBlock podium={podium} />
+          {raceStatus.phase === "race-completed" ? (
+            <HeroPodiumBlock podium={podium} />
+          ) : (
+            <HeroPhaseCard event={event} raceStatus={raceStatus} />
+          )}
         </div>
       </Container>
     </section>
+  );
+}
+
+function RaceStatusBadge({ raceStatus }: { raceStatus: RaceStatusView }) {
+  const className =
+    raceStatus.phase === "live-now"
+      ? "border-red-500/40 bg-red-500/15 text-red-200"
+      : raceStatus.phase === "race-completed"
+        ? "border-accent/50 bg-accent/15 text-accent"
+        : "border-white/20 bg-white/10 text-white";
+
+  return <Badge className={className}>{raceStatus.label}</Badge>;
+}
+
+function HeroPhaseCard({
+  event,
+  raceStatus,
+}: {
+  event: EventDetail;
+  raceStatus: RaceStatusView;
+}) {
+  const live = raceStatus.phase === "live-now";
+
+  return (
+    <Card className="border-white/12 bg-white/[0.06] p-5 text-white shadow-2xl shadow-black/20">
+      <div className="flex items-center justify-between gap-4">
+        <p
+          className={`text-xs font-semibold uppercase tracking-[0.2em] ${
+            live ? "text-red-300" : "text-accent"
+          }`}
+        >
+          {raceStatus.label}
+        </p>
+        <span
+          className={`h-3 w-3 rounded-full ${
+            live ? "bg-red-400 shadow-[0_0_18px_hsl(0_80%_58%)]" : "bg-accent"
+          }`}
+          aria-hidden="true"
+        />
+      </div>
+      <h2 className="mt-4 text-2xl font-black">
+        {live ? "Live coverage coming soon" : "Race week schedule"}
+      </h2>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <HeroPhaseFact
+          label="Date"
+          value={formatHeroDateRange(event.startDate, event.endDate)}
+        />
+        <HeroPhaseFact
+          label="Location"
+          value={`${event.country?.name ?? "Country TBC"} • ${
+            event.city ?? event.venue ?? "Location TBC"
+          }`}
+        />
+      </div>
+      <p className="mt-4 text-sm leading-6 text-white/[0.62]">
+        {live
+          ? "Official live timing is not connected yet. No live results are shown until verified."
+          : "Results will appear only after the race is complete and official data is verified."}
+      </p>
+    </Card>
+  );
+}
+
+function HeroPhaseFact({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md border border-white/10 bg-black/24 p-3">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/[0.48]">
+        {label}
+      </p>
+      <p className="mt-1 text-sm font-semibold text-white">{value}</p>
+    </div>
   );
 }
 

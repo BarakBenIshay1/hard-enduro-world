@@ -1,4 +1,5 @@
 import { EventsBrowser, type EventCardData } from "@/components/events/events-browser";
+import { getRaceStatus } from "@/components/events/race-status";
 import { Container } from "@/components/ui/container";
 import { PageHero } from "@/components/ui/page-hero";
 import { SectionTitle } from "@/components/ui/section-title";
@@ -17,6 +18,7 @@ export default async function EventsPage() {
   const events = await getEventsList();
   const eventCards: EventCardData[] = events.map((event) => {
     const winner = event.results[0]?.rider;
+    const raceStatus = getRaceStatus(event);
     const finisherCount = event.results.filter(
       (result) => result.status === "FINISHED",
     ).length;
@@ -31,7 +33,7 @@ export default async function EventsPage() {
       year: event.season.year,
       dateLabel: formatDateRange(event.startDate, event.endDate),
       startTimestamp: event.startDate.getTime(),
-      status: event.liveStatus,
+      status: raceStatus.label,
       elevation: "1,466 m profile",
       previousWinner: winner ? `${winner.firstName} ${winner.lastName}` : "Pending",
       stageCount: event.stages.length,

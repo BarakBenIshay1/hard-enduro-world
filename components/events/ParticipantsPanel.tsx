@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/card";
 import { SectionTitle } from "@/components/ui/section-title";
 import type { VerifiedEventFact } from "@/data/verified/types";
 import {
+  CompactMessage,
   CrossLinkGroup,
   DashboardPanel,
   DetailRow,
@@ -45,20 +46,28 @@ export function ParticipantsPanel({
       </div>
       <div className="mt-6 grid gap-4">
         <DashboardPanel id="participants-riders" title="Riders">
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            {riderCards.slice(0, 8).map((rider) => (
-              <Link key={rider.slug} href={`/riders/${rider.slug}`}>
-                <Card className="h-full p-4">
-                  <h3 className="font-black">{rider.name}</h3>
-                  <p className="mt-1 text-sm text-foreground/[0.58]">{rider.country}</p>
-                  <div className="mt-3 grid gap-2">
-                    <DetailRow label="Team" value={rider.team} compact />
-                    <DetailRow label="Manufacturer" value={rider.manufacturer} compact />
-                  </div>
-                </Card>
-              </Link>
-            ))}
-          </div>
+          {riderCards.length > 0 ? (
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              {riderCards.slice(0, 8).map((rider) => (
+                <Link key={rider.slug} href={`/riders/${rider.slug}`}>
+                  <Card className="h-full p-4">
+                    <h3 className="font-black">{rider.name}</h3>
+                    <p className="mt-1 text-sm text-foreground/[0.58]">{rider.country}</p>
+                    <div className="mt-3 grid gap-2">
+                      <DetailRow label="Team" value={rider.team} compact />
+                      <DetailRow
+                        label="Manufacturer"
+                        value={rider.manufacturer}
+                        compact
+                      />
+                    </div>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <CompactMessage text="Participant list pending official verification." />
+          )}
         </DashboardPanel>
 
         <DashboardPanel id="participants-manufacturers" title="Manufacturers">

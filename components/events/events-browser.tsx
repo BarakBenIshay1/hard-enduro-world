@@ -126,7 +126,14 @@ function EventCard({ event }: { event: EventCardData }) {
             {event.countryCode}
           </p>
         </div>
-        <Badge className="absolute right-5 top-5 border-white/[0.18] bg-white/10 text-white">
+        <Badge
+          className={cn(
+            "absolute right-5 top-5 border-white/[0.18] bg-white/10 text-white",
+            event.status === "Live Now" && "border-red-500/40 bg-red-500/15 text-red-100",
+            event.status === "Race Completed" &&
+              "border-accent/50 bg-accent/15 text-accent",
+          )}
+        >
           {event.status}
         </Badge>
         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/60 to-transparent p-5 text-white">
