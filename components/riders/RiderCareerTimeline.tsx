@@ -18,8 +18,8 @@ export function RiderCareerTimeline({ items }: { items: RiderCareerTimelineItem[
     <section>
       <SectionTitle
         eyebrow="Career Timeline"
-        title="Season-by-season structure"
-        description="Prepared for verified teams, manufacturers, motorcycles, and major achievements by year."
+        title="Season-by-season history"
+        description="Teams, manufacturers, motorcycles, and milestones by season."
       />
       <div className="mt-6 grid gap-3">
         {items.length > 0 ? (
@@ -52,7 +52,7 @@ export function RiderCareerTimeline({ items }: { items: RiderCareerTimelineItem[
             </Card>
           ))
         ) : (
-          <CompactPlaceholder text="Verified career timeline coming soon." />
+          <CompactPlaceholder text="Verified data coming soon." />
         )}
       </div>
     </section>

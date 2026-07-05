@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
-import { ShieldCheck } from "lucide-react";
 import { ButtonLink } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Container } from "@/components/ui/container";
 import { siteConfig } from "@/config/site";
 import { getRiderDetail } from "@/db/riders";
 import { formatDate, formatOptional } from "@/lib/format";
+import { RiderCareerHighlights } from "@/components/riders/RiderCareerHighlights";
 import { RiderCareerTimeline } from "@/components/riders/RiderCareerTimeline";
 import { RiderCurrentSetup } from "@/components/riders/RiderCurrentSetup";
 import { RiderHero } from "@/components/riders/RiderHero";
@@ -88,13 +87,11 @@ export default async function RiderProfilePage({ params }: RiderProfilePageProps
         manufacturer={currentManufacturer?.name ?? "Manufacturer TBC"}
         motorcycle={currentMotorcycle?.model ?? "Motorcycle TBC"}
         status={status}
-        bio="Verified biography coming soon. This profile is prepared to preserve official rider history, current setup, and source-reviewed results."
+        bio="Verified biography coming soon."
         profileImageUrl={null}
       />
 
       <Container className="grid gap-10 py-12">
-        <VerificationNote />
-
         <RiderStatsCards
           stats={[
             { label: "Wins", value: totals.wins },
@@ -106,45 +103,24 @@ export default async function RiderProfilePage({ params }: RiderProfilePageProps
           ]}
         />
 
-        <div className="grid gap-10 xl:grid-cols-[0.95fr_1.05fr]">
-          <RiderCurrentSetup
-            items={buildCurrentSetupItems({
-              currentTeam,
-              currentManufacturer,
-              currentMotorcycle,
-              season: currentStanding?.season.name ?? currentCareer?.season.name ?? null,
-              status,
-            })}
-          />
+        <RiderCareerHighlights
+          highlights={buildCareerHighlights({
+            championships,
+            totals,
+            bestResult: rider.results
+              .filter((result) => result.overallPosition !== null)
+              .sort((a, b) => (a.overallPosition ?? 999) - (b.overallPosition ?? 999))[0],
+          })}
+        />
 
-          <RiderRelatedLinks
-            links={buildRelatedLinks({
-              currentTeam,
-              currentManufacturer,
-              currentMotorcycle,
-              results: rider.results,
-            })}
-          />
-        </div>
-
-        <RiderCareerTimeline
-          items={rider.careerSeasons.map((career) => ({
-            id: career.id,
-            year: career.season.year,
-            season: career.season.name,
-            team: career.team?.name ?? "Independent",
-            manufacturer: career.manufacturer?.name ?? "Manufacturer TBC",
-            motorcycle: career.motorcycle
-              ? `${career.motorcycle.manufacturer.name} ${career.motorcycle.model}`
-              : "Motorcycle TBC",
-            championshipPosition: career.championshipPosition
-              ? `Championship P${career.championshipPosition}`
-              : "Classification pending verification",
-            achievement:
-              career.wins > 0 || career.podiums > 0
-                ? `${career.wins} wins / ${career.podiums} podiums`
-                : "Major achievements pending verification",
-          }))}
+        <RiderCurrentSetup
+          items={buildCurrentSetupItems({
+            currentTeam,
+            currentManufacturer,
+            currentMotorcycle,
+            season: currentStanding?.season.name ?? currentCareer?.season.name ?? null,
+            status,
+          })}
         />
 
         <RiderResultsHistory
@@ -162,6 +138,35 @@ export default async function RiderProfilePage({ params }: RiderProfilePageProps
           }))}
         />
 
+        <RiderCareerTimeline
+          items={rider.careerSeasons.map((career) => ({
+            id: career.id,
+            year: career.season.year,
+            season: career.season.name,
+            team: career.team?.name ?? "Independent",
+            manufacturer: career.manufacturer?.name ?? "Manufacturer TBC",
+            motorcycle: career.motorcycle
+              ? `${career.motorcycle.manufacturer.name} ${career.motorcycle.model}`
+              : "Motorcycle TBC",
+            championshipPosition: career.championshipPosition
+              ? `Championship P${career.championshipPosition}`
+              : "Classification pending verification",
+            achievement:
+              career.wins > 0 || career.podiums > 0
+                ? `${career.wins} wins / ${career.podiums} podiums`
+                : "Verified data coming soon",
+          }))}
+        />
+
+        <RiderRelatedLinks
+          links={buildRelatedLinks({
+            currentTeam,
+            currentManufacturer,
+            currentMotorcycle,
+            results: rider.results,
+          })}
+        />
+
         <div className="flex justify-start">
           <ButtonLink href="/riders" variant="secondary">
             Back to Riders
@@ -169,21 +174,6 @@ export default async function RiderProfilePage({ params }: RiderProfilePageProps
         </div>
       </Container>
     </main>
-  );
-}
-
-function VerificationNote() {
-  return (
-    <Card className="p-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <ShieldCheck className="h-5 w-5 text-accent" aria-hidden="true" />
-        <p className="text-sm font-semibold text-foreground/[0.66]">
-          Rider profile data is displayed conservatively. Unverified biography,
-          performance totals, and historical details remain marked as pending until
-          official sources are reviewed.
-        </p>
-      </div>
-    </Card>
   );
 }
 
@@ -227,6 +217,53 @@ function buildCurrentSetupItems({
     { label: "Season", value: season ?? "Verified data coming soon" },
     { label: "Status", value: status },
   ];
+}
+
+function buildCareerHighlights({
+  championships,
+  totals,
+  bestResult,
+}: {
+  championships: number;
+  totals: { wins: number; podiums: number; starts: number; dnfs: number };
+  bestResult:
+    | {
+        overallPosition: number | null;
+        event: { name: string };
+      }
+    | undefined;
+}) {
+  const highlights = [];
+
+  if (championships > 0) {
+    highlights.push({
+      label: "Championship Titles",
+      value: String(championships),
+    });
+  }
+
+  if (totals.wins > 0) {
+    highlights.push({
+      label: "Career Wins",
+      value: String(totals.wins),
+    });
+  }
+
+  if (totals.podiums > 0) {
+    highlights.push({
+      label: "Career Podiums",
+      value: String(totals.podiums),
+    });
+  }
+
+  if (bestResult?.overallPosition) {
+    highlights.push({
+      label: "Best Verified Result",
+      value: `P${bestResult.overallPosition} at ${bestResult.event.name}`,
+    });
+  }
+
+  return highlights;
 }
 
 function buildRelatedLinks({

@@ -1,4 +1,4 @@
-import { Bike, Flag, ShieldCheck, Trophy, Users } from "lucide-react";
+import { Bike, Flag, Trophy, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { Card } from "@/components/ui/card";
@@ -57,6 +57,7 @@ export function RiderHero({
         </div>
 
         <Card className="relative mx-auto aspect-square w-full max-w-[340px] overflow-hidden border-white/[0.14] bg-white/[0.06] p-5 text-white backdrop-blur">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_34%,hsl(24_94%_52%/0.22),transparent_34%)]" />
           <div className="flex h-full items-center justify-center rounded-full border border-white/[0.16] bg-black/40">
             {profileImageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -66,12 +67,6 @@ export function RiderHero({
                 {initials}
               </div>
             )}
-          </div>
-          <div className="absolute bottom-5 left-5 right-5 rounded-md border border-white/[0.12] bg-black/55 px-4 py-3 backdrop-blur">
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-white/58">
-              <ShieldCheck className="h-4 w-4 text-accent" aria-hidden="true" />
-              Profile image placeholder
-            </div>
           </div>
         </Card>
       </Container>

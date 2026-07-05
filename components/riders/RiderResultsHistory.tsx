@@ -17,9 +17,9 @@ export function RiderResultsHistory({ results }: { results: RiderResultRow[] }) 
   return (
     <section>
       <SectionTitle
-        eyebrow="Results History"
-        title="Recent verified event results"
-        description="Only event result rows already present in the verified database are shown here."
+        eyebrow="Recent Results"
+        title="Latest event classifications"
+        description="Verified event result rows linked to this rider."
       />
       <Card className="mt-6 overflow-hidden">
         {results.length > 0 ? (
@@ -61,7 +61,7 @@ export function RiderResultsHistory({ results }: { results: RiderResultRow[] }) 
           </div>
         ) : (
           <div className="p-4 text-sm font-semibold text-foreground/[0.62]">
-            Verified results history coming soon.
+            Verified data coming soon.
           </div>
         )}
       </Card>

@@ -16,10 +16,10 @@ export function RiderRelatedLinks({ links }: { links: RiderRelatedLink[] }) {
         <SectionTitle
           eyebrow="Related Links"
           title="Connected records"
-          description="Related team, manufacturer, motorcycle, and event links will appear as verified relationships are added."
+          description="Team, manufacturer, motorcycle, and event links connected to this rider."
         />
         <Card className="mt-6 p-4 text-sm font-semibold text-foreground/[0.62]">
-          Verified related links coming soon.
+          Verified data coming soon.
         </Card>
       </section>
     );
@@ -30,7 +30,7 @@ export function RiderRelatedLinks({ links }: { links: RiderRelatedLink[] }) {
       <SectionTitle
         eyebrow="Related Links"
         title="Connected records"
-        description="Jump into verified team, manufacturer, motorcycle, and event records connected to this rider."
+        description="Team, manufacturer, motorcycle, and event links connected to this rider."
       />
       <div className="mt-6 grid gap-3 sm:grid-cols-2">
         {links.map((link) => (

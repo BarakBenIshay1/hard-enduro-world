@@ -14,8 +14,8 @@ export function RiderCurrentSetup({ items }: { items: RiderSetupItem[] }) {
     <section>
       <SectionTitle
         eyebrow="Current Setup"
-        title="Team, machine, and season context"
-        description="Current rider context is built from existing team, manufacturer, motorcycle, and season records."
+        title="Team, machine, and season"
+        description="Current paddock context for the rider."
       />
       <div className="mt-6 grid gap-3 sm:grid-cols-2">
         {items.map((item) => (
