@@ -1,6 +1,7 @@
 import { EventsBrowser, type EventCardData } from "@/components/events/events-browser";
 import { getRaceStatus } from "@/components/events/race-status";
 import { Container } from "@/components/ui/container";
+import { IndexHeroVisual } from "@/components/ui/index-hero-visual";
 import { PageHero } from "@/components/ui/page-hero";
 import { SectionTitle } from "@/components/ui/section-title";
 import { getEventsList } from "@/db/events";
@@ -50,6 +51,7 @@ export default async function EventsPage() {
         eyebrow="Events"
         title="The championship calendar, built like a race control room."
         description="Browse the 2026 Hard Enduro World Championship calendar, then explore previous seasons through the championship archive."
+        visual={<IndexHeroVisual kind="events" />}
       />
 
       <Container className="py-12">

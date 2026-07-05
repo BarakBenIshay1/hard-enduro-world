@@ -1,5 +1,6 @@
 import { TeamsBrowser, type TeamCardData } from "@/components/teams/teams-browser";
 import { Container } from "@/components/ui/container";
+import { IndexHeroVisual } from "@/components/ui/index-hero-visual";
 import { PageHero } from "@/components/ui/page-hero";
 import { SectionTitle } from "@/components/ui/section-title";
 import { getTeamsList } from "@/db/teams";
@@ -61,6 +62,7 @@ export default async function TeamsPage() {
         eyebrow="Teams"
         title="Teams"
         description="Discover the factory and independent teams competing throughout the championship, their riders, achievements, and season history."
+        visual={<IndexHeroVisual kind="teams" />}
       />
 
       <Container className="py-12">

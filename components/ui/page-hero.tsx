@@ -8,6 +8,7 @@ type PageHeroProps = {
   description?: string;
   children?: React.ReactNode;
   compact?: boolean;
+  visual?: React.ReactNode;
 };
 
 export function PageHero({
@@ -16,6 +17,7 @@ export function PageHero({
   description,
   children,
   compact,
+  visual,
 }: PageHeroProps) {
   return (
     <section
@@ -27,17 +29,25 @@ export function PageHero({
       <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_20%_0%,hsl(var(--accent)/0.32),transparent_32%),linear-gradient(135deg,hsl(0_0%_4%),hsl(220_10%_12%)_48%,hsl(18_80%_20%))]" />
       <div className="absolute inset-x-0 bottom-0 -z-10 h-px bg-gradient-to-r from-transparent via-accent to-transparent" />
       <Container>
-        <div className="max-w-4xl">
-          {eyebrow ? <Badge>{eyebrow}</Badge> : null}
-          <h1 className="mt-5 text-4xl font-semibold tracking-tight sm:text-6xl lg:text-7xl">
-            {title}
-          </h1>
-          {description ? (
-            <p className="mt-6 max-w-2xl text-lg leading-8 text-white/72">
-              {description}
-            </p>
-          ) : null}
-          {children ? <div className="mt-8">{children}</div> : null}
+        <div
+          className={cn(
+            "grid gap-10",
+            visual && "items-center lg:grid-cols-[minmax(0,1fr)_minmax(360px,0.72fr)]",
+          )}
+        >
+          <div className="max-w-4xl">
+            {eyebrow ? <Badge>{eyebrow}</Badge> : null}
+            <h1 className="mt-5 text-4xl font-semibold tracking-tight sm:text-6xl lg:text-7xl">
+              {title}
+            </h1>
+            {description ? (
+              <p className="mt-6 max-w-2xl text-lg leading-8 text-white/72">
+                {description}
+              </p>
+            ) : null}
+            {children ? <div className="mt-8">{children}</div> : null}
+          </div>
+          {visual ? <div>{visual}</div> : null}
         </div>
       </Container>
     </section>

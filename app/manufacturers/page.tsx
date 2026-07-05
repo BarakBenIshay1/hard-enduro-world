@@ -3,6 +3,7 @@ import {
   type ManufacturerCardData,
 } from "@/components/manufacturers/manufacturers-browser";
 import { Container } from "@/components/ui/container";
+import { IndexHeroVisual } from "@/components/ui/index-hero-visual";
 import { PageHero } from "@/components/ui/page-hero";
 import { SectionTitle } from "@/components/ui/section-title";
 import { getManufacturersList } from "@/db/manufacturers";
@@ -81,6 +82,7 @@ export default async function ManufacturersPage() {
         eyebrow="Manufacturers"
         title="Manufacturers"
         description="Explore the motorcycle brands competing in Hard Enduro, their factory programs, championship history, technical evolution, and rider line-ups."
+        visual={<IndexHeroVisual kind="manufacturers" />}
       />
 
       <Container className="py-12">

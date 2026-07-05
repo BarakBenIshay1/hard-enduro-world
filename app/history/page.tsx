@@ -4,6 +4,7 @@ import {
   type HistorySeasonCardData,
 } from "@/components/history/history-browser";
 import { Container } from "@/components/ui/container";
+import { IndexHeroVisual } from "@/components/ui/index-hero-visual";
 import { PageHero } from "@/components/ui/page-hero";
 import { SectionTitle } from "@/components/ui/section-title";
 import { siteConfig } from "@/config/site";
@@ -65,6 +66,7 @@ export default async function HistoryPage() {
         eyebrow="Championship History"
         title="The archive of hard enduro seasons."
         description="Explore each championship year through champions, runner-up previews, event counts, rider totals, and season detail pages."
+        visual={<IndexHeroVisual kind="history" />}
       />
 
       <Container className="py-12">

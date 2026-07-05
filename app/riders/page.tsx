@@ -1,5 +1,6 @@
 import { RidersBrowser, type RiderCardData } from "@/components/riders/riders-browser";
 import { Container } from "@/components/ui/container";
+import { IndexHeroVisual } from "@/components/ui/index-hero-visual";
 import { PageHero } from "@/components/ui/page-hero";
 import { SectionTitle } from "@/components/ui/section-title";
 import { getRidersList } from "@/db/riders";
@@ -49,7 +50,8 @@ export default async function RidersPage() {
         compact
         eyebrow="Riders"
         title="The athletes who define the hard line."
-        description="Search, filter, and explore the seeded rider grid while the module prepares for complete career histories and future automation."
+        description="Explore rider profiles, nationalities, team connections, motorcycle setups, and verified career records as the knowledge base grows."
+        visual={<IndexHeroVisual kind="riders" />}
       />
 
       <Container className="py-12">
