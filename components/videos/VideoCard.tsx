@@ -58,9 +58,6 @@ export function VideoCard({ video, view }: VideoCardProps) {
       <div className="grid gap-5 p-5">
         <div>
           <div className="mb-3 flex flex-wrap items-center gap-2">
-            <Badge className="border-white/12 bg-white/[0.06] text-foreground/76">
-              {video.sourceType}
-            </Badge>
             {video.verified ? (
               <Badge className="border-emerald-400/30 bg-emerald-400/10 text-emerald-200">
                 <BadgeCheck className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
@@ -68,7 +65,7 @@ export function VideoCard({ video, view }: VideoCardProps) {
               </Badge>
             ) : (
               <Badge className="border-accent/28 bg-accent/10 text-accent">
-                Source-aware
+                Awaiting approval
               </Badge>
             )}
           </div>

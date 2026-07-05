@@ -19,7 +19,7 @@ type VideoFeedProps = {
 
 const tabs: Array<{ label: string; value: VideoTopTab }> = [
   { label: "All", value: "all" },
-  { label: "Subscribed", value: "subscribed" },
+  { label: "Featured", value: "featured" },
   { label: "Highlights", value: "highlights" },
   { label: "Races", value: "races" },
   { label: "Behind the Scenes", value: "behind-scenes" },

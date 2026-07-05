@@ -39,6 +39,27 @@ export default async function VideosPage() {
     verified: true,
     url: item.url,
     placeholder: false,
+    relations: {
+      event: item.event
+        ? {
+            id: item.event.id,
+            name: item.event.name,
+            slug: item.event.slug,
+          }
+        : null,
+      season: item.event
+        ? {
+            year: item.event.startDate.getFullYear(),
+            name: `${item.event.startDate.getFullYear()} season`,
+          }
+        : null,
+      source: {
+        id: (item.provider ?? "reviewed-media-source")
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-"),
+        name: item.provider ?? "Reviewed media source",
+      },
+    },
   }));
   const videos = approvedVideos.length > 0 ? approvedVideos : placeholderVideos;
 
@@ -58,43 +79,43 @@ const videoSources: VideoSource[] = [
     id: "manuel-lettenbichler",
     name: "Manuel Lettenbichler",
     type: "Official Rider",
-    subscribed: true,
+    featured: true,
   },
   {
     id: "media-mike-tv",
     name: "Media Mike TV",
     type: "Trusted Creator",
-    subscribed: true,
+    featured: true,
   },
   {
     id: "billy-bolt",
     name: "Billy Bolt",
     type: "Official Rider",
-    subscribed: true,
+    featured: true,
   },
   {
     id: "red-bull-motorsports",
     name: "Red Bull Motorsports",
     type: "Official Brand",
-    subscribed: true,
+    featured: true,
   },
   {
     id: "red-bull-erzbergrodeo",
     name: "Red Bull Erzbergrodeo",
     type: "Official Event",
-    subscribed: true,
+    featured: true,
   },
   {
     id: "red-bull-romaniacs",
     name: "Red Bull Romaniacs",
     type: "Official Event",
-    subscribed: true,
+    featured: true,
   },
   {
     id: "sea-to-sky-official",
     name: "Sea to Sky Official",
     type: "Official Event",
-    subscribed: true,
+    featured: true,
   },
 ];
 
@@ -136,6 +157,12 @@ function createPlaceholderVideo(
     verified: false,
     url: null,
     placeholder: true,
+    relations: {
+      source: {
+        id: sourceName.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+        name: sourceName,
+      },
+    },
   };
 }
 

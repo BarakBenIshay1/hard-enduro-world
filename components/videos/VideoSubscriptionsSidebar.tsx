@@ -30,7 +30,7 @@ export function VideoSubscriptionsSidebar({
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">
             Sources
           </p>
-          <h2 className="mt-1 text-2xl font-black">My Subscriptions</h2>
+          <h2 className="mt-1 text-2xl font-black">Official & Trusted Sources</h2>
         </div>
         <Bell className="h-5 w-5 text-accent" aria-hidden="true" />
       </div>
@@ -67,20 +67,17 @@ export function VideoSubscriptionsSidebar({
           >
             <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/12 bg-[radial-gradient(circle_at_35%_25%,rgba(245,123,32,0.35),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.12),rgba(255,255,255,0.04))] text-sm font-black">
               {initials(source.name)}
-              {source.subscribed ? (
+              {source.featured ? (
                 <span className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-surface-muted bg-emerald-400" />
               ) : null}
             </span>
             <span className="min-w-0 flex-1">
               <span className="block truncate text-sm font-black">{source.name}</span>
               <span className="mt-1 flex flex-wrap items-center gap-1.5">
-                <Badge className="border-white/10 bg-white/[0.05] px-2 py-0.5 text-[10px] text-foreground/64">
-                  {source.type}
-                </Badge>
-                {source.subscribed ? (
+                {source.featured ? (
                   <Badge className="border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[10px] text-emerald-200">
                     <BadgeCheck className="mr-1 h-3 w-3" aria-hidden="true" />
-                    Active
+                    Featured
                   </Badge>
                 ) : null}
               </span>

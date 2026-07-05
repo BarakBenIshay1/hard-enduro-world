@@ -6,6 +6,11 @@ export type VideoFilterState = {
   sourceType: "All" | VideoSourceType;
   contentType: "All" | VideoContentType;
   eventId: "all" | string;
+  riderId: "all" | string;
+  teamId: "all" | string;
+  manufacturerId: "all" | string;
+  motorcycleId: "all" | string;
+  seasonYear: "all" | number;
   dateRange: "all" | "latest" | "week" | "month" | "season";
 };
 

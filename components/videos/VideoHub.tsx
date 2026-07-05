@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Container } from "@/components/ui/container";
+import { getVideoSourcePriority } from "./helpers";
 import type { VideoFilterState } from "./VideoFilters";
 import { VideoFeed } from "./VideoFeed";
 import { VideoSubscriptionsSidebar } from "./VideoSubscriptionsSidebar";
@@ -24,6 +25,11 @@ const initialFilters: VideoFilterState = {
   sourceType: "All",
   contentType: "All",
   eventId: "all",
+  riderId: "all",
+  teamId: "all",
+  manufacturerId: "all",
+  motorcycleId: "all",
+  seasonYear: "all",
   dateRange: "all",
 };
 
@@ -36,8 +42,8 @@ export function VideoHub({ sources, events, videos }: VideoHubProps) {
 
   const filteredVideos = useMemo(() => {
     const activeSource = sources.find((source) => source.id === activeSourceId);
-    const subscribedSourceNames = new Set(
-      sources.filter((source) => source.subscribed).map((source) => source.name),
+    const featuredSourceNames = new Set(
+      sources.filter((source) => source.featured).map((source) => source.name),
     );
     const now = new Date();
 
@@ -54,10 +60,34 @@ export function VideoHub({ sources, events, videos }: VideoHubProps) {
           const event = events.find((item) => item.id === filters.eventId);
           if (!event || video.eventName !== event.name) return false;
         }
+        if (filters.riderId !== "all" && video.relations.rider?.id !== filters.riderId) {
+          return false;
+        }
+        if (filters.teamId !== "all" && video.relations.team?.id !== filters.teamId) {
+          return false;
+        }
+        if (
+          filters.manufacturerId !== "all" &&
+          video.relations.manufacturer?.id !== filters.manufacturerId
+        ) {
+          return false;
+        }
+        if (
+          filters.motorcycleId !== "all" &&
+          video.relations.motorcycle?.id !== filters.motorcycleId
+        ) {
+          return false;
+        }
+        if (
+          filters.seasonYear !== "all" &&
+          video.relations.season?.year !== filters.seasonYear
+        ) {
+          return false;
+        }
         if (!matchesDateFilter(video.publishedAt, filters.dateRange, now)) {
           return false;
         }
-        if (activeTab === "subscribed" && !subscribedSourceNames.has(video.sourceName)) {
+        if (activeTab === "featured" && !featuredSourceNames.has(video.sourceName)) {
           return false;
         }
         if (activeTab === "highlights" && video.contentType !== "Highlights") {
@@ -123,6 +153,8 @@ function matchesDateFilter(
 
 function sortVideos(a: VideoFeedItem, b: VideoFeedItem, sort: VideoSort) {
   if (sort === "source") {
+    const priorityDelta = getVideoSourcePriority(a) - getVideoSourcePriority(b);
+    if (priorityDelta !== 0) return priorityDelta;
     return a.sourceName.localeCompare(b.sourceName);
   }
 

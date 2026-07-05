@@ -16,7 +16,27 @@ export type VideoSource = {
   id: string;
   name: string;
   type: VideoSourceType;
-  subscribed: boolean;
+  featured: boolean;
+};
+
+export type VideoEntityLink = {
+  id: string;
+  name: string;
+  slug?: string | null;
+};
+
+export type VideoKnowledgeGraphRelations = {
+  rider?: VideoEntityLink | null;
+  team?: VideoEntityLink | null;
+  manufacturer?: VideoEntityLink | null;
+  motorcycle?: VideoEntityLink | null;
+  event?: VideoEntityLink | null;
+  stage?: VideoEntityLink | null;
+  season?: {
+    year: number;
+    name?: string | null;
+  } | null;
+  source?: VideoEntityLink | null;
 };
 
 export type VideoEventOption = {
@@ -36,13 +56,14 @@ export type VideoFeedItem = {
   verified: boolean;
   url: string | null;
   placeholder: boolean;
+  relations: VideoKnowledgeGraphRelations;
 };
 
 export type VideoSort = "newest" | "oldest" | "source";
 export type VideoView = "grid" | "list";
 export type VideoTopTab =
   | "all"
-  | "subscribed"
+  | "featured"
   | "highlights"
   | "races"
   | "behind-scenes"
