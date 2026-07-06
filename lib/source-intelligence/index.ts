@@ -4,6 +4,7 @@ export * from "./entity-resolution";
 export * from "./lifecycle";
 export * from "./normalization";
 export * from "./relationships";
+export * from "./registry";
 export * from "./review";
 export * from "./source-health";
 export * from "./source-registry";
