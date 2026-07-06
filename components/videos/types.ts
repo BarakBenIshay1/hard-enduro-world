@@ -61,10 +61,3 @@ export type VideoFeedItem = {
 
 export type VideoSort = "newest" | "oldest" | "source";
 export type VideoView = "grid" | "list";
-export type VideoTopTab =
-  | "all"
-  | "featured"
-  | "highlights"
-  | "races"
-  | "behind-scenes"
-  | "interviews";

@@ -24,7 +24,7 @@ export function VideoSubscriptionsSidebar({
   onFiltersChange,
 }: VideoSubscriptionsSidebarProps) {
   return (
-    <aside className="rounded-xl border border-white/[0.1] bg-surface-muted/64 p-4 lg:sticky lg:top-24 lg:self-start">
+    <aside className="rounded-xl border border-white/[0.1] bg-surface-muted/64 p-4 lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:self-start lg:overflow-y-auto lg:pr-3">
       <div className="mb-5 flex items-center justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">

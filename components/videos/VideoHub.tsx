@@ -11,7 +11,6 @@ import type {
   VideoFeedItem,
   VideoSort,
   VideoSource,
-  VideoTopTab,
   VideoView,
 } from "./types";
 
@@ -36,15 +35,11 @@ const initialFilters: VideoFilterState = {
 export function VideoHub({ sources, events, videos }: VideoHubProps) {
   const [activeSourceId, setActiveSourceId] = useState("all");
   const [filters, setFilters] = useState<VideoFilterState>(initialFilters);
-  const [activeTab, setActiveTab] = useState<VideoTopTab>("all");
   const [sort, setSort] = useState<VideoSort>("newest");
   const [view, setView] = useState<VideoView>("grid");
 
   const filteredVideos = useMemo(() => {
     const activeSource = sources.find((source) => source.id === activeSourceId);
-    const featuredSourceNames = new Set(
-      sources.filter((source) => source.featured).map((source) => source.name),
-    );
     const now = new Date();
 
     return videos
@@ -87,25 +82,10 @@ export function VideoHub({ sources, events, videos }: VideoHubProps) {
         if (!matchesDateFilter(video.publishedAt, filters.dateRange, now)) {
           return false;
         }
-        if (activeTab === "featured" && !featuredSourceNames.has(video.sourceName)) {
-          return false;
-        }
-        if (activeTab === "highlights" && video.contentType !== "Highlights") {
-          return false;
-        }
-        if (activeTab === "races" && video.contentType !== "Full Race") {
-          return false;
-        }
-        if (activeTab === "behind-scenes" && video.contentType !== "Behind the Scenes") {
-          return false;
-        }
-        if (activeTab === "interviews" && video.contentType !== "Interviews") {
-          return false;
-        }
         return true;
       })
       .sort((a, b) => sortVideos(a, b, sort));
-  }, [activeSourceId, activeTab, events, filters, sort, sources, videos]);
+  }, [activeSourceId, events, filters, sort, sources, videos]);
 
   return (
     <Container className="py-12">
@@ -120,8 +100,6 @@ export function VideoHub({ sources, events, videos }: VideoHubProps) {
         />
         <VideoFeed
           videos={filteredVideos}
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
           sort={sort}
           onSortChange={setSort}
           view={view}

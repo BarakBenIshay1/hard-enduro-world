@@ -98,12 +98,12 @@ type FilterSelectProps = {
 
 function FilterSelect({ label, value, options, onChange }: FilterSelectProps) {
   return (
-    <label className="grid gap-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-foreground/50">
+    <label className="grid gap-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-foreground/72">
       {label}
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="h-11 rounded-md border border-white/[0.12] bg-black/24 px-3 text-sm font-semibold normal-case tracking-normal text-foreground outline-none transition focus:border-accent"
+        className="h-11 rounded-md border border-white/[0.16] bg-surface px-3 text-sm font-semibold normal-case tracking-normal text-foreground shadow-inner outline-none transition focus:border-accent focus:bg-black/40"
       >
         {options.map((option) => (
           <option key={`${label}-${option.value}`} value={option.value}>

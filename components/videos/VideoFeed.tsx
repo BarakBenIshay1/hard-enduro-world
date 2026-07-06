@@ -5,31 +5,18 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { cn } from "@/lib/cn";
 import { VideoCard } from "./VideoCard";
-import type { VideoFeedItem, VideoSort, VideoTopTab, VideoView } from "./types";
+import type { VideoFeedItem, VideoSort, VideoView } from "./types";
 
 type VideoFeedProps = {
   videos: VideoFeedItem[];
-  activeTab: VideoTopTab;
-  onTabChange: (tab: VideoTopTab) => void;
   sort: VideoSort;
   onSortChange: (sort: VideoSort) => void;
   view: VideoView;
   onViewChange: (view: VideoView) => void;
 };
 
-const tabs: Array<{ label: string; value: VideoTopTab }> = [
-  { label: "All", value: "all" },
-  { label: "Featured", value: "featured" },
-  { label: "Highlights", value: "highlights" },
-  { label: "Races", value: "races" },
-  { label: "Behind the Scenes", value: "behind-scenes" },
-  { label: "Interviews", value: "interviews" },
-];
-
 export function VideoFeed({
   videos,
-  activeTab,
-  onTabChange,
   sort,
   onSortChange,
   view,
@@ -57,7 +44,7 @@ export function VideoFeed({
             <select
               value={sort}
               onChange={(event) => onSortChange(event.target.value as VideoSort)}
-              className="h-11 min-w-40 rounded-md border border-white/[0.12] bg-black/24 px-3 text-sm font-semibold normal-case tracking-normal text-foreground outline-none transition focus:border-accent"
+              className="h-11 min-w-40 rounded-md border border-white/[0.16] bg-surface px-3 text-sm font-semibold normal-case tracking-normal text-foreground shadow-inner outline-none transition focus:border-accent focus:bg-black/40"
             >
               <option value="newest">Newest First</option>
               <option value="oldest">Oldest First</option>
@@ -97,23 +84,6 @@ export function VideoFeed({
             </Button>
           </div>
         </div>
-      </div>
-
-      <div className="mb-7 flex gap-2 overflow-x-auto rounded-lg border border-white/[0.1] bg-surface-muted/52 p-2">
-        {tabs.map((tab) => (
-          <button
-            key={tab.value}
-            type="button"
-            onClick={() => onTabChange(tab.value)}
-            className={cn(
-              "h-10 shrink-0 rounded-md px-4 text-sm font-semibold text-foreground/62 transition hover:text-foreground",
-              activeTab === tab.value &&
-                "bg-accent text-accent-foreground shadow-[0_14px_34px_hsl(var(--accent)/0.22)]",
-            )}
-          >
-            {tab.label}
-          </button>
-        ))}
       </div>
 
       {videos.length > 0 ? (
