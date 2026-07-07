@@ -35,6 +35,39 @@ The connector accepts local source input:
 If no local source input is provided, the connector returns a safe empty report
 with a warning. It does not fetch a real source in this sprint.
 
+## Developer Command
+
+Run the local dry-run report:
+
+```bash
+pnpm run connector:fim-calendar:dry-run
+```
+
+The command:
+
+- reads local sample input from `jobs/connectors/fim-calendar/sample-2026-calendar.json`
+- reads current database events through a read-only helper
+- compares source candidates against current events
+- prints a console report
+- creates review-ready items in memory only
+- performs no database writes
+
+To use a different local JSON/ICS input file:
+
+```bash
+FIM_CALENDAR_INPUT_PATH=/absolute/path/to/local-calendar.json pnpm run connector:fim-calendar:dry-run
+```
+
+To target a different season:
+
+```bash
+FIM_CALENDAR_SEASON_YEAR=2025 pnpm run connector:fim-calendar:dry-run
+```
+
+If the local database is not reachable, the command prints a warning and
+continues with an empty current-event list so the report shape can still be
+inspected.
+
 ## What It Can Collect
 
 Normalized candidates support:

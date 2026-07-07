@@ -1,0 +1,33 @@
+{
+  "notes": "Local dry-run sample only. This file is not official source data and must never be imported or published.",
+  "events": [
+    {
+      "sourceEventId": "fim-sample-erzbergrodeo-2026",
+      "eventName": "Red Bull Erzbergrodeo",
+      "seasonYear": 2026,
+      "country": "Austria",
+      "countryCode": "AT",
+      "location": "Eisenerz",
+      "venue": "Erzberg",
+      "startDate": "2026-06-04T00:00:00.000Z",
+      "endDate": "2026-06-07T23:59:59.000Z",
+      "status": "completed",
+      "officialUrl": "https://www.redbullerzbergrodeo.com",
+      "notes": "Local dry-run sample row for connector report testing only."
+    },
+    {
+      "sourceEventId": "fim-sample-red-bull-romaniacs-2026",
+      "eventName": "Red Bull Romaniacs",
+      "seasonYear": 2026,
+      "country": "Romania",
+      "countryCode": "RO",
+      "location": "Sibiu",
+      "venue": "Sibiu",
+      "startDate": "2026-07-21T00:00:00.000Z",
+      "endDate": "2026-07-25T23:59:59.000Z",
+      "status": "scheduled",
+      "officialUrl": "https://www.redbullromaniacs.com",
+      "notes": "Local dry-run sample row for connector report testing only."
+    }
+  ]
+}
