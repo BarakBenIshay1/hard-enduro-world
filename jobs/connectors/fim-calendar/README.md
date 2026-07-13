@@ -52,6 +52,9 @@ The command:
 - creates review-ready items in memory only
 - performs no database writes
 
+The bundled sample is marked as `partial-season`, so it will not recommend
+removing unrelated database events that are absent from the sample.
+
 To use a different local JSON/ICS input file:
 
 ```bash
@@ -61,7 +64,30 @@ FIM_CALENDAR_INPUT_PATH=/absolute/path/to/local-calendar.json pnpm run connector
 To target a different season:
 
 ```bash
-FIM_CALENDAR_SEASON_YEAR=2025 pnpm run connector:fim-calendar:dry-run
+FIM_CALENDAR_SEASON=2025 pnpm run connector:fim-calendar:dry-run
+```
+
+To explicitly set coverage behavior:
+
+```bash
+FIM_CALENDAR_COVERAGE_MODE=full-season pnpm run connector:fim-calendar:dry-run
+FIM_CALENDAR_COVERAGE_MODE=partial-season pnpm run connector:fim-calendar:dry-run
+FIM_CALENDAR_COVERAGE_MODE=single-event FIM_CALENDAR_EVENT_SLUG=erzbergrodeo-2026 pnpm run connector:fim-calendar:dry-run
+```
+
+To configure an official URL without fetching it yet:
+
+```bash
+FIM_CALENDAR_OFFICIAL_URL=https://example.com/official-calendar pnpm run connector:fim-calendar:dry-run
+```
+
+In that mode the report is labeled `configured-url-fetch-disabled`, and no
+network request is made.
+
+Run focused deterministic connector tests:
+
+```bash
+pnpm run test:fim-calendar
 ```
 
 If the local database is not reachable, the command prints a warning and

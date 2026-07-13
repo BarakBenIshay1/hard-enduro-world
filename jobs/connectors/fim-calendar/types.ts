@@ -17,14 +17,26 @@ export type FimCalendarChangeType =
   | "new-event-found"
   | "existing-event-unchanged"
   | "date-changed"
+  | "time-changed"
   | "country-changed"
   | "location-changed"
   | "status-changed"
   | "official-url-changed"
   | "missing-from-source"
+  | "not-evaluated-partial-input"
   | "ambiguous-match-requires-review";
 
 export type FimCalendarSeverity = "info" | "warning" | "review-required";
+export type FimCalendarInputCoverageMode =
+  | "full-season"
+  | "partial-season"
+  | "single-event";
+export type FimCalendarInputSourceType =
+  | "local-json"
+  | "local-ics"
+  | "local-html"
+  | "configured-url-fetch-disabled"
+  | "unknown";
 
 export type FimCalendarConfig = {
   connectorId: "fim-calendar";
@@ -63,6 +75,8 @@ export type NormalizedFimCalendarEventCandidate = {
   startDate: string | null;
   endDate: string | null;
   raceStatusCandidate: FimCalendarRaceStatusCandidate;
+  startDatePrecision: "date" | "datetime" | "unknown";
+  endDatePrecision: "date" | "datetime" | "unknown";
   officialUrl: string | null;
   sourceId: string;
   confidence: SourceConfidence;
@@ -90,17 +104,31 @@ export type FimCalendarMatch =
   | {
       status: "matched";
       event: FimCalendarCurrentEvent;
-      strategy: "sourceEventId" | "slugCandidate" | "name-season";
+      strategy: FimCalendarMatchingStrategy;
+      confidence: number;
+      reason: string;
     }
   | {
       status: "ambiguous";
       events: FimCalendarCurrentEvent[];
-      strategy: "sourceEventId" | "slugCandidate" | "name-season";
+      strategy: FimCalendarMatchingStrategy;
+      confidence: number;
+      reason: string;
     }
   | {
       status: "not-found";
-      strategy: "sourceEventId" | "slugCandidate" | "name-season";
+      strategy: FimCalendarMatchingStrategy;
+      confidence: number;
+      reason: string;
     };
+
+export type FimCalendarMatchingStrategy =
+  | "sourceEventId"
+  | "explicit-alias"
+  | "exact-normalized-slug"
+  | "sponsorless-name-season"
+  | "country-location-overlapping-dates"
+  | "unmatched";
 
 export type FimCalendarReportRow = {
   eventName: string;
@@ -111,6 +139,9 @@ export type FimCalendarReportRow = {
   severity: FimCalendarSeverity;
   reviewRecommendation: string;
   sourceUrl: string | null;
+  matchingStrategy: FimCalendarMatchingStrategy;
+  matchingConfidence: number;
+  ambiguousReason?: string | null;
 };
 
 export type FimCalendarReviewItem = {
@@ -137,6 +168,11 @@ export type FimCalendarDryRunReport = {
     warnings: string[];
     errors: string[];
   };
+  metadata: {
+    inputCoverageMode: FimCalendarInputCoverageMode;
+    inputSourceType: FimCalendarInputSourceType;
+    inputCompletenessWarning: string | null;
+  };
   rows: FimCalendarReportRow[];
   reviewItems: FimCalendarReviewItem[];
   source: {
@@ -155,4 +191,7 @@ export type FimCalendarDryRunInput = {
   currentEvents: FimCalendarCurrentEvent[];
   seasonYear?: number;
   sourceId?: string;
+  coverageMode?: FimCalendarInputCoverageMode;
+  inputSourceType?: FimCalendarInputSourceType;
+  selectedEventSlug?: string | null;
 };

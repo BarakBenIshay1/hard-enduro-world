@@ -39,6 +39,8 @@ function normalizeFimCalendarItem(
     startDate,
     endDate,
     raceStatusCandidate: mapRaceStatus(item.status, startDate, endDate),
+    startDatePrecision: getDatePrecision(item.startDate),
+    endDatePrecision: getDatePrecision(item.endDate),
     officialUrl: item.officialUrl?.trim() || config.sourceUrl,
     sourceId: config.sourceId,
     confidence: createCalendarConfidence(config),
@@ -56,6 +58,13 @@ function normalizeDate(value: string | null | undefined) {
   return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
 }
 
+function getDatePrecision(
+  value: string | null | undefined,
+): NormalizedFimCalendarEventCandidate["startDatePrecision"] {
+  if (!value) return "unknown";
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) || /^\d{8}$/.test(value) ? "date" : "datetime";
+}
+
 function mapRaceStatus(
   status: string | null | undefined,
   startDate: string | null,
@@ -70,7 +79,11 @@ function mapRaceStatus(
   if (normalized?.includes("complete") || normalized?.includes("finished")) {
     return "Race Completed";
   }
-  if (normalized?.includes("scheduled") || normalized?.includes("upcoming")) {
+  if (
+    normalized?.includes("scheduled") ||
+    normalized?.includes("upcoming") ||
+    normalized?.includes("coming soon")
+  ) {
     return "Coming Soon";
   }
 

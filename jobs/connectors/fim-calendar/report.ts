@@ -10,21 +10,31 @@ export function buildFimCalendarDryRunReport({
   rows,
   warnings,
   errors,
+  inputCoverageMode,
+  inputSourceType,
+  inputCompletenessWarning,
 }: {
   config: FimCalendarConfig;
   rows: FimCalendarReportRow[];
   warnings: string[];
   errors: string[];
+  inputCoverageMode: FimCalendarDryRunReport["metadata"]["inputCoverageMode"];
+  inputSourceType: FimCalendarDryRunReport["metadata"]["inputSourceType"];
+  inputCompletenessWarning: string | null;
 }): FimCalendarDryRunReport {
   const reviewRows = rows.filter((row) => row.severity === "review-required");
+  const sourceRows = rows.filter(
+    (row) =>
+      row.changeType !== "missing-from-source" &&
+      row.changeType !== "not-evaluated-partial-input",
+  );
 
   return {
     summary: {
       sourceId: config.sourceId,
       runMode: "dry-run",
       seasonYear: config.seasonYear,
-      totalSourceEvents: rows.filter((row) => row.changeType !== "missing-from-source")
-        .length,
+      totalSourceEvents: sourceRows.length,
       totalMatchedEvents: rows.filter(
         (row) =>
           row.changeType === "existing-event-unchanged" ||
@@ -37,6 +47,11 @@ export function buildFimCalendarDryRunReport({
       ).length,
       warnings,
       errors,
+    },
+    metadata: {
+      inputCoverageMode,
+      inputSourceType,
+      inputCompletenessWarning,
     },
     rows,
     reviewItems: reviewRows.map((row, index): FimCalendarReviewItem => {

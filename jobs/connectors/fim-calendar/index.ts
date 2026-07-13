@@ -27,6 +27,12 @@ export async function runFimCalendarDryRun(
         warnings,
         errors,
       },
+      metadata: {
+        inputCoverageMode: input.coverageMode ?? "partial-season",
+        inputSourceType: input.inputSourceType ?? "unknown",
+        inputCompletenessWarning:
+          "Connector configuration failed before source input could be evaluated.",
+      },
       rows: [],
       reviewItems: [],
       source: {
@@ -40,8 +46,20 @@ export async function runFimCalendarDryRun(
     };
   }
 
-  const rawItems =
-    input.rawItems ?? (input.rawContent ? parseFimCalendarPayload(input.rawContent) : []);
+  const parsedPayload = input.rawContent
+    ? parseFimCalendarPayload(input.rawContent)
+    : null;
+  const rawItems = input.rawItems ?? parsedPayload?.items ?? [];
+  const coverageMode =
+    input.coverageMode ?? parsedPayload?.coverageMode ?? "partial-season";
+  const inputSourceType =
+    input.inputSourceType ??
+    parsedPayload?.inputSourceType ??
+    (input.rawItems ? "unknown" : "configured-url-fetch-disabled");
+  const inputCompletenessWarning =
+    coverageMode === "full-season"
+      ? null
+      : "Input is not marked as full-season. Missing-from-source checks are suppressed for unrelated events.";
 
   if (!input.rawItems && !input.rawContent) {
     warnings.push(
@@ -58,6 +76,8 @@ export async function runFimCalendarDryRun(
     currentEvents: input.currentEvents.filter(
       (event) => event.seasonYear === config.seasonYear,
     ),
+    coverageMode,
+    selectedEventSlug: input.selectedEventSlug,
   });
 
   return buildFimCalendarDryRunReport({
@@ -65,6 +85,9 @@ export async function runFimCalendarDryRun(
     rows,
     warnings,
     errors,
+    inputCoverageMode: coverageMode,
+    inputSourceType,
+    inputCompletenessWarning,
   });
 }
 

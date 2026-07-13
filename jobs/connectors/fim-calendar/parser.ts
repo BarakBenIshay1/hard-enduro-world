@@ -1,27 +1,52 @@
-import type { RawFimCalendarItem } from "./types";
+import type {
+  FimCalendarInputCoverageMode,
+  FimCalendarInputSourceType,
+  RawFimCalendarItem,
+} from "./types";
 
 type FlexibleCalendarRecord = Record<string, unknown>;
 
-export function parseFimCalendarPayload(rawContent: string): RawFimCalendarItem[] {
+export type ParsedFimCalendarPayload = {
+  items: RawFimCalendarItem[];
+  coverageMode: FimCalendarInputCoverageMode | null;
+  inputSourceType: FimCalendarInputSourceType;
+};
+
+export function parseFimCalendarPayload(rawContent: string): ParsedFimCalendarPayload {
   const trimmed = rawContent.trim();
 
   if (!trimmed) {
-    return [];
+    return { items: [], coverageMode: null, inputSourceType: "unknown" };
   }
 
-  const jsonItems = parseJsonCalendar(trimmed);
-  if (jsonItems.length > 0) {
-    return jsonItems;
+  const jsonPayload = parseJsonCalendar(trimmed);
+  if (jsonPayload.items.length > 0) {
+    return { ...jsonPayload, inputSourceType: "local-json" };
   }
 
-  return parseIcsCalendar(trimmed);
+  if (looksLikeHtml(trimmed)) {
+    return {
+      items: parseHtmlCalendarSnapshot(trimmed),
+      coverageMode: null,
+      inputSourceType: "local-html",
+    };
+  }
+
+  return {
+    items: parseIcsCalendar(trimmed),
+    coverageMode: null,
+    inputSourceType: "local-ics",
+  };
 }
 
 export function parseFimCalendarItems(items: RawFimCalendarItem[]) {
   return items.filter((item) => item.eventName && item.startDate);
 }
 
-function parseJsonCalendar(rawContent: string): RawFimCalendarItem[] {
+function parseJsonCalendar(rawContent: string): {
+  items: RawFimCalendarItem[];
+  coverageMode: FimCalendarInputCoverageMode | null;
+} {
   try {
     const parsed = JSON.parse(rawContent) as unknown;
     const rows = Array.isArray(parsed)
@@ -31,14 +56,23 @@ function parseJsonCalendar(rawContent: string): RawFimCalendarItem[] {
           Array.isArray((parsed as { events?: unknown }).events)
         ? (parsed as { events: unknown[] }).events
         : [];
+    const coverageMode =
+      typeof parsed === "object" &&
+      parsed !== null &&
+      isCoverageMode((parsed as { coverageMode?: unknown }).coverageMode)
+        ? (parsed as { coverageMode: FimCalendarInputCoverageMode }).coverageMode
+        : null;
 
-    return rows
-      .filter(
-        (row): row is FlexibleCalendarRecord => typeof row === "object" && row !== null,
-      )
-      .map(mapFlexibleRecord);
+    return {
+      coverageMode,
+      items: rows
+        .filter(
+          (row): row is FlexibleCalendarRecord => typeof row === "object" && row !== null,
+        )
+        .map(mapFlexibleRecord),
+    };
   } catch {
-    return [];
+    return { items: [], coverageMode: null };
   }
 }
 
@@ -75,6 +109,42 @@ function parseIcsCalendar(rawContent: string): RawFimCalendarItem[] {
     officialUrl: icsField(block, "URL"),
     notes: null,
   }));
+}
+
+function parseHtmlCalendarSnapshot(rawContent: string): RawFimCalendarItem[] {
+  const jsonLdBlocks = [
+    ...rawContent.matchAll(
+      /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi,
+    ),
+  ]
+    .map((match) => match[1]?.trim())
+    .filter((value): value is string => Boolean(value));
+
+  return jsonLdBlocks.flatMap((block) => {
+    try {
+      const parsed = JSON.parse(block) as unknown;
+      const rows = Array.isArray(parsed) ? parsed : [parsed];
+      return rows
+        .filter(
+          (row): row is FlexibleCalendarRecord => typeof row === "object" && row !== null,
+        )
+        .filter((row) => {
+          const type = row["@type"];
+          return type === "Event" || (Array.isArray(type) && type.includes("Event"));
+        })
+        .map((row) =>
+          mapFlexibleRecord({
+            ...row,
+            eventName: row.name,
+            startDate: row.startDate,
+            endDate: row.endDate,
+            officialUrl: row.url,
+          }),
+        );
+    } catch {
+      return [];
+    }
+  });
 }
 
 function stringField(row: FlexibleCalendarRecord, keys: string[]) {
@@ -123,4 +193,14 @@ function parseIcsDate(value: string | null) {
 
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+}
+
+function isCoverageMode(value: unknown): value is FimCalendarInputCoverageMode {
+  return (
+    value === "full-season" || value === "partial-season" || value === "single-event"
+  );
+}
+
+function looksLikeHtml(value: string) {
+  return /<\/?[a-z][\s\S]*>/i.test(value);
 }

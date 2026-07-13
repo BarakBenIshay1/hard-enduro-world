@@ -1,5 +1,6 @@
 {
   "notes": "Local dry-run sample only. This file is not official source data and must never be imported or published.",
+  "coverageMode": "partial-season",
   "events": [
     {
       "sourceEventId": "fim-sample-erzbergrodeo-2026",
