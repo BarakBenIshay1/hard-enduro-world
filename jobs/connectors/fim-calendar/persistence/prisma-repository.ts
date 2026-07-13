@@ -14,8 +14,9 @@ type PrismaTransaction = Omit<
 
 export function createPrismaFimCalendarPersistenceRepository(
   client: PrismaClient | PrismaTransaction = prisma,
+  { inTransaction = false }: { inTransaction?: boolean } = {},
 ): FimCalendarPersistenceRepository {
-  return {
+  const repository: FimCalendarPersistenceRepository = {
     async findLatestSnapshot({ connectorKey, season }) {
       const snapshot = await client.connectorSnapshot.findFirst({
         where: { connectorKey, season },
@@ -115,14 +116,26 @@ export function createPrismaFimCalendarPersistenceRepository(
     },
 
     async transaction(callback) {
-      if ("$transaction" in client) {
-        return client.$transaction((tx) =>
-          callback(createPrismaFimCalendarPersistenceRepository(tx)),
-        );
+      if (inTransaction) {
+        return callback(repository);
       }
-      return callback(createPrismaFimCalendarPersistenceRepository(client));
+
+      return (client as PrismaClient).$transaction(
+        (tx) =>
+          callback(
+            createPrismaFimCalendarPersistenceRepository(tx, {
+              inTransaction: true,
+            }),
+          ),
+        {
+          maxWait: 10_000,
+          timeout: 60_000,
+        },
+      );
     },
   };
+
+  return repository;
 }
 
 function mapSnapshot(snapshot: {
@@ -146,9 +159,9 @@ function mapSnapshot(snapshot: {
 function mapReviewInputToCreate(
   snapshotId: string,
   input: FimCalendarReviewInput,
-): Prisma.ConnectorReviewItemCreateInput {
+): Prisma.ConnectorReviewItemUncheckedCreateInput {
   return {
-    snapshot: { connect: { id: snapshotId } },
+    snapshotId,
     connectorKey: input.connectorKey,
     season: input.season,
     sourceEventId: input.sourceEventId,

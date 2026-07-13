@@ -11,6 +11,7 @@ import { runFimCalendarDryRun } from "@/jobs/connectors/fim-calendar";
 import {
   createMemoryFimCalendarPersistenceRepository,
   createNoPersistenceResult,
+  createPrismaFimCalendarPersistenceRepository,
   createStableChecksum,
   persistFimCalendarReviewRun,
   stableStringify,
@@ -549,6 +550,37 @@ async function main() {
     assert.equal(repository.reviewItems.length, 0);
   });
 
+  await test("Prisma repository reuses the same transaction client without nesting", async () => {
+    let rootTransactions = 0;
+    let nestedTransactions = 0;
+    const txClient = createFakePrismaClient({
+      onNestedTransaction: () => {
+        nestedTransactions += 1;
+        throw new Error("Nested transaction should not be opened.");
+      },
+    });
+    const rootClient = {
+      ...createFakePrismaClient(),
+      $transaction: async (callback: (client: typeof txClient) => Promise<unknown>) => {
+        rootTransactions += 1;
+        return callback(txClient);
+      },
+    };
+    const repository = createPrismaFimCalendarPersistenceRepository(rootClient as never);
+
+    const result = await persistFimCalendarReviewRun({
+      repository,
+      input: createPersistenceInput(
+        createReportWithRows([newEventRow("Alestrem", "94054")]),
+      ),
+    });
+
+    assert.equal(result.performed, true);
+    assert.equal(result.reviewItemsCreated.length, 1);
+    assert.equal(rootTransactions, 1);
+    assert.equal(nestedTransactions, 0);
+  });
+
   await test("default no-persistence behavior is explicit in report metadata", () => {
     const result = createNoPersistenceResult(false);
 
@@ -710,5 +742,57 @@ function normalizedCandidate(eventName: string, sourceEventId: string) {
     },
     reviewRequired: true as const,
     notes: "Test candidate.",
+  };
+}
+
+function createFakePrismaClient({
+  onNestedTransaction,
+}: {
+  onNestedTransaction?: () => void;
+} = {}) {
+  return {
+    connectorSnapshot: {
+      findFirst: async () => null,
+      create: async ({ data }: { data: Record<string, unknown> }) => ({
+        id: "snapshot-fake",
+        connectorKey: data.connectorKey,
+        sourceKey: data.sourceKey,
+        season: data.season,
+        payloadChecksum: data.payloadChecksum,
+        createdAt: new Date("2026-07-13T10:00:00.000Z"),
+      }),
+    },
+    connectorReviewItem: {
+      findFirst: async () => null,
+      findMany: async () => [],
+      create: async ({ data }: { data: Record<string, unknown> }) => ({
+        id: "review-fake",
+        snapshotId: "snapshot-fake",
+        connectorKey: data.connectorKey,
+        season: data.season,
+        sourceEventId: data.sourceEventId ?? null,
+        currentEventId: data.currentEventId ?? null,
+        eventName: data.eventName,
+        suggestedAction: data.suggestedAction,
+        reviewStatus: data.reviewStatus,
+        confidence: data.confidence,
+        matchingStrategy: data.matchingStrategy ?? null,
+        ambiguityReason: data.ambiguityReason ?? null,
+        currentValues: data.currentValues ?? null,
+        proposedValues: data.proposedValues ?? null,
+        changedFields: data.changedFields,
+        recommendation: data.recommendation ?? null,
+        deduplicationKey: data.deduplicationKey,
+        createdAt: new Date("2026-07-13T10:00:01.000Z"),
+        updatedAt: new Date("2026-07-13T10:00:01.000Z"),
+      }),
+      update: async () => {
+        throw new Error("Update should not be called in this transaction test.");
+      },
+      count: async () => 1,
+    },
+    $transaction: async () => {
+      onNestedTransaction?.();
+    },
   };
 }
