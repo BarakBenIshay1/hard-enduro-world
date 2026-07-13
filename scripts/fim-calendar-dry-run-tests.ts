@@ -9,6 +9,12 @@ import { fetchFimCalendarOfficialSource } from "@/jobs/connectors/fim-calendar/f
 import { parseFimCalendarPayload } from "@/jobs/connectors/fim-calendar/parser";
 import { runFimCalendarDryRun } from "@/jobs/connectors/fim-calendar";
 import {
+  decideConnectorReviewItemWithRepository,
+  type ConnectorReviewDecisionAudit,
+  type ConnectorReviewDecisionRecord,
+  type ConnectorReviewDecisionRepository,
+} from "@/lib/admin/connector-review-decisions";
+import {
   createMemoryFimCalendarPersistenceRepository,
   createNoPersistenceResult,
   createPrismaFimCalendarPersistenceRepository,
@@ -588,6 +594,85 @@ async function main() {
     assert.equal(result.performed, false);
     assert.equal(result.publicEventsUpdated, 0);
   });
+
+  await test("admin review approval records decision metadata and audit only", async () => {
+    const repository = createMemoryDecisionRepository();
+    const result = await decideConnectorReviewItemWithRepository(repository, {
+      reviewItemId: "review-1",
+      expectedStatus: "PENDING",
+      expectedVersion: 1,
+      decision: "APPROVED",
+      actor: testActor,
+      note: "Source reviewed.",
+    });
+
+    assert.equal(result.ok, true);
+    assert.equal(repository.items[0]?.reviewStatus, "APPROVED");
+    assert.equal(repository.items[0]?.decidedByUserId, testActor.id);
+    assert.equal(repository.items[0]?.version, 2);
+    assert.equal(repository.audit.length, 1);
+    assert.equal(repository.publicEventWrites, 0);
+  });
+
+  await test("admin review rejection requires a reason", async () => {
+    const repository = createMemoryDecisionRepository();
+    const result = await decideConnectorReviewItemWithRepository(repository, {
+      reviewItemId: "review-1",
+      expectedStatus: "PENDING",
+      expectedVersion: 1,
+      decision: "REJECTED",
+      actor: testActor,
+      note: "",
+    });
+
+    assert.equal(result.ok, false);
+    assert.equal(result.ok ? "" : result.code, "invalid");
+    assert.equal(repository.items[0]?.reviewStatus, "PENDING");
+    assert.equal(repository.audit.length, 0);
+  });
+
+  await test("approved rejected and superseded review items cannot be decided", async () => {
+    for (const status of ["APPROVED", "REJECTED", "SUPERSEDED"] as const) {
+      const repository = createMemoryDecisionRepository({ status });
+      const result = await decideConnectorReviewItemWithRepository(repository, {
+        reviewItemId: "review-1",
+        expectedStatus: "PENDING",
+        expectedVersion: 1,
+        decision: "APPROVED",
+        actor: testActor,
+        note: null,
+      });
+
+      assert.equal(result.ok, false);
+      assert.equal(result.ok ? "" : result.code, "conflict");
+      assert.equal(repository.audit.length, 0);
+    }
+  });
+
+  await test("stale or repeated review decisions conflict", async () => {
+    const repository = createMemoryDecisionRepository();
+    const first = await decideConnectorReviewItemWithRepository(repository, {
+      reviewItemId: "review-1",
+      expectedStatus: "PENDING",
+      expectedVersion: 1,
+      decision: "APPROVED",
+      actor: testActor,
+      note: null,
+    });
+    const second = await decideConnectorReviewItemWithRepository(repository, {
+      reviewItemId: "review-1",
+      expectedStatus: "PENDING",
+      expectedVersion: 1,
+      decision: "REJECTED",
+      actor: testActor,
+      note: "Too late.",
+    });
+
+    assert.equal(first.ok, true);
+    assert.equal(second.ok, false);
+    assert.equal(second.ok ? "" : second.code, "conflict");
+    assert.equal(repository.audit.length, 1);
+  });
 }
 
 main().catch((error) => {
@@ -795,4 +880,95 @@ function createFakePrismaClient({
       onNestedTransaction?.();
     },
   };
+}
+
+const testActor = {
+  id: "admin-1",
+  email: "admin@example.com",
+  name: "Admin User",
+};
+
+function createMemoryDecisionRepository({
+  status = "PENDING",
+}: {
+  status?: ConnectorReviewDecisionRecord["reviewStatus"];
+} = {}): ConnectorReviewDecisionRepository & {
+  items: ConnectorReviewDecisionRecord[];
+  audit: ConnectorReviewDecisionAudit[];
+  publicEventWrites: number;
+} {
+  const items: ConnectorReviewDecisionRecord[] = [
+    {
+      id: "review-1",
+      snapshotId: "snapshot-1",
+      connectorKey: "fim-calendar",
+      season: 2026,
+      suggestedAction: "NEW_EVENT",
+      reviewStatus: status,
+      decidedByUserId: null,
+      decidedAt: null,
+      version: 1,
+      snapshot: {
+        payloadChecksum: "checksum-1",
+        finalResponseUrl: "https://www.fim-moto.com/en/calendars",
+      },
+    },
+  ];
+  const audit: ConnectorReviewDecisionAudit[] = [];
+  let publicEventWrites = 0;
+
+  const repository: ConnectorReviewDecisionRepository & {
+    items: ConnectorReviewDecisionRecord[];
+    audit: ConnectorReviewDecisionAudit[];
+    publicEventWrites: number;
+  } = {
+    items,
+    audit,
+    get publicEventWrites() {
+      return publicEventWrites;
+    },
+    async transaction(callback) {
+      const itemCopy = items.map((item) => ({ ...item, snapshot: { ...item.snapshot } }));
+      const auditCopy = [...audit];
+      const tx = createMemoryDecisionRepository({ status: itemCopy[0]!.reviewStatus });
+      tx.items.splice(0, tx.items.length, ...itemCopy);
+      tx.audit.splice(0, tx.audit.length, ...auditCopy);
+      const result = await callback(tx);
+      items.splice(0, items.length, ...tx.items);
+      audit.splice(0, audit.length, ...tx.audit);
+      publicEventWrites = tx.publicEventWrites;
+      return result;
+    },
+    async findReviewItem(id) {
+      return items.find((item) => item.id === id) ?? null;
+    },
+    async updatePendingReviewItem({
+      id,
+      expectedVersion,
+      decision,
+      actor,
+      note,
+      decidedAt,
+    }) {
+      const item = items.find(
+        (candidate) =>
+          candidate.id === id &&
+          candidate.reviewStatus === "PENDING" &&
+          candidate.version === expectedVersion,
+      );
+      if (!item) return { count: 0, item: null };
+
+      item.reviewStatus = decision;
+      item.decidedByUserId = actor.id;
+      item.decidedAt = decidedAt;
+      item.version += 1;
+      void note;
+      return { count: 1, item };
+    },
+    async createAudit(input) {
+      audit.push(input);
+    },
+  };
+
+  return repository;
 }

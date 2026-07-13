@@ -379,14 +379,93 @@ Championship`.
 ## Review Queue Path
 
 Report rows with actionable comparison outcomes can now become durable internal
-review items when persistence is explicitly enabled. Approval remains separate
-from connector execution and is not implemented here.
+review items when persistence is explicitly enabled. Admin approval remains
+separate from connector execution and does not apply public event changes.
+
+## Admin Review Workflow
+
+FIM Calendar review items can be inspected internally at `/admin/review`.
+
+The review list is protected by the existing admin authorization layer and shows:
+
+- connector key
+- season
+- event name
+- suggested action
+- confidence
+- matching strategy
+- review status
+- snapshot timestamp
+- created and updated timestamps
+
+Each item has a detail page with side-by-side current and proposed values,
+changed-field highlighting, snapshot diagnostics, checksum, official source URL,
+recommendation, and decision audit history.
+
+## Approval Behavior
+
+Authorized admins with `review:approve` permission can approve a `PENDING`
+review item. Approval:
+
+- changes only the review item status to `APPROVED`
+- records the acting admin
+- records the decision timestamp
+- stores an optional admin note
+- creates a `DataVersion` audit entry
+- updates zero public `Event` rows
+- publishes nothing
+
+Approval requires the expected current status and version. Repeated or stale
+approval attempts fail as conflicts.
+
+## Rejection Behavior
+
+Authorized admins with `review:approve` permission can reject a `PENDING` review
+item. Rejection:
+
+- changes only the review item status to `REJECTED`
+- records the acting admin
+- records the decision timestamp
+- requires a rejection reason
+- creates a `DataVersion` audit entry
+- updates zero public `Event` rows
+- publishes nothing
+
+## Superseded Behavior
+
+`SUPERSEDED` items are read-only. They remain visible as history and cannot be
+approved or rejected. A newer connector snapshot may supersede an older pending
+proposal, but approved and rejected items are never reopened automatically.
+
+## Authorization Requirements
+
+All review list, detail, approval, and rejection paths are admin-only. The UI
+does not expose review data publicly, and server actions enforce permissions
+again on direct submission. Hidden buttons are not treated as security.
+
+## Audit Trail
+
+Every approval or rejection writes a `DataVersion` audit entry with:
+
+- actor id
+- previous status and version
+- new status and version
+- connector key
+- season
+- suggested action
+- snapshot id
+- snapshot checksum
+- decision note
+- source URL when available
+
+Do not log secrets, cookies, authorization headers, or database connection
+details.
 
 ## Future Approval Path
 
-Only after review infrastructure is implemented should approved calendar changes
-write to the database. Approved writes must create audit/version history and
-source links.
+Only after a later apply step is implemented should approved calendar changes
+write to the public event database. Approved writes must create audit/version
+history and source links.
 
 During this stage, the connector never inserts, updates, deletes, or publishes
 public calendar events.

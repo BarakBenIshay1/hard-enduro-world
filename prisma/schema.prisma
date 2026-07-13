@@ -675,6 +675,12 @@ model ConnectorReviewItem {
   changedFields       String[]              @default([])
   recommendation      String?
   deduplicationKey    String
+  decidedByUserId     String?
+  decidedByUserEmail  String?
+  decidedAt           DateTime?
+  decisionNote        String?
+  supersededByReviewItemId String?
+  version             Int                   @default(1)
   createdAt           DateTime              @default(now())
   updatedAt           DateTime              @updatedAt
 
@@ -684,6 +690,7 @@ model ConnectorReviewItem {
   @@index([connectorKey, season])
   @@index([reviewStatus])
   @@index([deduplicationKey])
+  @@index([supersededByReviewItemId])
 }
 
 model UserProfile {
