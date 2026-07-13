@@ -620,6 +620,72 @@ model DataVersion {
   @@index([importRunId])
 }
 
+model ConnectorSnapshot {
+  id                  String   @id @default(cuid())
+  connectorKey        String
+  sourceKey           String
+  season              Int
+  runTimestamp        DateTime @default(now())
+  coverageMode        String
+  inputSourceType     String
+  requestedSourceUrl  String?
+  finalResponseUrl    String?
+  httpStatus          Int?
+  contentType         String?
+  parserSelected      String
+  rawRecordCount      Int      @default(0)
+  usableEventCount    Int      @default(0)
+  rejectedRecordCount Int      @default(0)
+  rejectionReasons    String[] @default([])
+  fetchDurationMs     Int?
+  executionDurationMs Int?
+  fallbackUsed        Boolean  @default(false)
+  environment         String?
+  gitCommitSha        String?
+  connectorVersion    String?
+  normalizedPayload   Json
+  matchingPayload     Json
+  diagnostics         Json
+  payloadChecksum     String
+  createdAt           DateTime @default(now())
+
+  reviewItems ConnectorReviewItem[]
+
+  @@index([connectorKey, season, createdAt])
+  @@index([sourceKey])
+  @@index([payloadChecksum])
+  @@unique([connectorKey, season, payloadChecksum])
+}
+
+model ConnectorReviewItem {
+  id                  String                @id @default(cuid())
+  snapshotId          String
+  connectorKey        String
+  season              Int
+  sourceEventId       String?
+  currentEventId      String?
+  eventName           String
+  suggestedAction     ConnectorReviewAction
+  reviewStatus        ConnectorReviewStatus @default(PENDING)
+  confidence          Json
+  matchingStrategy    String?
+  ambiguityReason     String?
+  currentValues       Json?
+  proposedValues      Json?
+  changedFields       String[]              @default([])
+  recommendation      String?
+  deduplicationKey    String
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+
+  snapshot ConnectorSnapshot @relation(fields: [snapshotId], references: [id])
+
+  @@index([snapshotId])
+  @@index([connectorKey, season])
+  @@index([reviewStatus])
+  @@index([deduplicationKey])
+}
+
 model UserProfile {
   id          String   @id
   email       String?  @unique
@@ -785,6 +851,20 @@ enum ImportStatus {
   COMPLETED
   FAILED
   NEEDS_REVIEW
+}
+
+enum ConnectorReviewAction {
+  NEW_EVENT
+  UPDATE_EVENT
+  SOURCE_REMOVED
+  MANUAL_REVIEW
+}
+
+enum ConnectorReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SUPERSEDED
 }
 
 enum UserRole {

@@ -37,8 +37,9 @@ The connector can read a real official source in dry-run mode:
 - HTML calendar snapshots with JSON-LD event metadata
 - already parsed local calendar item objects
 
-The official fetch path is read-only. It does not persist snapshots, create
-review rows, write events, or update public pages.
+The official fetch path is read-only by default. It does not persist snapshots,
+create review rows, write events, or update public pages unless the explicit
+review-persistence flag is enabled.
 
 ## Developer Command
 
@@ -110,6 +111,121 @@ Tests use saved fixtures only and never depend on live network access.
 If the local database is not reachable, the command prints a warning and
 continues with an empty current-event list so the report shape can still be
 inspected.
+
+## Internal Snapshot Persistence
+
+The connector can optionally persist an internal synchronization snapshot and
+pending review items. This is still not publishing. It is only a durable audit
+trail for future human review.
+
+Persistence is disabled by default. Enable it only with:
+
+```bash
+FIM_CALENDAR_PERSIST_REVIEW=true pnpm run connector:fim-calendar:dry-run
+```
+
+When this flag is absent, the command continues to:
+
+- fetch or load input
+- parse and normalize calendar candidates
+- compare against current events
+- print a report
+- update zero public `Event` rows
+- create zero database records
+
+When this flag is present, the command additionally:
+
+- creates or reuses one immutable `ConnectorSnapshot`
+- creates, reuses, or supersedes `ConnectorReviewItem` rows
+- leaves all new review items as `PENDING`
+- updates zero public `Event` rows
+- performs no approval action
+
+Persistence never becomes enabled simply because `DATABASE_URL` exists.
+
+## Snapshot Purpose
+
+Each persisted snapshot records the exact official-source run that produced a
+review package. It stores connector/source keys, requested season, input type,
+source URLs, HTTP diagnostics, parser details, record counts, rejection reasons,
+normalized event payload, matching payload, diagnostics, execution environment,
+optional git commit SHA, connector version, and a deterministic payload
+checksum.
+
+Snapshots are immutable. A later connector run creates a new snapshot only when
+the normalized official payload materially changes.
+
+The snapshot payload must never contain secrets, cookies, authorization headers,
+database credentials, or sensitive environment values.
+
+## Duplicate Snapshot Handling
+
+The connector creates a stable checksum from the normalized event payload. The
+checksum ignores execution timestamps, report formatting, local file paths,
+random IDs, and JavaScript object insertion order.
+
+If the latest snapshot for the same connector and season has the same checksum,
+the connector:
+
+- reuses the existing snapshot id
+- marks the run as a duplicate snapshot
+- creates no duplicate review items
+- reports `Public events updated: 0`
+
+## Review Item Purpose
+
+Review items represent actionable connector findings that may later need human
+approval.
+
+Review items are created only for:
+
+- `NEW_EVENT`
+- `UPDATE_EVENT`
+- `SOURCE_REMOVED`
+- `MANUAL_REVIEW`
+
+Review items are not created for unchanged or ignored rows.
+
+Every new review item starts as `PENDING`.
+
+Supported lifecycle statuses:
+
+- `PENDING`
+- `APPROVED`
+- `REJECTED`
+- `SUPERSEDED`
+
+This connector never automatically approves or rejects items. A newer materially
+different proposal for the same pending event/action may mark the previous
+pending item as `SUPERSEDED` and create a new `PENDING` item. Existing
+`APPROVED` and `REJECTED` items are never reopened automatically.
+
+## Review Deduplication
+
+Review item deduplication uses a deterministic key built from the connector,
+season, source or matched event identity, suggested action, current values,
+proposed values, and changed fields.
+
+If the same pending proposal already exists, the connector reuses it and links
+it to the latest snapshot where appropriate. If the proposal changes materially,
+the previous pending item is superseded and a new pending item is created.
+
+## Database Requirements
+
+Persistence requires the latest Prisma migration containing the generic
+connector snapshot and review item tables:
+
+- `ConnectorSnapshot`
+- `ConnectorReviewItem`
+- `ConnectorReviewAction`
+- `ConnectorReviewStatus`
+
+If persistence is explicitly requested and the database is unavailable, the
+command fails with a non-zero exit code. It must not silently continue or report
+persistence success.
+
+All persistence runs are wrapped in a transaction. A run stores the snapshot and
+review relationships together, or it stores nothing.
 
 ## What It Can Collect
 
@@ -260,15 +376,17 @@ Scope filters:
 - The parser only accepts rows whose title contains `FIM Hard Enduro World
 Championship`.
 
-## Future Review Queue Path
+## Review Queue Path
 
-Report rows with `review-required` severity can later be converted into durable
-review items.
-
-Approval must remain separate from connector execution.
+Report rows with actionable comparison outcomes can now become durable internal
+review items when persistence is explicitly enabled. Approval remains separate
+from connector execution and is not implemented here.
 
 ## Future Approval Path
 
 Only after review infrastructure is implemented should approved calendar changes
 write to the database. Approved writes must create audit/version history and
 source links.
+
+During this stage, the connector never inserts, updates, deletes, or publishes
+public calendar events.

@@ -5,10 +5,20 @@ import { getFimCalendarCurrentEvents } from "@/db/fim-calendar";
 import {
   fetchFimCalendarOfficialSource,
   getFimCalendarConfig,
+  normalizeFimCalendarItems,
+  parseFimCalendarItems,
+  parseFimCalendarPayload,
   runFimCalendarDryRun,
   type FimCalendarDryRunInput,
   type FimCalendarDryRunReport,
 } from "@/jobs/connectors/fim-calendar";
+import {
+  createFailedPersistenceResult,
+  createNoPersistenceResult,
+  createPrismaFimCalendarPersistenceRepository,
+  persistFimCalendarReviewRun,
+  type FimCalendarPersistenceResult,
+} from "@/jobs/connectors/fim-calendar/persistence";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -19,6 +29,7 @@ const defaultSamplePath = path.join(
 );
 
 async function main() {
+  const startedAt = new Date();
   const seasonYear = Number(
     process.env.FIM_CALENDAR_SEASON ?? process.env.FIM_CALENDAR_SEASON_YEAR ?? 2026,
   );
@@ -52,14 +63,66 @@ async function main() {
     inputDiagnostics: input.inputDiagnostics,
     selectedEventSlug: process.env.FIM_CALENDAR_EVENT_SLUG ?? null,
   });
+  const persistence = await maybePersistReviewRun({
+    requested: process.env.FIM_CALENDAR_PERSIST_REVIEW === "true",
+    report,
+    rawContent: input.rawContent,
+    startedAt,
+  });
 
-  printReport(report, input.inputLabel);
+  printReport(report, input.inputLabel, persistence);
 
   if (
     report.metadata.inputSourceType === "official-fetch" &&
     report.metadata.diagnostics.usableEventsParsed === 0
   ) {
     process.exitCode = 1;
+  }
+  if (persistence.requested && !persistence.performed) {
+    process.exitCode = 1;
+  }
+}
+
+async function maybePersistReviewRun({
+  requested,
+  report,
+  rawContent,
+  startedAt,
+}: {
+  requested: boolean;
+  report: FimCalendarDryRunReport;
+  rawContent: string | null;
+  startedAt: Date;
+}): Promise<FimCalendarPersistenceResult> {
+  if (!requested) return createNoPersistenceResult(false);
+
+  try {
+    const config = getFimCalendarConfig({ seasonYear: report.summary.seasonYear }).config;
+    if (!config) {
+      throw new Error("FIM calendar config unavailable for persistence.");
+    }
+    const parsedPayload = rawContent ? parseFimCalendarPayload(rawContent) : null;
+    const parsedItems = parseFimCalendarItems(parsedPayload?.items ?? []);
+    const normalizedCandidates = normalizeFimCalendarItems(parsedItems, config).filter(
+      (candidate) => candidate.seasonYear === report.summary.seasonYear,
+    );
+
+    return await persistFimCalendarReviewRun({
+      repository: createPrismaFimCalendarPersistenceRepository(),
+      input: {
+        report,
+        normalizedCandidates,
+        startedAt,
+        finishedAt: new Date(),
+        environment: process.env.VERCEL_ENV ?? process.env.NODE_ENV ?? "local",
+        gitCommitSha: process.env.VERCEL_GIT_COMMIT_SHA ?? null,
+        connectorVersion: config.source.connectorVersion,
+      },
+    });
+  } catch (error) {
+    return createFailedPersistenceResult(
+      error instanceof Error ? error.message : "Unknown persistence error.",
+    );
   }
 }
 
@@ -174,7 +237,11 @@ async function getCurrentEventsSafely(seasonYear: number) {
   }
 }
 
-function printReport(report: FimCalendarDryRunReport, inputLabel: string) {
+function printReport(
+  report: FimCalendarDryRunReport,
+  inputLabel: string,
+  persistence: FimCalendarPersistenceResult,
+) {
   const { summary } = report;
 
   console.log("\nFIM Calendar Dry Run Report");
@@ -275,7 +342,52 @@ function printReport(report: FimCalendarDryRunReport, inputLabel: string) {
     });
   }
 
-  console.log("\nDry-run complete. No database writes were performed.\n");
+  console.log("\nPersistence");
+  console.log("-----------");
+  console.log(`Persistence requested: ${persistence.requested ? "yes" : "no"}`);
+  console.log(`Persistence performed: ${persistence.performed ? "yes" : "no"}`);
+  console.log(`Snapshot status: ${persistence.snapshotStatus}`);
+  console.log(`Snapshot ID: ${persistence.snapshotId ?? "none"}`);
+  console.log(`Snapshot checksum: ${persistence.snapshotChecksum ?? "none"}`);
+  console.log(`Snapshot created: ${persistence.snapshotCreated ? "yes" : "no"}`);
+  console.log(`Snapshot reused: ${persistence.snapshotReused ? "yes" : "no"}`);
+  console.log(
+    `Duplicate snapshot detected: ${persistence.duplicateSnapshotDetected ? "yes" : "no"}`,
+  );
+  console.log(`Review items created: ${persistence.reviewItemsCreated.length}`);
+  console.log(`Review items reused: ${persistence.reviewItemsReused.length}`);
+  console.log(`Review items superseded: ${persistence.reviewItemsSuperseded.length}`);
+  console.log(`Total pending review items: ${persistence.totalPendingReviewItems}`);
+  console.log(`Public events updated: ${persistence.publicEventsUpdated}`);
+  if (persistence.errorMessage) {
+    console.log(`Persistence error: ${persistence.errorMessage}`);
+  }
+
+  const reviewItems = [
+    ...persistence.reviewItemsCreated,
+    ...persistence.reviewItemsReused,
+    ...persistence.reviewItemsSuperseded,
+  ];
+  if (reviewItems.length > 0) {
+    console.log("\nPersisted Review Items");
+    console.log("----------------------");
+    reviewItems.forEach((item, index) => {
+      console.log(`${index + 1}. ${item.eventName}`);
+      console.log(`   ID: ${item.id}`);
+      console.log(`   Suggested action: ${item.suggestedAction}`);
+      console.log(`   Status: ${item.reviewStatus}`);
+      console.log(`   Confidence: ${JSON.stringify(item.confidence)}`);
+      console.log(`   Matching strategy: ${item.matchingStrategy ?? "none"}`);
+      console.log(`   Changed fields: ${item.changedFields.join(", ") || "none"}`);
+      console.log(`   Current: ${JSON.stringify(item.currentValues ?? null)}`);
+      console.log(`   Proposed: ${JSON.stringify(item.proposedValues ?? null)}`);
+      console.log(`   Recommendation: ${item.recommendation ?? "none"}`);
+    });
+  }
+
+  console.log(
+    "\nDry-run complete. No public Event rows were inserted, updated, deleted, or published.\n",
+  );
 }
 
 main().catch((error) => {

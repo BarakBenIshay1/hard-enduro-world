@@ -8,7 +8,15 @@ import { getFimCalendarConfig } from "@/jobs/connectors/fim-calendar/config";
 import { fetchFimCalendarOfficialSource } from "@/jobs/connectors/fim-calendar/fetcher";
 import { parseFimCalendarPayload } from "@/jobs/connectors/fim-calendar/parser";
 import { runFimCalendarDryRun } from "@/jobs/connectors/fim-calendar";
+import {
+  createMemoryFimCalendarPersistenceRepository,
+  createNoPersistenceResult,
+  createStableChecksum,
+  persistFimCalendarReviewRun,
+  stableStringify,
+} from "@/jobs/connectors/fim-calendar/persistence";
 import type {
+  FimCalendarDryRunReport,
   FimCalendarCurrentEvent,
   RawFimCalendarItem,
 } from "@/jobs/connectors/fim-calendar";
@@ -361,6 +369,193 @@ async function main() {
     assert.equal(calls[1]?.includes("year%3A2026"), true);
     assert.equal(result.ok ? result.endpointDiscovered : false, true);
   });
+
+  await test("stable payload hashing ignores object insertion order", () => {
+    assert.equal(stableStringify({ b: 2, a: 1 }), stableStringify({ a: 1, b: 2 }));
+    assert.equal(
+      createStableChecksum({ b: 2, a: 1 }),
+      createStableChecksum({ a: 1, b: 2 }),
+    );
+  });
+
+  await test("snapshot creation and review item creation are internal only", async () => {
+    const repository = createMemoryFimCalendarPersistenceRepository();
+    const result = await persistFimCalendarReviewRun({
+      repository,
+      input: createPersistenceInput(
+        createReportWithRows([newEventRow("Alestrem", "94054")]),
+      ),
+    });
+
+    assert.equal(result.performed, true);
+    assert.equal(result.snapshotCreated, true);
+    assert.equal(repository.snapshots.length, 1);
+    assert.equal(result.reviewItemsCreated.length, 1);
+    assert.equal(result.reviewItemsCreated[0]?.reviewStatus, "PENDING");
+    assert.equal(result.publicEventsUpdated, 0);
+  });
+
+  await test("duplicate snapshot reuses existing snapshot and avoids duplicate reviews", async () => {
+    const repository = createMemoryFimCalendarPersistenceRepository();
+    const input = createPersistenceInput(
+      createReportWithRows([newEventRow("Alestrem", "94054")]),
+    );
+
+    const first = await persistFimCalendarReviewRun({ repository, input });
+    const second = await persistFimCalendarReviewRun({ repository, input });
+
+    assert.equal(first.snapshotCreated, true);
+    assert.equal(second.snapshotReused, true);
+    assert.equal(second.duplicateSnapshotDetected, true);
+    assert.equal(repository.snapshots.length, 1);
+    assert.equal(repository.reviewItems.length, 1);
+  });
+
+  await test("different payload creates a new snapshot", async () => {
+    const repository = createMemoryFimCalendarPersistenceRepository();
+
+    await persistFimCalendarReviewRun({
+      repository,
+      input: createPersistenceInput(
+        createReportWithRows([newEventRow("Alestrem", "94054")]),
+      ),
+    });
+    const second = await persistFimCalendarReviewRun({
+      repository,
+      input: createPersistenceInput(
+        createReportWithRows([newEventRow("Hixpania", "94049")]),
+        [normalizedCandidate("Hixpania", "94049")],
+      ),
+    });
+
+    assert.equal(second.snapshotCreated, true);
+    assert.equal(repository.snapshots.length, 2);
+  });
+
+  await test("same pending proposed change is reused across new snapshot", async () => {
+    const repository = createMemoryFimCalendarPersistenceRepository();
+
+    await persistFimCalendarReviewRun({
+      repository,
+      input: createPersistenceInput(
+        createReportWithRows([newEventRow("Alestrem", "94054")]),
+      ),
+    });
+    const second = await persistFimCalendarReviewRun({
+      repository,
+      input: createPersistenceInput(
+        createReportWithRows([newEventRow("Alestrem", "94054")]),
+        [{ ...normalizedCandidate("Alestrem", "94054"), location: "Ales" }],
+      ),
+    });
+
+    assert.equal(second.reviewItemsReused.length, 1);
+    assert.equal(repository.reviewItems.length, 1);
+  });
+
+  await test("materially different pending proposal supersedes previous pending item", async () => {
+    const repository = createMemoryFimCalendarPersistenceRepository();
+
+    await persistFimCalendarReviewRun({
+      repository,
+      input: createPersistenceInput(
+        createReportWithRows([newEventRow("Alestrem", "94054")]),
+      ),
+    });
+    const changed = newEventRow("Alestrem", "94054");
+    changed.proposedValue = { ...changed.proposedValue, location: "New Venue" };
+    const second = await persistFimCalendarReviewRun({
+      repository,
+      input: createPersistenceInput(createReportWithRows([changed]), [
+        { ...normalizedCandidate("Alestrem", "94054"), location: "New Venue" },
+      ]),
+    });
+
+    assert.equal(second.reviewItemsSuperseded.length, 1);
+    assert.equal(second.reviewItemsCreated.length, 1);
+    assert.equal(repository.reviewItems[0]?.reviewStatus, "SUPERSEDED");
+    assert.equal(repository.reviewItems[1]?.reviewStatus, "PENDING");
+  });
+
+  await test("approved and rejected review items are not reopened automatically", async () => {
+    const repository = createMemoryFimCalendarPersistenceRepository();
+    await persistFimCalendarReviewRun({
+      repository,
+      input: createPersistenceInput(
+        createReportWithRows([newEventRow("Alestrem", "94054")]),
+      ),
+    });
+    repository.reviewItems[0]!.reviewStatus = "APPROVED";
+
+    const second = await persistFimCalendarReviewRun({
+      repository,
+      input: createPersistenceInput(
+        createReportWithRows([newEventRow("Alestrem", "94054")]),
+        [{ ...normalizedCandidate("Alestrem", "94054"), location: "Ales" }],
+      ),
+    });
+    repository.reviewItems[1]!.reviewStatus = "REJECTED";
+    const third = await persistFimCalendarReviewRun({
+      repository,
+      input: createPersistenceInput(
+        createReportWithRows([newEventRow("Alestrem", "94054")]),
+        [{ ...normalizedCandidate("Alestrem", "94054"), location: "Ales-2" }],
+      ),
+    });
+
+    assert.equal(second.reviewItemsCreated.length, 1);
+    assert.equal(third.reviewItemsCreated.length, 1);
+    assert.equal(repository.reviewItems[0]?.reviewStatus, "APPROVED");
+    assert.equal(repository.reviewItems[1]?.reviewStatus, "REJECTED");
+  });
+
+  await test("unchanged and ignored rows do not create review items", async () => {
+    const repository = createMemoryFimCalendarPersistenceRepository();
+    const result = await persistFimCalendarReviewRun({
+      repository,
+      input: createPersistenceInput(
+        createReportWithRows([
+          {
+            ...newEventRow("Alestrem", "94054"),
+            changeType: "existing-event-unchanged",
+            severity: "info",
+          },
+          {
+            ...newEventRow("Partial input", "partial"),
+            changeType: "not-evaluated-partial-input",
+            severity: "info",
+          },
+        ]),
+      ),
+    });
+
+    assert.equal(result.reviewItemsCreated.length, 0);
+  });
+
+  await test("transaction rollback stores nothing", async () => {
+    const repository = createMemoryFimCalendarPersistenceRepository({
+      failOnCommit: true,
+    });
+    await assert.rejects(() =>
+      persistFimCalendarReviewRun({
+        repository,
+        input: createPersistenceInput(
+          createReportWithRows([newEventRow("Alestrem", "94054")]),
+        ),
+      }),
+    );
+
+    assert.equal(repository.snapshots.length, 0);
+    assert.equal(repository.reviewItems.length, 0);
+  });
+
+  await test("default no-persistence behavior is explicit in report metadata", () => {
+    const result = createNoPersistenceResult(false);
+
+    assert.equal(result.requested, false);
+    assert.equal(result.performed, false);
+    assert.equal(result.publicEventsUpdated, 0);
+  });
 }
 
 main().catch((error) => {
@@ -393,4 +588,127 @@ function createResponse(body: string, url: string) {
   });
   Object.defineProperty(response, "url", { value: url });
   return response;
+}
+
+function createPersistenceInput(
+  report: FimCalendarDryRunReport,
+  normalizedCandidates = [normalizedCandidate("Alestrem", "94054")],
+) {
+  return {
+    report,
+    normalizedCandidates,
+    startedAt: new Date("2026-07-13T10:00:00.000Z"),
+    finishedAt: new Date("2026-07-13T10:00:02.000Z"),
+    environment: "test",
+    gitCommitSha: "test-sha",
+    connectorVersion: "test-version",
+  };
+}
+
+function createReportWithRows(
+  rows: FimCalendarDryRunReport["rows"],
+): FimCalendarDryRunReport {
+  return {
+    summary: {
+      sourceId: "fim-hard-enduro-world-championship",
+      runMode: "dry-run",
+      seasonYear: 2026,
+      totalSourceEvents: rows.length,
+      totalMatchedEvents: 0,
+      newCandidates: rows.filter((row) => row.changeType === "new-event-found").length,
+      changedCandidates: rows.filter((row) => row.changeType.endsWith("-changed")).length,
+      ambiguousCandidates: rows.filter(
+        (row) => row.changeType === "ambiguous-match-requires-review",
+      ).length,
+      warnings: [],
+      errors: [],
+    },
+    metadata: {
+      inputCoverageMode: "full-season",
+      inputSourceType: "official-fetch",
+      inputCompletenessWarning: null,
+      diagnostics: {
+        requestedOfficialUrl:
+          "https://www.fim-moto.com/en/sports/view/fim-hard-enduro-world-championship-5410",
+        finalResponseUrl:
+          "https://www.fim-moto.com/en/calendars?tx_solr%5Bfilter%5D%5Byear%5D=year%3A2026",
+        httpStatus: 200,
+        contentType: "text/plain;charset=UTF-8",
+        responseSizeBytes: 1000,
+        parserSelected: "fim-solr-calendar-html",
+        rawRecordsDetected: rows.length,
+        usableEventsParsed: rows.length,
+        recordsRejected: 0,
+        rejectionReasons: [],
+        fallbackUsed: false,
+        fetchStatus: "official-fetch-success",
+      },
+    },
+    rows,
+    reviewItems: [],
+    source: {
+      id: "fim-hard-enduro-world-championship",
+      displayName: "FIM Hard Enduro World Championship",
+      priority: "critical",
+      confidenceLevel: "official-primary",
+      reviewPolicy: "always-review",
+      sourceUrl:
+        "https://www.fim-moto.com/en/sports/view/fim-hard-enduro-world-championship-5410",
+    },
+  };
+}
+
+function newEventRow(
+  eventName: string,
+  sourceEventId: string,
+): FimCalendarDryRunReport["rows"][number] {
+  return {
+    eventName,
+    currentValue: null,
+    proposedValue: {
+      sourceEventId,
+      eventName,
+      seasonYear: 2026,
+      location: "Test Venue",
+    },
+    changeType: "new-event-found",
+    confidence: {
+      level: "official-primary",
+      score: 0.9,
+      reason: "Test confidence.",
+    },
+    severity: "review-required",
+    reviewRecommendation: "Review as a new event candidate.",
+    sourceUrl: "https://www.fim-moto.com/en/calendars/view/test",
+    matchingStrategy: "unmatched",
+    matchingConfidence: 0,
+    ambiguousReason: null,
+  };
+}
+
+function normalizedCandidate(eventName: string, sourceEventId: string) {
+  return {
+    sourceEventId,
+    seasonYear: 2026,
+    eventName,
+    slugCandidate: `${eventName.toLowerCase()}-2026`,
+    country: "Test",
+    countryCode: "TST",
+    location: "Test Venue",
+    venue: "Test Venue",
+    startDate: "2026-01-01T00:00:00.000Z",
+    endDate: "2026-01-02T00:00:00.000Z",
+    raceStatusCandidate: "Coming Soon" as const,
+    startDatePrecision: "date" as const,
+    endDatePrecision: "date" as const,
+    officialUrl: "https://www.fim-moto.com/en/calendars/view/test",
+    sourceId: "fim-hard-enduro-world-championship",
+    confidence: {
+      level: "official-primary" as const,
+      score: 0.9,
+      reason: "Test confidence.",
+    },
+    reviewRequired: true as const,
+    notes: "Test candidate.",
+  };
 }
