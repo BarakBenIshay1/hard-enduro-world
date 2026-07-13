@@ -13,6 +13,7 @@ export function buildFimCalendarDryRunReport({
   inputCoverageMode,
   inputSourceType,
   inputCompletenessWarning,
+  diagnostics,
 }: {
   config: FimCalendarConfig;
   rows: FimCalendarReportRow[];
@@ -21,6 +22,7 @@ export function buildFimCalendarDryRunReport({
   inputCoverageMode: FimCalendarDryRunReport["metadata"]["inputCoverageMode"];
   inputSourceType: FimCalendarDryRunReport["metadata"]["inputSourceType"];
   inputCompletenessWarning: string | null;
+  diagnostics: FimCalendarDryRunReport["metadata"]["diagnostics"];
 }): FimCalendarDryRunReport {
   const reviewRows = rows.filter((row) => row.severity === "review-required");
   const sourceRows = rows.filter(
@@ -52,6 +54,7 @@ export function buildFimCalendarDryRunReport({
       inputCoverageMode,
       inputSourceType,
       inputCompletenessWarning,
+      diagnostics,
     },
     rows,
     reviewItems: reviewRows.map((row, index): FimCalendarReviewItem => {

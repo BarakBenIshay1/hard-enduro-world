@@ -3,7 +3,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { getFimCalendarCurrentEvents } from "@/db/fim-calendar";
 import {
+  fetchFimCalendarOfficialSource,
+  getFimCalendarConfig,
   runFimCalendarDryRun,
+  type FimCalendarDryRunInput,
   type FimCalendarDryRunReport,
 } from "@/jobs/connectors/fim-calendar";
 
@@ -30,20 +33,133 @@ async function main() {
     : null;
   const configuredOfficialUrl =
     process.env.FIM_CALENDAR_OFFICIAL_URL ?? process.env.FIM_CALENDAR_URL ?? null;
-  const inputPath =
-    explicitInputPath ?? (configuredOfficialUrl ? null : defaultSamplePath);
-  const rawContent = inputPath ? await readFile(inputPath, "utf8") : null;
+  const sourceConfig = getFimCalendarConfig({ seasonYear }).config;
+  const officialUrl = configuredOfficialUrl ?? sourceConfig?.sourceUrl ?? null;
+  const input = await resolveDryRunInput({
+    explicitInputPath,
+    officialUrl,
+    coverageMode,
+    seasonYear,
+  });
   const currentEvents = await getCurrentEventsSafely(seasonYear);
   const report = await runFimCalendarDryRun({
-    rawContent,
+    rawContent: input.rawContent,
     currentEvents,
     seasonYear,
-    coverageMode,
-    inputSourceType: inputPath ? undefined : "configured-url-fetch-disabled",
+    coverageMode: input.coverageMode,
+    inputSourceType: input.inputSourceType,
+    inputWarnings: input.inputWarnings,
+    inputDiagnostics: input.inputDiagnostics,
     selectedEventSlug: process.env.FIM_CALENDAR_EVENT_SLUG ?? null,
   });
 
-  printReport(report, inputPath, configuredOfficialUrl);
+  printReport(report, input.inputLabel);
+
+  if (
+    report.metadata.inputSourceType === "official-fetch" &&
+    report.metadata.diagnostics.usableEventsParsed === 0
+  ) {
+    process.exitCode = 1;
+  }
+}
+
+async function resolveDryRunInput({
+  explicitInputPath,
+  officialUrl,
+  coverageMode,
+  seasonYear,
+}: {
+  explicitInputPath: string | null;
+  officialUrl: string | null;
+  coverageMode: FimCalendarDryRunInput["coverageMode"];
+  seasonYear: number;
+}): Promise<{
+  rawContent: string | null;
+  coverageMode: FimCalendarDryRunInput["coverageMode"];
+  inputSourceType: FimCalendarDryRunInput["inputSourceType"];
+  inputWarnings: string[];
+  inputDiagnostics: FimCalendarDryRunInput["inputDiagnostics"];
+  inputLabel: string;
+}> {
+  if (explicitInputPath) {
+    return {
+      rawContent: await readFile(explicitInputPath, "utf8"),
+      coverageMode,
+      inputSourceType: undefined,
+      inputWarnings: [],
+      inputDiagnostics: {
+        fallbackUsed: false,
+        fetchStatus: "local-input",
+      },
+      inputLabel: explicitInputPath,
+    };
+  }
+
+  if (officialUrl) {
+    const fetchResult = await fetchFimCalendarOfficialSource({
+      url: officialUrl,
+      seasonYear,
+      timeoutMs: Number(process.env.FIM_CALENDAR_FETCH_TIMEOUT_MS ?? 8_000),
+      retries: Number(process.env.FIM_CALENDAR_FETCH_RETRIES ?? 2),
+    });
+
+    if (fetchResult.ok) {
+      return {
+        rawContent: fetchResult.rawContent,
+        coverageMode: coverageMode ?? "full-season",
+        inputSourceType: "official-fetch",
+        inputWarnings: [
+          `Official fetch completed from ${fetchResult.url} with HTTP ${fetchResult.status} in ${fetchResult.elapsedMs}ms after ${fetchResult.attempts} attempt(s).`,
+          fetchResult.endpointDiscovered
+            ? `Official calendar endpoint discovered: ${fetchResult.endpointUrl}.`
+            : "No separate calendar endpoint was discovered; parsing the fetched source response directly.",
+        ],
+        inputDiagnostics: {
+          requestedOfficialUrl: fetchResult.requestedUrl,
+          finalResponseUrl: fetchResult.url,
+          httpStatus: fetchResult.status,
+          contentType: fetchResult.contentType,
+          responseSizeBytes: fetchResult.responseSizeBytes,
+          fallbackUsed: false,
+          fetchStatus: "official-fetch-success",
+        },
+        inputLabel: `${fetchResult.url} (official fetch)`,
+      };
+    }
+
+    return {
+      rawContent: await readFile(defaultSamplePath, "utf8"),
+      coverageMode: coverageMode ?? "partial-season",
+      inputSourceType: undefined,
+      inputWarnings: [
+        `Official fetch failed for ${fetchResult.url}: ${fetchResult.errorMessage}`,
+        "Falling back to local partial-season sample input. No database writes were performed.",
+      ],
+      inputDiagnostics: {
+        requestedOfficialUrl: fetchResult.requestedUrl,
+        finalResponseUrl: fetchResult.url,
+        httpStatus: fetchResult.status,
+        contentType: fetchResult.contentType,
+        fallbackUsed: true,
+        fetchStatus: "fallback-local-json",
+      },
+      inputLabel: `${defaultSamplePath} (fallback after official fetch failure)`,
+    };
+  }
+
+  return {
+    rawContent: await readFile(defaultSamplePath, "utf8"),
+    coverageMode: coverageMode ?? "partial-season",
+    inputSourceType: undefined,
+    inputWarnings: [
+      "No official calendar URL is configured. Using local partial-season sample input.",
+    ],
+    inputDiagnostics: {
+      fallbackUsed: true,
+      fetchStatus: "fallback-local-json",
+    },
+    inputLabel: `${defaultSamplePath} (local fallback)`,
+  };
 }
 
 async function getCurrentEventsSafely(seasonYear: number) {
@@ -58,11 +174,7 @@ async function getCurrentEventsSafely(seasonYear: number) {
   }
 }
 
-function printReport(
-  report: FimCalendarDryRunReport,
-  inputPath: string | null,
-  configuredOfficialUrl: string | null,
-) {
+function printReport(report: FimCalendarDryRunReport, inputLabel: string) {
   const { summary } = report;
 
   console.log("\nFIM Calendar Dry Run Report");
@@ -70,16 +182,39 @@ function printReport(
   console.log(`Source: ${report.source.displayName} (${summary.sourceId})`);
   console.log(`Run mode: ${summary.runMode}`);
   console.log(`Season: ${summary.seasonYear}`);
-  console.log(
-    `Input: ${
-      inputPath ??
-      `fetch disabled for configured official URL ${configuredOfficialUrl ?? "none"}`
-    }`,
-  );
+  console.log(`Input: ${inputLabel}`);
   console.log(`Coverage mode: ${report.metadata.inputCoverageMode}`);
   console.log(`Input source type: ${report.metadata.inputSourceType}`);
+  console.log(`Fetch status: ${report.metadata.diagnostics.fetchStatus}`);
+  console.log(
+    `Fallback used: ${report.metadata.diagnostics.fallbackUsed ? "yes" : "no"}`,
+  );
   if (report.metadata.inputCompletenessWarning) {
     console.log(`Completeness: ${report.metadata.inputCompletenessWarning}`);
+  }
+  console.log("");
+  console.log("Input Diagnostics");
+  console.log("-----------------");
+  console.log(
+    `Requested official URL: ${report.metadata.diagnostics.requestedOfficialUrl ?? "none"}`,
+  );
+  console.log(
+    `Final response URL: ${report.metadata.diagnostics.finalResponseUrl ?? "none"}`,
+  );
+  console.log(`HTTP status: ${report.metadata.diagnostics.httpStatus ?? "none"}`);
+  console.log(`Content type: ${report.metadata.diagnostics.contentType ?? "none"}`);
+  console.log(
+    `Response size: ${report.metadata.diagnostics.responseSizeBytes ?? "unknown"} bytes`,
+  );
+  console.log(`Parser selected: ${report.metadata.diagnostics.parserSelected}`);
+  console.log(`Raw records detected: ${report.metadata.diagnostics.rawRecordsDetected}`);
+  console.log(`Usable events parsed: ${report.metadata.diagnostics.usableEventsParsed}`);
+  console.log(`Records rejected: ${report.metadata.diagnostics.recordsRejected}`);
+  if (report.metadata.diagnostics.rejectionReasons.length > 0) {
+    console.log("Rejection reasons:");
+    report.metadata.diagnostics.rejectionReasons.forEach((reason) =>
+      console.log(`- ${reason}`),
+    );
   }
   console.log("");
   console.log("Summary");

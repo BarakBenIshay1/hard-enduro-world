@@ -36,7 +36,37 @@ export type FimCalendarInputSourceType =
   | "local-ics"
   | "local-html"
   | "configured-url-fetch-disabled"
+  | "official-fetch"
   | "unknown";
+
+export type FimCalendarParserSelected =
+  | "fim-solr-calendar-html"
+  | "json"
+  | "json-ld-html"
+  | "ics"
+  | "unsupported"
+  | "unknown";
+
+export type FimCalendarFetchStatus =
+  | "official-fetch-success"
+  | "official-fetch-incomplete"
+  | "fallback-local-json"
+  | "local-input";
+
+export type FimCalendarInputDiagnostics = {
+  requestedOfficialUrl: string | null;
+  finalResponseUrl: string | null;
+  httpStatus: number | null;
+  contentType: string | null;
+  responseSizeBytes: number | null;
+  parserSelected: FimCalendarParserSelected;
+  rawRecordsDetected: number;
+  usableEventsParsed: number;
+  recordsRejected: number;
+  rejectionReasons: string[];
+  fallbackUsed: boolean;
+  fetchStatus: FimCalendarFetchStatus;
+};
 
 export type FimCalendarConfig = {
   connectorId: "fim-calendar";
@@ -172,6 +202,7 @@ export type FimCalendarDryRunReport = {
     inputCoverageMode: FimCalendarInputCoverageMode;
     inputSourceType: FimCalendarInputSourceType;
     inputCompletenessWarning: string | null;
+    diagnostics: FimCalendarInputDiagnostics;
   };
   rows: FimCalendarReportRow[];
   reviewItems: FimCalendarReviewItem[];
@@ -194,4 +225,6 @@ export type FimCalendarDryRunInput = {
   coverageMode?: FimCalendarInputCoverageMode;
   inputSourceType?: FimCalendarInputSourceType;
   selectedEventSlug?: string | null;
+  inputWarnings?: string[];
+  inputDiagnostics?: Partial<FimCalendarInputDiagnostics>;
 };

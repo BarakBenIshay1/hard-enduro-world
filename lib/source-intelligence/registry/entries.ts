@@ -159,7 +159,8 @@ export const productionSourceRegistry: ProductionSourceRegistryEntry[] = [
     displayName: "FIM Hard Enduro World Championship",
     shortDescription:
       "Primary championship authority for calendars, standings, classifications, and official documents.",
-    websiteUrl: "https://www.fim-moto.com",
+    websiteUrl:
+      "https://www.fim-moto.com/en/sports/view/fim-hard-enduro-world-championship-5410",
     category: "official-championship",
     priority: "critical",
     entityTypes: ["event", "stage", "result", "season", "standings", "document"],
