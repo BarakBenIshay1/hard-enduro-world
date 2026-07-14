@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import type { User } from "@supabase/supabase-js";
 import { config as middlewareConfig } from "@/middleware";
+import { getPublicAdminShortcut } from "@/lib/admin/public-menu";
 import { rolePermissions } from "@/lib/auth/permissions";
+import type { AuthRole, AuthSession } from "@/lib/auth";
 import { resolveRoleFromSupabaseUser } from "@/lib/auth/role-mapping";
 import { buildLoginRedirect, sanitizeAdminRedirect } from "@/lib/auth/redirects";
 import {
@@ -18,6 +20,7 @@ try {
   testCookieDetection();
   testRolePrecedence();
   testPermissions();
+  testPublicAdminShortcut();
   testMiddlewareScope();
   console.log("Auth flow tests passed.");
 } finally {
@@ -89,4 +92,76 @@ function testPermissions() {
 
 function testMiddlewareScope() {
   assert.deepEqual(middlewareConfig.matcher, ["/admin/:path*"]);
+}
+
+function testPublicAdminShortcut() {
+  assert.equal(
+    getPublicAdminShortcut(session({ role: "viewer", authenticated: false })),
+    null,
+  );
+  assert.equal(getPublicAdminShortcut(session({ role: "viewer" })), null);
+  assert.equal(
+    getPublicAdminShortcut(session({ role: "owner", authStatus: "not-configured" })),
+    null,
+  );
+
+  const ownerShortcut = getPublicAdminShortcut(session({ role: "owner" }));
+  assert.equal(
+    ownerShortcut?.items.some((item) => item.href === "/admin"),
+    true,
+  );
+  assert.equal(
+    ownerShortcut?.items.some((item) => item.href === "/admin/review"),
+    true,
+  );
+  assert.equal(
+    ownerShortcut?.items.some((item) => item.href === "/admin/jobs"),
+    true,
+  );
+  assert.equal(
+    ownerShortcut?.items.some((item) => item.href === "/admin/audit"),
+    true,
+  );
+
+  const adminShortcut = getPublicAdminShortcut(session({ role: "admin" }));
+  assert.equal(
+    adminShortcut?.items.some((item) => item.href === "/admin/review"),
+    true,
+  );
+
+  const reviewerShortcut = getPublicAdminShortcut(session({ role: "reviewer" }));
+  assert.deepEqual(
+    reviewerShortcut?.items.map((item) => item.href),
+    ["/admin", "/admin/review", "/admin/jobs", "/admin/audit"],
+  );
+}
+
+function session({
+  role,
+  authenticated = true,
+  authStatus = "configured",
+}: {
+  role: AuthRole;
+  authenticated?: boolean;
+  authStatus?: AuthSession["authStatus"];
+}): AuthSession {
+  return {
+    isAuthenticated: authenticated,
+    user: authenticated
+      ? {
+          id: `${role}-user`,
+          email: `${role}@example.com`,
+          name: `${role} User`,
+          role,
+          provider: "supabase",
+          lastActiveAt: null,
+        }
+      : null,
+    role,
+    permissions: authenticated ? rolePermissions[role] : [],
+    provider: authenticated ? "supabase" : "supabase",
+    authStatus,
+    roleSource: authenticated ? "supabase-user-profile" : "unauthenticated",
+    expiresAt: null,
+  };
 }

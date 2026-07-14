@@ -4,6 +4,8 @@ import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { ThemeProvider } from "@/components/theme-provider";
 import { hasLiveRaceEvent } from "@/db/navigation";
+import { getAdminAccessContext } from "@/lib/admin/access";
+import { getPublicAdminShortcut } from "@/lib/admin/public-menu";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -40,13 +42,17 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const hasLiveRace = await hasLiveRaceEvent();
+  const [hasLiveRace, adminAccess] = await Promise.all([
+    hasLiveRaceEvent(),
+    getAdminAccessContext(),
+  ]);
+  const adminShortcut = getPublicAdminShortcut(adminAccess.session);
 
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="font-sans">
         <ThemeProvider>
-          <SiteHeader hasLiveRace={hasLiveRace} />
+          <SiteHeader hasLiveRace={hasLiveRace} adminShortcut={adminShortcut} />
           <PageTransition>{children}</PageTransition>
           <SiteFooter />
         </ThemeProvider>
