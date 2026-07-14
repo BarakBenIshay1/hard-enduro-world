@@ -6,6 +6,7 @@ import { AdminStatusBadge } from "@/components/admin/admin-status-badge";
 import { EventAlert } from "@/components/admin/events/event-alert";
 import { EventEditorForm } from "@/components/admin/events/event-editor-form";
 import { EventSubmitButton } from "@/components/admin/events/event-submit-button";
+import { ImageUploadField } from "@/components/admin/media/image-upload-field";
 import { Card } from "@/components/ui/card";
 import {
   archiveAdminRider,
@@ -162,12 +163,16 @@ export default async function AdminRiderDetailPage({ params, searchParams }: Pag
                 defaultValue={rider.officialUrl ?? ""}
                 disabled={!canManage}
               />
-              <TextField
-                label="Profile Image URL"
-                name="profileImageUrl"
-                defaultValue={rider.profileImageUrl ?? ""}
-                disabled={!canManage}
-              />
+              <div className="lg:col-span-2">
+                <ImageUploadField
+                  label="Profile Image"
+                  name="profileImageUrl"
+                  defaultValue={rider.profileImageUrl}
+                  disabled={!canManage}
+                  uploadEndpoint="/admin/riders/media"
+                  help="Upload an approved rider portrait, or use the advanced URL field."
+                />
+              </div>
               <SelectField
                 label="Visibility"
                 name="visibility"

@@ -14,6 +14,8 @@ Reusable UI patterns now include:
 - `EventAlert` for accessible success/error feedback
 - `EventSubmitButton` for pending-safe submit buttons with serializable icon names
 - `EventEditorForm` for unsaved-change warnings
+- `ImageUploadField` for protected image uploads with preview, replace, remove,
+  progress, and advanced URL fallback
 - Responsive editor/sidebar layout pattern
 - Audit tables backed by immutable `DataVersion`
 - Archive/restore panels
@@ -34,6 +36,11 @@ Shared helpers live in `lib/admin/platform.ts`:
 - Next redirect detection
 
 Domain-specific validation remains in dedicated modules such as `lib/admin/rider-cms.ts` and `lib/admin/event-cms.ts`.
+
+Shared media upload policy lives in `lib/admin/media-upload.ts`. The upload
+route remains domain-owned for now so each CMS can enforce its own permissions
+and storage path rules without leaking Rider-specific behavior into future
+Teams, Manufacturers, Motorcycles, Results, or Standings modules.
 
 ## Permission Model
 

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { EventAlert } from "@/components/admin/events/event-alert";
 import { EventSubmitButton } from "@/components/admin/events/event-submit-button";
+import { ImageUploadField } from "@/components/admin/media/image-upload-field";
 import { getAdminAccessContext } from "@/lib/admin/access";
 import { canManageRiders } from "@/lib/admin/rider-cms";
 import { getAdminRiderOptions } from "@/db/admin-riders";
@@ -87,7 +88,14 @@ export default async function NewAdminRiderPage({ searchParams }: PageProps) {
               </label>
               <Field label="Birth Date" name="birthDate" type="date" />
               <Field label="Official URL" name="officialUrl" />
-              <Field label="Profile Image URL" name="profileImageUrl" />
+              <div className="lg:col-span-2">
+                <ImageUploadField
+                  label="Profile Image"
+                  name="profileImageUrl"
+                  uploadEndpoint="/admin/riders/media"
+                  help="Upload an approved rider portrait, or use the advanced URL field."
+                />
+              </div>
               <label className="grid gap-2">
                 <span className="text-xs font-semibold uppercase tracking-[0.16em] text-foreground/[0.48]">
                   Visibility

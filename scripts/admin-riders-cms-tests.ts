@@ -10,10 +10,17 @@ import {
   getAdminTotalPages,
   parseAdminPage,
 } from "@/lib/admin/platform";
+import {
+  adminImageUploadConfig,
+  extensionForImageType,
+  getAdminImageUploadErrorMessage,
+  validateAdminImageUpload,
+} from "@/lib/admin/media-upload";
 
 testPermissions();
 testSlugGeneration();
 testValidation();
+testImageUploadValidation();
 testPaginationHelpers();
 testDeleteEligibilityPolicyModel();
 
@@ -55,6 +62,24 @@ function testValidation() {
     validateRiderInput({ ...valid, profileImageUrl: "ftp://example.com/x.jpg" }),
     "invalid-profile-image-url",
   );
+}
+
+function testImageUploadValidation() {
+  assert.equal(validateAdminImageUpload({ size: 120_000, type: "image/jpeg" }), null);
+  assert.equal(validateAdminImageUpload({ size: 0, type: "image/jpeg" }), "missing-file");
+  assert.equal(
+    validateAdminImageUpload({
+      size: adminImageUploadConfig.maxBytes + 1,
+      type: "image/jpeg",
+    }),
+    "file-too-large",
+  );
+  assert.equal(
+    validateAdminImageUpload({ size: 120_000, type: "image/gif" }),
+    "unsupported-file-type",
+  );
+  assert.equal(extensionForImageType("image/webp"), "webp");
+  assert.match(getAdminImageUploadErrorMessage("file-too-large"), /5 MB/);
 }
 
 function testPaginationHelpers() {

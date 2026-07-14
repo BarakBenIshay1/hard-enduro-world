@@ -20,9 +20,35 @@ It must never modify:
 - Current motorcycle
 - Birth date
 - Official URL
-- Profile image URL
+- Profile image upload with preview
+- Advanced profile image URL
 - Visibility
 - Archive metadata
+
+## Profile Image Upload
+
+Rider profile images use the shared Admin media upload workflow.
+
+- OWNER and ADMIN users can upload images.
+- REVIEWER users can view image metadata but cannot upload or replace images.
+- Supported types: JPG, PNG, WebP, AVIF.
+- Maximum size: 5 MB.
+- Uploads are stored in Supabase Storage through the protected admin upload route.
+- The generated public URL is saved into the rider profile when the editor form is saved.
+- Removing an image clears the rider profile URL on save; it does not delete historical storage objects.
+
+Required storage configuration:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+SUPABASE_STORAGE_BUCKET=hard-enduro-media
+```
+
+The storage service role key is server-only. It must never be exposed to the
+browser. The bucket should be configured so approved public profile images are
+readable by the website.
 
 ## Lifecycle
 
