@@ -63,16 +63,18 @@ export default async function AdminEventDetailPage({ params, searchParams }: Pag
   const canDelete = canPermanentlyDeleteEvents(access.role);
 
   return (
-    <div className="grid gap-8">
-      <section className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
+    <div className="grid min-w-0 gap-6 overflow-x-hidden">
+      <section className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div className="min-w-0">
           <Link
             href="/admin/events"
             className="text-xs font-semibold uppercase tracking-[0.18em] text-accent"
           >
             Back to events
           </Link>
-          <h1 className="mt-3 text-3xl font-black lg:text-5xl">{event.name}</h1>
+          <h1 className="mt-3 break-words text-3xl font-black lg:text-4xl">
+            {event.name}
+          </h1>
           <p className="mt-4 max-w-3xl text-sm leading-6 text-foreground/[0.62]">
             Edit stored event metadata, inspect related records, and review immutable
             audit history.
@@ -95,8 +97,8 @@ export default async function AdminEventDetailPage({ params, searchParams }: Pag
 
       <EventMessage code={query?.error ?? query?.saved} />
 
-      <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
-        <Card className="p-6">
+      <div className="grid min-w-0 gap-5 2xl:grid-cols-[minmax(0,1fr)_320px] 2xl:items-start">
+        <Card className="min-w-0 p-4 sm:p-5">
           <h2 className="text-xl font-black">Event editor</h2>
           <p className="mt-2 text-sm text-foreground/[0.62]">
             {canManage
@@ -104,9 +106,9 @@ export default async function AdminEventDetailPage({ params, searchParams }: Pag
               : "Reviewer access is read-only."}
           </p>
 
-          <EventEditorForm action={updateAdminEvent} className="mt-6 grid gap-5">
+          <EventEditorForm action={updateAdminEvent} className="mt-5 grid gap-4">
             <input type="hidden" name="eventId" value={event.id} />
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid min-w-0 gap-3 lg:grid-cols-2">
               <TextField
                 label="Name"
                 name="name"
@@ -229,17 +231,19 @@ export default async function AdminEventDetailPage({ params, searchParams }: Pag
             />
 
             {canManage ? (
-              <EventSubmitButton
-                label="Save Event"
-                pendingLabel="Saving..."
-                icon="save"
-              />
+              <div className="sticky bottom-0 z-10 -mx-4 border-t border-border bg-card/95 p-4 backdrop-blur sm:-mx-5">
+                <EventSubmitButton
+                  label="Save Event"
+                  pendingLabel="Saving..."
+                  icon="save"
+                />
+              </div>
             ) : null}
           </EventEditorForm>
         </Card>
 
-        <aside className="grid gap-6">
-          <Card className="p-5">
+        <aside className="grid min-w-0 gap-4 self-start 2xl:sticky 2xl:top-6">
+          <Card className="min-w-0 p-4">
             <h2 className="text-xl font-black">Stored information</h2>
             <div className="mt-5 grid gap-3 text-sm">
               <Meta label="ID" value={event.id} />
@@ -263,7 +267,7 @@ export default async function AdminEventDetailPage({ params, searchParams }: Pag
             </div>
           </Card>
 
-          <Card className="p-5">
+          <Card className="min-w-0 p-4">
             <h2 className="text-xl font-black">Archive</h2>
             <p className="mt-2 text-sm leading-6 text-foreground/[0.62]">
               Archiving never deletes the event. It marks the record private and keeps it
@@ -304,7 +308,7 @@ export default async function AdminEventDetailPage({ params, searchParams }: Pag
             )}
           </Card>
 
-          <Card className="border-red-500/25 p-5">
+          <Card className="min-w-0 border-red-500/25 p-4">
             <h2 className="text-xl font-black text-red-200">Danger Zone</h2>
             <p className="mt-2 text-sm leading-6 text-foreground/[0.62]">
               Permanent deletion is reserved for eligible archived manual/test records. It
@@ -342,7 +346,7 @@ export default async function AdminEventDetailPage({ params, searchParams }: Pag
         </aside>
       </div>
 
-      <Card className="overflow-hidden">
+      <Card className="min-w-0 overflow-hidden">
         <div className="border-b border-border p-5">
           <h2 className="text-xl font-black">Audit history</h2>
           <p className="mt-2 text-sm text-foreground/[0.62]">
@@ -403,7 +407,7 @@ function TextField({
   disabled?: boolean;
 }) {
   return (
-    <label className="grid gap-2">
+    <label className="grid min-w-0 gap-2">
       <span className="text-xs font-semibold uppercase tracking-[0.16em] text-foreground/[0.48]">
         {label}
       </span>
@@ -412,7 +416,7 @@ function TextField({
         type={type}
         defaultValue={defaultValue}
         disabled={disabled}
-        className="h-10 rounded-md border border-border bg-surface-muted px-3 text-sm disabled:opacity-60"
+        className="h-10 min-w-0 w-full rounded-md border border-border bg-surface-muted px-3 text-sm disabled:opacity-60"
       />
     </label>
   );
@@ -432,7 +436,7 @@ function SelectField({
   children: React.ReactNode;
 }) {
   return (
-    <label className="grid gap-2">
+    <label className="grid min-w-0 gap-2">
       <span className="text-xs font-semibold uppercase tracking-[0.16em] text-foreground/[0.48]">
         {label}
       </span>
@@ -440,7 +444,7 @@ function SelectField({
         name={name}
         defaultValue={defaultValue}
         disabled={disabled}
-        className="h-10 rounded-md border border-border bg-surface-muted px-3 text-sm disabled:opacity-60"
+        className="h-10 min-w-0 w-full rounded-md border border-border bg-surface-muted px-3 text-sm disabled:opacity-60"
       >
         {children}
       </select>
@@ -462,7 +466,7 @@ function TextAreaField({
   help?: string;
 }) {
   return (
-    <label className="grid gap-2">
+    <label className="grid min-w-0 gap-2">
       <span className="text-xs font-semibold uppercase tracking-[0.16em] text-foreground/[0.48]">
         {label}
       </span>
@@ -471,7 +475,7 @@ function TextAreaField({
         defaultValue={defaultValue}
         disabled={disabled}
         rows={6}
-        className="rounded-md border border-border bg-surface-muted px-3 py-2 text-sm disabled:opacity-60"
+        className="min-w-0 w-full rounded-md border border-border bg-surface-muted px-3 py-2 text-sm disabled:opacity-60"
       />
       {help ? <span className="text-xs text-foreground/[0.48]">{help}</span> : null}
     </label>
@@ -480,9 +484,9 @@ function TextAreaField({
 
 function Meta({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="flex justify-between gap-4 border-b border-border pb-2">
+    <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] gap-3 border-b border-border pb-2">
       <span className="text-foreground/[0.48]">{label}</span>
-      <span className="font-semibold">{value}</span>
+      <span className="min-w-0 break-words text-right font-semibold">{value}</span>
     </div>
   );
 }
@@ -596,5 +600,5 @@ function formatAdminTimestamp(date: Date) {
     hour12: false,
   }).formatToParts(date);
   const get = (type: string) => parts.find((part) => part.type === type)?.value ?? "";
-  return `${get("month")} ${get("day")}, ${get("year")}\n${get("hour")}:${get("minute")}:${get("second")} (UTC+3)`;
+  return `${get("month")} ${get("day")}, ${get("year")} ${get("hour")}:${get("minute")}:${get("second")} (UTC+3)`;
 }
