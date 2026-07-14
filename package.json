@@ -19,6 +19,7 @@
     "test:fim-calendar": "node --import tsx scripts/fim-calendar-dry-run-tests.ts",
     "test:auth": "node --import tsx scripts/auth-flow-tests.ts",
     "test:admin-events": "node --import tsx scripts/admin-events-cms-tests.ts",
+    "test:admin-riders": "node --import tsx scripts/admin-riders-cms-tests.ts",
     "test:e2e": "playwright test",
     "prepare": "husky || true"
   },

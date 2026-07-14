@@ -123,17 +123,20 @@ model EventTimelineItem {
 }
 
 model Rider {
-  id                  String    @id @default(cuid())
+  id                  String          @id @default(cuid())
   countryId           String?
   currentMotorcycleId String?
   firstName           String
   lastName            String
-  slug                String    @unique
+  slug                String          @unique
   birthDate           DateTime?
   profileImageUrl     String?
   officialUrl         String?
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  visibility          EventVisibility @default(PUBLIC)
+  archivedAt          DateTime?
+  archivedBy          String?
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
 
   country           Country?            @relation(fields: [countryId], references: [id])
   currentMotorcycle Motorcycle?         @relation("CurrentRiderMotorcycle", fields: [currentMotorcycleId], references: [id])
