@@ -12,8 +12,7 @@ export function isSupabaseAuthCookieName(name: string) {
   return (
     (name.startsWith("sb-") && name.endsWith("-auth-token")) ||
     name === "supabase-auth-token" ||
-    name === supabaseAccessTokenCookie ||
-    name === supabaseStorageKey
+    name === supabaseAccessTokenCookie
   );
 }
 

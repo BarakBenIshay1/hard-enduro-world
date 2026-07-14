@@ -1,8 +1,23 @@
 import { createClient } from "@supabase/supabase-js";
 import type { SupportedStorage } from "@supabase/supabase-js";
-import type { ReadonlyRequestCookies } from "next/dist/server/web/spec-extension/adapters/request-cookies";
 import { getSupabaseConfig } from "@/lib/supabase/config";
 import { supabaseCodeVerifierCookie, supabaseStorageKey } from "@/lib/supabase/cookies";
+
+type CookieStorageStore = {
+  get(name: string): { value?: string } | undefined;
+  set(
+    name: string,
+    value: string,
+    options?: {
+      httpOnly?: boolean;
+      sameSite?: "lax";
+      secure?: boolean;
+      path?: string;
+      maxAge?: number;
+    },
+  ): unknown;
+  delete(name: string): unknown;
+};
 
 export function createSupabaseServerClient() {
   const config = getSupabaseConfig();
@@ -19,9 +34,7 @@ export function createSupabaseServerClient() {
   });
 }
 
-export function createSupabaseCookieServerClient(
-  cookieStore: Pick<ReadonlyRequestCookies, "get" | "set" | "delete">,
-) {
+export function createSupabaseCookieServerClient(cookieStore: CookieStorageStore) {
   const config = getSupabaseConfig();
 
   if (!config.isConfigured) {
@@ -55,9 +68,7 @@ export function createSupabaseServiceRoleClient() {
   });
 }
 
-function createCookieStorage(
-  cookieStore: Pick<ReadonlyRequestCookies, "get" | "set" | "delete">,
-): SupportedStorage {
+export function createCookieStorage(cookieStore: CookieStorageStore): SupportedStorage {
   return {
     isServer: true,
     getItem(key) {

@@ -5,17 +5,21 @@ import { redirect } from "next/navigation";
 import { getAuthSession } from "@/lib/auth";
 import { recordAuthAudit } from "@/lib/auth/audit";
 import { clearSupabaseSessionCookies } from "@/lib/supabase/auth";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseCookieServerClient } from "@/lib/supabase/server";
 
 export async function logout() {
   const session = await getAuthSession();
-  const supabase = createSupabaseServerClient();
+  const cookieStore = await cookies();
+  const supabase = createSupabaseCookieServerClient(cookieStore);
 
   if (supabase) {
-    await supabase.auth.signOut({ scope: "local" });
+    try {
+      await supabase.auth.signOut({ scope: "local" });
+    } catch {
+      // Local cookie cleanup below is the authoritative logout behavior for this app.
+    }
   }
 
-  const cookieStore = await cookies();
   clearSupabaseSessionCookies(cookieStore);
 
   if (session.user) {

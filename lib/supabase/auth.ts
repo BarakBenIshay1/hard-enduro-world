@@ -122,6 +122,12 @@ export function clearSupabaseSessionCookies(
   cookieStore.delete(supabaseAccessTokenCookie);
   cookieStore.delete(supabaseRefreshTokenCookie);
   cookieStore.delete("supabase-auth-token");
+  clearSupabaseOAuthCookies(cookieStore);
+}
+
+export function clearSupabaseOAuthCookies(
+  cookieStore: Pick<ReadonlyRequestCookies, "delete">,
+) {
   cookieStore.delete(supabaseStorageKey);
   cookieStore.delete(supabaseCodeVerifierCookie);
 }

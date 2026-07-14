@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { sanitizeAdminRedirect } from "@/lib/auth/redirects";
+import { clearSupabaseOAuthCookies } from "@/lib/supabase/auth";
 import { createSupabaseCookieServerClient } from "@/lib/supabase/server";
 
 export async function signInWithGoogle(formData: FormData) {
@@ -17,6 +18,7 @@ export async function signInWithGoogle(formData: FormData) {
   callbackUrl.searchParams.set("next", next);
 
   const cookieStore = await cookies();
+  clearSupabaseOAuthCookies(cookieStore);
   const supabase = createSupabaseCookieServerClient(cookieStore);
 
   if (!supabase) {

@@ -8,26 +8,34 @@ import { resolveRoleFromSupabaseUser } from "@/lib/auth/role-mapping";
 import { buildLoginRedirect, sanitizeAdminRedirect } from "@/lib/auth/redirects";
 import {
   hasSupabaseAuthCookie,
+  supabaseAccessTokenCookie,
   supabaseCodeVerifierCookie,
+  supabaseRefreshTokenCookie,
   supabaseStorageKey,
 } from "@/lib/supabase/cookies";
+import { createCookieStorage } from "@/lib/supabase/server";
 
 const previousOwnerEmail = process.env.ADMIN_OWNER_EMAIL;
 process.env.ADMIN_OWNER_EMAIL = "barakbenishay1@gmail.com";
 
-try {
-  testRedirectSafety();
-  testCookieDetection();
-  testRolePrecedence();
-  testPermissions();
-  testPublicAdminShortcut();
-  testMiddlewareScope();
-  console.log("Auth flow tests passed.");
-} finally {
-  if (previousOwnerEmail === undefined) {
-    delete process.env.ADMIN_OWNER_EMAIL;
-  } else {
-    process.env.ADMIN_OWNER_EMAIL = previousOwnerEmail;
+void main();
+
+async function main() {
+  try {
+    testRedirectSafety();
+    testCookieDetection();
+    await testLoginLogoutLoginCookieLifecycle();
+    testRolePrecedence();
+    testPermissions();
+    testPublicAdminShortcut();
+    testMiddlewareScope();
+    console.log("Auth flow tests passed.");
+  } finally {
+    if (previousOwnerEmail === undefined) {
+      delete process.env.ADMIN_OWNER_EMAIL;
+    } else {
+      process.env.ADMIN_OWNER_EMAIL = previousOwnerEmail;
+    }
   }
 }
 
@@ -46,9 +54,34 @@ function testRedirectSafety() {
 function testCookieDetection() {
   assert.equal(hasSupabaseAuthCookie([{ name: "sb-access-token" }]), true);
   assert.equal(hasSupabaseAuthCookie([{ name: "sb-project-auth-token" }]), true);
-  assert.equal(hasSupabaseAuthCookie([{ name: supabaseStorageKey }]), true);
+  assert.equal(hasSupabaseAuthCookie([{ name: supabaseStorageKey }]), false);
+  assert.equal(hasSupabaseAuthCookie([{ name: supabaseCodeVerifierCookie }]), false);
   assert.equal(supabaseCodeVerifierCookie, `${supabaseStorageKey}-code-verifier`);
   assert.equal(hasSupabaseAuthCookie([{ name: "session" }]), false);
+}
+
+async function testLoginLogoutLoginCookieLifecycle() {
+  const jar = createMemoryCookieStore();
+  const storage = createCookieStorage(jar);
+
+  await storage.setItem(supabaseCodeVerifierCookie, "first-verifier");
+  assert.equal(await storage.getItem(supabaseCodeVerifierCookie), "first-verifier");
+  assert.equal(hasSupabaseAuthCookie(jar.getAll()), false);
+
+  jar.set(supabaseAccessTokenCookie, "access-token");
+  jar.set(supabaseRefreshTokenCookie, "refresh-token");
+  assert.equal(hasSupabaseAuthCookie(jar.getAll()), true);
+
+  jar.delete(supabaseAccessTokenCookie);
+  jar.delete(supabaseRefreshTokenCookie);
+  await storage.removeItem(supabaseCodeVerifierCookie);
+  await storage.removeItem(supabaseStorageKey);
+  assert.equal(hasSupabaseAuthCookie(jar.getAll()), false);
+  assert.equal(await storage.getItem(supabaseCodeVerifierCookie), null);
+
+  await storage.setItem(supabaseCodeVerifierCookie, "second-verifier");
+  assert.equal(await storage.getItem(supabaseCodeVerifierCookie), "second-verifier");
+  assert.equal(hasSupabaseAuthCookie(jar.getAll()), false);
 }
 
 function testRolePrecedence() {
@@ -163,5 +196,25 @@ function session({
     authStatus,
     roleSource: authenticated ? "supabase-user-profile" : "unauthenticated",
     expiresAt: null,
+  };
+}
+
+function createMemoryCookieStore() {
+  const store = new Map<string, string>();
+
+  return {
+    get(name: string) {
+      const value = store.get(name);
+      return value ? { name, value } : undefined;
+    },
+    getAll() {
+      return Array.from(store.entries()).map(([name, value]) => ({ name, value }));
+    },
+    set(name: string, value: string) {
+      store.set(name, value);
+    },
+    delete(name: string) {
+      store.delete(name);
+    },
   };
 }
