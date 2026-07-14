@@ -74,6 +74,7 @@ export function ImageUploadField({
 
     const request = new XMLHttpRequest();
     request.open("POST", uploadEndpoint);
+    request.withCredentials = true;
     request.upload.onprogress = (event) => {
       if (!event.lengthComputable) return;
       setProgress(Math.round((event.loaded / event.total) * 100));
@@ -93,14 +94,14 @@ export function ImageUploadField({
       setStatus("error");
       setMessage(
         payload?.message ??
-          getAdminImageUploadErrorMessage(payload?.error ?? "upload-failed"),
+          getUploadStatusMessage(request.status, payload?.error ?? "upload-failed"),
       );
     };
     request.onerror = () => {
       URL.revokeObjectURL(localPreview);
       setPreviewUrl(value);
       setStatus("error");
-      setMessage("The image could not be uploaded. Please try again.");
+      setMessage(getAdminImageUploadErrorMessage("upload-failed"));
     };
     request.send(body);
   }
@@ -222,6 +223,14 @@ export function ImageUploadField({
       </div>
     </div>
   );
+}
+
+function getUploadStatusMessage(status: number, error: string) {
+  if (status === 401) return getAdminImageUploadErrorMessage("session-expired");
+  if (status === 413) return getAdminImageUploadErrorMessage("file-too-large");
+  if (status === 415) return getAdminImageUploadErrorMessage("unsupported-file-type");
+  if (status === 503) return getAdminImageUploadErrorMessage("storage-not-configured");
+  return getAdminImageUploadErrorMessage(error);
 }
 
 function parseResponse(value: string): {

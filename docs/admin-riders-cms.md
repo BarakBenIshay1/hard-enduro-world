@@ -34,6 +34,10 @@ Rider profile images use the shared Admin media upload workflow.
 - Supported types: JPG, PNG, WebP, AVIF.
 - Maximum size: 5 MB.
 - Uploads are stored in Supabase Storage through the protected admin upload route.
+- Uploads use the dedicated `POST /admin/riders/media` Route Handler, not a
+  Server Action.
+- Unauthenticated upload requests return a JSON `401` response instead of
+  redirecting the image POST body to `/login`.
 - The generated public URL is saved into the rider profile when the editor form is saved.
 - Removing an image clears the rider profile URL on save; it does not delete historical storage objects.
 
@@ -49,6 +53,13 @@ SUPABASE_STORAGE_BUCKET=hard-enduro-media
 The storage service role key is server-only. It must never be exposed to the
 browser. The bucket should be configured so approved public profile images are
 readable by the website.
+
+The upload policy is intentionally bounded:
+
+- File size limit: 5 MB.
+- Request envelope limit: 6 MB, allowing multipart overhead while still
+  preventing oversized media requests.
+- Allowed MIME types are validated in the browser and again on the server.
 
 ## Lifecycle
 

@@ -14,6 +14,7 @@ import {
   adminImageUploadConfig,
   extensionForImageType,
   getAdminImageUploadErrorMessage,
+  isAdminMediaUploadRequest,
   validateAdminImageUpload,
 } from "@/lib/admin/media-upload";
 
@@ -74,12 +75,32 @@ function testImageUploadValidation() {
     }),
     "file-too-large",
   );
+  assert.equal(adminImageUploadConfig.maxBytes, 5 * 1024 * 1024);
+  assert.equal(adminImageUploadConfig.maxRequestBytes, 6 * 1024 * 1024);
   assert.equal(
     validateAdminImageUpload({ size: 120_000, type: "image/gif" }),
     "unsupported-file-type",
   );
   assert.equal(extensionForImageType("image/webp"), "webp");
-  assert.match(getAdminImageUploadErrorMessage("file-too-large"), /5 MB/);
+  assert.equal(
+    getAdminImageUploadErrorMessage("file-too-large"),
+    "Image must be smaller than 5 MB.",
+  );
+  assert.equal(
+    getAdminImageUploadErrorMessage("unsupported-file-type"),
+    "Use a JPG, PNG, WebP, or AVIF image.",
+  );
+  assert.equal(
+    getAdminImageUploadErrorMessage("storage-not-configured"),
+    "Storage bucket is unavailable.",
+  );
+  assert.equal(
+    getAdminImageUploadErrorMessage("session-expired"),
+    "Session expired. Please sign in again.",
+  );
+  assert.equal(isAdminMediaUploadRequest("POST", "/admin/riders/media"), true);
+  assert.equal(isAdminMediaUploadRequest("GET", "/admin/riders/media"), false);
+  assert.equal(isAdminMediaUploadRequest("POST", "/login"), false);
 }
 
 function testPaginationHelpers() {
