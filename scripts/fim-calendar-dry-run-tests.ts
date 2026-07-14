@@ -14,6 +14,7 @@ import {
   type ConnectorReviewDecisionRecord,
   type ConnectorReviewDecisionRepository,
 } from "@/lib/admin/connector-review-decisions";
+import { validateConnectorReviewApplicationPolicy } from "@/lib/admin/connector-review-application";
 import {
   createMemoryFimCalendarPersistenceRepository,
   createNoPersistenceResult,
@@ -673,6 +674,67 @@ async function main() {
     assert.equal(second.ok ? "" : second.code, "conflict");
     assert.equal(repository.audit.length, 1);
   });
+
+  await test("application policy allows only approved applyable review items", () => {
+    assert.equal(
+      validateConnectorReviewApplicationPolicy({
+        reviewStatus: "PENDING",
+        applicationStatus: "NOT_APPLIED",
+        suggestedAction: "UPDATE_EVENT",
+        changedFields: ["startDate"],
+        proposedValues: applicationProposal(),
+      }).ok,
+      false,
+    );
+    assert.equal(
+      validateConnectorReviewApplicationPolicy({
+        reviewStatus: "APPROVED",
+        applicationStatus: "APPLIED",
+        suggestedAction: "UPDATE_EVENT",
+        changedFields: ["startDate"],
+        proposedValues: applicationProposal(),
+      }).ok,
+      false,
+    );
+  });
+
+  await test("application policy fails closed for source removed and manual review", () => {
+    for (const suggestedAction of ["SOURCE_REMOVED", "MANUAL_REVIEW"]) {
+      assert.equal(
+        validateConnectorReviewApplicationPolicy({
+          reviewStatus: "APPROVED",
+          applicationStatus: "NOT_APPLIED",
+          suggestedAction,
+          changedFields: ["event"],
+          proposedValues: applicationProposal(),
+        }).ok,
+        false,
+      );
+    }
+  });
+
+  await test("application policy rejects unsupported fields and maps safe statuses", () => {
+    assert.equal(
+      validateConnectorReviewApplicationPolicy({
+        reviewStatus: "APPROVED",
+        applicationStatus: "NOT_APPLIED",
+        suggestedAction: "UPDATE_EVENT",
+        changedFields: ["description"],
+        proposedValues: applicationProposal(),
+      }).ok,
+      false,
+    );
+    const result = validateConnectorReviewApplicationPolicy({
+      reviewStatus: "APPROVED",
+      applicationStatus: "NOT_APPLIED",
+      suggestedAction: "UPDATE_EVENT",
+      changedFields: ["status"],
+      proposedValues: applicationProposal({ raceStatusCandidate: "Race Completed" }),
+    });
+
+    assert.equal(result.ok, true);
+    assert.equal(result.ok ? result.eventStatus : "", "COMPLETED");
+  });
 }
 
 main().catch((error) => {
@@ -879,6 +941,24 @@ function createFakePrismaClient({
     $transaction: async () => {
       onNestedTransaction?.();
     },
+  };
+}
+
+function applicationProposal(overrides: Record<string, unknown> = {}) {
+  return {
+    sourceEventId: "94049",
+    eventName: "Hixpania",
+    slugCandidate: "hixpania-2026",
+    country: "Spain",
+    countryCode: "ESP",
+    location: "Aguilar de Campoo",
+    venue: "Aguilar de Campoo",
+    startDate: "2026-10-23T00:00:00.000Z",
+    endDate: "2026-10-25T00:00:00.000Z",
+    raceStatusCandidate: "Coming Soon",
+    officialUrl:
+      "https://www.fim-moto.com/en/calendars/view/fim-hard-enduro-world-championship-spain-espagne-hixpania-26591",
+    ...overrides,
   };
 }
 

@@ -418,6 +418,9 @@ review item. Approval:
 Approval requires the expected current status and version. Repeated or stale
 approval attempts fail as conflicts.
 
+Approval does not apply the change. Approved proposals remain separate from
+database application until an authorized admin explicitly applies one item.
+
 ## Rejection Behavior
 
 Authorized admins with `review:approve` permission can reject a `PENDING` review
@@ -469,3 +472,48 @@ history and source links.
 
 During this stage, the connector never inserts, updates, deletes, or publishes
 public calendar events.
+
+## Controlled Event Application
+
+Approved FIM Calendar proposals can now be applied one item at a time from the
+review detail page. Application is an explicit second action after approval.
+
+Application statuses:
+
+- `NOT_APPLIED`
+- `APPLYING`
+- `APPLIED`
+- `APPLY_FAILED`
+
+Supported behavior:
+
+- `UPDATE_EVENT` updates only explicitly approved, allowlisted Event fields.
+- `NEW_EVENT` runs defensive duplicate, season, country, date, status, and URL
+  checks before inserting one Event.
+- `SOURCE_REMOVED` fails closed. It does not delete or unpublish Events.
+- `MANUAL_REVIEW` fails closed. It requires a resolved explicit proposal first.
+
+Field writes use an explicit allowlist. The connector never spreads
+`proposedValues` directly into Prisma Event writes.
+
+Application checks:
+
+- review item must be `APPROVED`
+- application status must be `NOT_APPLIED` or `APPLY_FAILED`
+- source snapshot must still exist
+- proposed payload must be valid
+- current Event state must still match the approved expected state
+- stale proposals fail instead of overwriting newer edits
+
+Every application attempt updates internal application metadata and audit
+history. Successful application writes one Event change plus audit records in one
+transaction. Failed application rolls back Event changes, keeps the review item
+approved, records `APPLY_FAILED`, and stores a sanitized reason.
+
+There is still no cron, no automatic application after approval, no automatic
+website refresh, and no automatic publishing.
+
+Safe visibility note: the current Event model does not have a separate draft or
+publication flag. A `NEW_EVENT` application creates a normal Event row after an
+explicit admin confirmation. A future publishing model should add a dedicated
+visibility field before broad calendar imports are applied.

@@ -101,6 +101,7 @@ export default async function AdminReviewPage({ searchParams }: PageProps) {
                   "Confidence",
                   "Match",
                   "Status",
+                  "Application",
                   "Snapshot",
                   "Created",
                   "Updated",
@@ -133,6 +134,11 @@ export default async function AdminReviewPage({ searchParams }: PageProps) {
                   </td>
                   <td className="px-5 py-4">
                     <ReviewStatusBadge status={item.reviewStatus} />
+                  </td>
+                  <td className="px-5 py-4">
+                    <span className="inline-flex rounded-sm border border-border bg-surface-muted px-2.5 py-1 text-xs font-semibold uppercase tracking-[0.14em]">
+                      {item.applicationStatus.replaceAll("_", " ")}
+                    </span>
                   </td>
                   <td className="px-5 py-4">
                     <div>{formatDate(item.snapshot.createdAt)}</div>

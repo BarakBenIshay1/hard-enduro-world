@@ -8,6 +8,7 @@ import {
   ConfidenceValue,
   ReviewStatusBadge,
 } from "@/components/admin/review-badges";
+import { ReviewApplyForm } from "@/components/admin/review-apply-form";
 import { ReviewDecisionForm } from "@/components/admin/review-decision-form";
 import {
   getConnectorReviewDecisionAudit,
@@ -32,7 +33,7 @@ export const metadata: Metadata = {
 
 type PageProps = {
   params: Promise<{ id: string }>;
-  searchParams?: Promise<{ decision?: string }>;
+  searchParams?: Promise<{ application?: string; decision?: string }>;
 };
 
 export default async function AdminReviewDetailPage({ params, searchParams }: PageProps) {
@@ -74,6 +75,7 @@ export default async function AdminReviewDetailPage({ params, searchParams }: Pa
       </section>
 
       {query?.decision ? <DecisionMessage code={query.decision} /> : null}
+      {query?.application ? <ApplicationMessage code={query.application} /> : null}
 
       {item.reviewStatus === "SUPERSEDED" ? (
         <Card className="border-zinc-500/30 bg-zinc-500/5 p-5">
@@ -105,7 +107,7 @@ export default async function AdminReviewDetailPage({ params, searchParams }: Pa
           value={<ConfidenceValue value={item.confidence} />}
         />
         <SummaryCard label="Matching" value={item.matchingStrategy ?? "manual"} />
-        <SummaryCard label="Version" value={item.version} />
+        <SummaryCard label="Application" value={item.applicationStatus} />
       </div>
 
       <Card className="p-5">
@@ -124,6 +126,8 @@ export default async function AdminReviewDetailPage({ params, searchParams }: Pa
           <Meta label="Snapshot checksum" value={item.snapshot.payloadChecksum} mono />
           <Meta label="Parser" value={item.snapshot.parserSelected} />
           <Meta label="Official source" value={sourceUrl ?? "None"} />
+          <Meta label="Review version" value={item.version} />
+          <Meta label="Application version" value={item.applicationVersion} />
         </div>
         {item.ambiguityReason ? (
           <div className="mt-5 rounded-md border border-gold/30 bg-gold/10 p-4 text-sm text-gold">
@@ -173,6 +177,43 @@ export default async function AdminReviewDetailPage({ params, searchParams }: Pa
             suggestedAction={item.suggestedAction}
             changedFields={item.changedFields}
             canDecide={canDecide}
+          />
+        </div>
+      </Card>
+
+      <Card className="p-5">
+        <h2 className="text-xl font-black">Application</h2>
+        <p className="mt-2 text-sm text-foreground/[0.62]">
+          Approved does not mean applied. This action writes one controlled change to the
+          Event database after validation and stale-state checks.
+        </p>
+        <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <Meta label="Application status" value={item.applicationStatus} />
+          <Meta label="Applied event ID" value={item.appliedEventId ?? "None"} mono />
+          <Meta label="Applied by" value={item.appliedByUserEmail ?? "None"} />
+          <Meta
+            label="Applied at"
+            value={item.appliedAt ? formatDate(item.appliedAt) : "None"}
+          />
+        </div>
+        {item.applicationError ? (
+          <div className="mt-5 rounded-md border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-300">
+            {item.applicationError}
+          </div>
+        ) : null}
+        <div className="mt-5">
+          <ReviewApplyForm
+            reviewItemId={item.id}
+            reviewStatus={item.reviewStatus}
+            applicationStatus={item.applicationStatus}
+            applicationVersion={item.applicationVersion}
+            suggestedAction={item.suggestedAction}
+            changedFields={item.changedFields}
+            canApply={
+              canAccessAdmin(access, "review:approve") &&
+              item.reviewStatus === "APPROVED" &&
+              ["NOT_APPLIED", "APPLY_FAILED"].includes(item.applicationStatus)
+            }
           />
         </div>
       </Card>
@@ -336,6 +377,55 @@ function DecisionMessage({ code }: { code: string }) {
     unauthorized: {
       title: "Not authorized",
       body: "Your role cannot approve or reject review items.",
+      tone: "warn",
+    },
+  };
+  const message = messages[code] ?? messages.invalid!;
+
+  return (
+    <Card
+      className={cn(
+        "p-5",
+        message.tone === "ok" && "border-emerald-500/25 bg-emerald-500/5",
+        message.tone === "warn" && "border-red-500/25 bg-red-500/5",
+      )}
+    >
+      <h2 className="font-black">{message.title}</h2>
+      <p className="mt-2 text-sm text-foreground/[0.62]">{message.body}</p>
+    </Card>
+  );
+}
+
+function ApplicationMessage({ code }: { code: string }) {
+  const messages: Record<string, { title: string; body: string; tone: "ok" | "warn" }> = {
+    applied: {
+      title: "Approved change applied",
+      body: "One controlled Event database change was applied and audited.",
+      tone: "ok",
+    },
+    "already-applied": {
+      title: "Already applied",
+      body: "This review item was already applied. No duplicate write was performed.",
+      tone: "warn",
+    },
+    conflict: {
+      title: "Application conflict",
+      body: "The review or Event state changed before application. Reload and review again.",
+      tone: "warn",
+    },
+    invalid: {
+      title: "Application failed",
+      body: "The proposal could not be safely applied. See application status for details.",
+      tone: "warn",
+    },
+    unsupported: {
+      title: "Unsupported action",
+      body: "This action type intentionally fails closed in this sprint.",
+      tone: "warn",
+    },
+    unauthorized: {
+      title: "Not authorized",
+      body: "Your role cannot apply approved review items.",
       tone: "warn",
     },
   };

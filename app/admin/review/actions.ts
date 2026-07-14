@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import type { ConnectorReviewApplicationStatus } from "@prisma/client";
+import { applyConnectorReviewItem } from "@/lib/admin/connector-review-application";
 import { decideConnectorReviewItem } from "@/lib/admin/connector-review-decisions";
 import { getAuthSession, hasPermission } from "@/lib/auth";
 
@@ -11,6 +13,50 @@ export async function approveConnectorReviewItem(formData: FormData) {
 
 export async function rejectConnectorReviewItem(formData: FormData) {
   return decideFromForm(formData, "REJECTED");
+}
+
+export async function applyApprovedConnectorReviewItem(formData: FormData) {
+  const session = await getAuthSession();
+
+  if (!hasPermission(session, "review:approve") || !session.user) {
+    redirect("/admin/review?application=unauthorized");
+  }
+
+  const reviewItemId = stringField(formData, "reviewItemId");
+  const expectedApplicationStatus = stringField(formData, "expectedApplicationStatus");
+  const expectedApplicationVersion = Number(
+    stringField(formData, "expectedApplicationVersion"),
+  );
+  const note = stringField(formData, "applicationNote");
+  const confirmed = stringField(formData, "confirmApplication") === "on";
+
+  if (
+    !reviewItemId ||
+    !["NOT_APPLIED", "APPLY_FAILED"].includes(expectedApplicationStatus) ||
+    !Number.isInteger(expectedApplicationVersion) ||
+    !confirmed
+  ) {
+    redirect(`/admin/review/${reviewItemId || ""}?application=invalid`);
+  }
+
+  const result = await applyConnectorReviewItem({
+    reviewItemId,
+    expectedApplicationStatus:
+      expectedApplicationStatus as ConnectorReviewApplicationStatus,
+    expectedApplicationVersion,
+    actor: session.user,
+    note,
+  });
+
+  revalidatePath("/admin/review");
+  revalidatePath(`/admin/review/${reviewItemId}`);
+  revalidatePath("/admin/audit");
+
+  if (!result.ok) {
+    redirect(`/admin/review/${reviewItemId}?application=${result.code}`);
+  }
+
+  redirect(`/admin/review/${reviewItemId}?application=applied`);
 }
 
 async function decideFromForm(formData: FormData, decision: "APPROVED" | "REJECTED") {

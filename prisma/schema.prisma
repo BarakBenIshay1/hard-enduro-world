@@ -681,6 +681,17 @@ model ConnectorReviewItem {
   decisionNote        String?
   supersededByReviewItemId String?
   version             Int                   @default(1)
+  applicationStatus   ConnectorReviewApplicationStatus @default(NOT_APPLIED)
+  appliedAt           DateTime?
+  appliedByUserId     String?
+  appliedByUserEmail  String?
+  applicationNote     String?
+  applicationError    String?
+  appliedEventId      String?
+  applicationAttemptCount Int                @default(0)
+  expectedCurrentStateChecksum String?
+  resultingEventStateChecksum String?
+  applicationVersion  Int                    @default(1)
   createdAt           DateTime              @default(now())
   updatedAt           DateTime              @updatedAt
 
@@ -689,6 +700,7 @@ model ConnectorReviewItem {
   @@index([snapshotId])
   @@index([connectorKey, season])
   @@index([reviewStatus])
+  @@index([applicationStatus])
   @@index([deduplicationKey])
   @@index([supersededByReviewItemId])
 }
@@ -872,6 +884,13 @@ enum ConnectorReviewStatus {
   APPROVED
   REJECTED
   SUPERSEDED
+}
+
+enum ConnectorReviewApplicationStatus {
+  NOT_APPLIED
+  APPLYING
+  APPLIED
+  APPLY_FAILED
 }
 
 enum UserRole {
