@@ -4,7 +4,11 @@ import { config as middlewareConfig } from "@/middleware";
 import { rolePermissions } from "@/lib/auth/permissions";
 import { resolveRoleFromSupabaseUser } from "@/lib/auth/role-mapping";
 import { buildLoginRedirect, sanitizeAdminRedirect } from "@/lib/auth/redirects";
-import { hasSupabaseAuthCookie } from "@/lib/supabase/cookies";
+import {
+  hasSupabaseAuthCookie,
+  supabaseCodeVerifierCookie,
+  supabaseStorageKey,
+} from "@/lib/supabase/cookies";
 
 const previousOwnerEmail = process.env.ADMIN_OWNER_EMAIL;
 process.env.ADMIN_OWNER_EMAIL = "barakbenishay1@gmail.com";
@@ -39,6 +43,8 @@ function testRedirectSafety() {
 function testCookieDetection() {
   assert.equal(hasSupabaseAuthCookie([{ name: "sb-access-token" }]), true);
   assert.equal(hasSupabaseAuthCookie([{ name: "sb-project-auth-token" }]), true);
+  assert.equal(hasSupabaseAuthCookie([{ name: supabaseStorageKey }]), true);
+  assert.equal(supabaseCodeVerifierCookie, `${supabaseStorageKey}-code-verifier`);
   assert.equal(hasSupabaseAuthCookie([{ name: "session" }]), false);
 }
 

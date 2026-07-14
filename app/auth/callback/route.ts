@@ -3,8 +3,9 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getAuthSessionForSupabaseUser, hasPermission } from "@/lib/auth";
 import { recordAuthAudit } from "@/lib/auth/audit";
 import { buildLoginRedirect, sanitizeAdminRedirect } from "@/lib/auth/redirects";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseCookieServerClient } from "@/lib/supabase/server";
 import { setSupabaseSessionCookies } from "@/lib/supabase/auth";
+import { supabaseCodeVerifierCookie } from "@/lib/supabase/cookies";
 
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
@@ -24,7 +25,8 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const supabase = createSupabaseServerClient();
+  const cookieStore = await cookies();
+  const supabase = createSupabaseCookieServerClient(cookieStore);
 
   if (!supabase) {
     return NextResponse.redirect(
@@ -40,8 +42,8 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const cookieStore = await cookies();
   setSupabaseSessionCookies(cookieStore, data.session);
+  cookieStore.delete(supabaseCodeVerifierCookie);
 
   const session = await getAuthSessionForSupabaseUser(data.session.user);
 

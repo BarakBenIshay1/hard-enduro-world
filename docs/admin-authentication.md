@@ -73,6 +73,12 @@ Unauthorized -> /access-denied
 `/login` accepts only same-app admin destinations. External URLs and public page
 destinations are rejected and replaced with `/admin`.
 
+The OAuth flow uses Supabase PKCE with server-side cookie storage. The login
+action stores Supabase's one-time PKCE verifier in an HTTP-only cookie, and
+`/auth/callback` reads that verifier before exchanging the OAuth code for a
+session. Cookies use `SameSite=Lax` so the top-level Google redirect can return
+to the app, and `Secure` is enabled in production.
+
 ## Authorization Flow
 
 Authorization continues to use the existing project model:

@@ -1,9 +1,10 @@
 "use server";
 
+import { cookies } from "next/headers";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { sanitizeAdminRedirect } from "@/lib/auth/redirects";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseCookieServerClient } from "@/lib/supabase/server";
 
 export async function signInWithGoogle(formData: FormData) {
   const next = sanitizeAdminRedirect(stringField(formData, "next"));
@@ -15,7 +16,8 @@ export async function signInWithGoogle(formData: FormData) {
   const callbackUrl = new URL("/auth/callback", origin);
   callbackUrl.searchParams.set("next", next);
 
-  const supabase = createSupabaseServerClient();
+  const cookieStore = await cookies();
+  const supabase = createSupabaseCookieServerClient(cookieStore);
 
   if (!supabase) {
     redirect(`/login?error=auth_unavailable&next=${encodeURIComponent(next)}`);

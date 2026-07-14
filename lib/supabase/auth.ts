@@ -5,8 +5,10 @@ import type { AuthStatus } from "@/lib/auth/types";
 import { getSupabaseAuthReadiness, getSupabaseConfig } from "@/lib/supabase/config";
 import {
   isSupabaseAuthCookieName,
+  supabaseCodeVerifierCookie,
   supabaseAccessTokenCookie,
   supabaseRefreshTokenCookie,
+  supabaseStorageKey,
 } from "@/lib/supabase/cookies";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -120,6 +122,8 @@ export function clearSupabaseSessionCookies(
   cookieStore.delete(supabaseAccessTokenCookie);
   cookieStore.delete(supabaseRefreshTokenCookie);
   cookieStore.delete("supabase-auth-token");
+  cookieStore.delete(supabaseStorageKey);
+  cookieStore.delete(supabaseCodeVerifierCookie);
 }
 
 export { getSupabaseAuthReadiness };
