@@ -1,18 +1,27 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Archive, ExternalLink, Save } from "lucide-react";
+import { Archive, ExternalLink, RotateCcw, Save } from "lucide-react";
 import { AdminStatusBadge } from "@/components/admin/admin-status-badge";
+import { EventAlert } from "@/components/admin/events/event-alert";
+import { EventEditorForm } from "@/components/admin/events/event-editor-form";
+import { EventSubmitButton } from "@/components/admin/events/event-submit-button";
+import { PermanentDeleteForm } from "@/components/admin/events/permanent-delete-form";
 import { Card } from "@/components/ui/card";
 import { getAdminAccessContext } from "@/lib/admin/access";
 import { formatDate } from "@/lib/format";
 import {
   getAdminEventAudit,
+  getAdminEventDeleteEligibility,
   getAdminEventDetail,
   getAdminEventOptions,
 } from "@/db/admin-events";
-import { archiveAdminEvent, updateAdminEvent } from "@/app/admin/events/actions";
-import { canManageEvents } from "@/lib/admin/event-cms";
+import {
+  archiveAdminEvent,
+  restoreAdminEvent,
+  updateAdminEvent,
+} from "@/app/admin/events/actions";
+import { canManageEvents, canPermanentlyDeleteEvents } from "@/lib/admin/event-cms";
 
 export const dynamic = "force-dynamic";
 
@@ -42,14 +51,16 @@ export default async function AdminEventDetailPage({ params, searchParams }: Pag
     getAdminAccessContext(),
     getAdminEventOptions(),
   ]);
-  const [event, audit] = await Promise.all([
+  const [event, audit, deleteEligibility] = await Promise.all([
     getAdminEventDetail(id),
     getAdminEventAudit(id),
+    getAdminEventDeleteEligibility(id),
   ]);
 
   if (!event) notFound();
 
   const canManage = canManageEvents(access.role);
+  const canDelete = canPermanentlyDeleteEvents(access.role);
 
   return (
     <div className="grid gap-8">
@@ -93,7 +104,7 @@ export default async function AdminEventDetailPage({ params, searchParams }: Pag
               : "Reviewer access is read-only."}
           </p>
 
-          <form action={updateAdminEvent} className="mt-6 grid gap-5">
+          <EventEditorForm action={updateAdminEvent} className="mt-6 grid gap-5">
             <input type="hidden" name="eventId" value={event.id} />
             <div className="grid gap-4 md:grid-cols-2">
               <TextField
@@ -218,15 +229,13 @@ export default async function AdminEventDetailPage({ params, searchParams }: Pag
             />
 
             {canManage ? (
-              <button
-                type="submit"
-                className="inline-flex h-11 w-fit items-center gap-2 rounded-md bg-accent px-5 text-sm font-black uppercase tracking-[0.12em] text-black transition hover:bg-gold"
-              >
-                <Save className="h-4 w-4" aria-hidden="true" />
-                Save Event
-              </button>
+              <EventSubmitButton
+                label="Save Event"
+                pendingLabel="Saving..."
+                icon={Save}
+              />
             ) : null}
-          </form>
+          </EventEditorForm>
         </Card>
 
         <aside className="grid gap-6">
@@ -267,17 +276,66 @@ export default async function AdminEventDetailPage({ params, searchParams }: Pag
                   <input type="checkbox" name="confirmArchive" />
                   Confirm archive
                 </label>
-                <button
-                  type="submit"
-                  className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-red-500/30 bg-red-500/10 px-4 text-sm font-semibold text-red-200"
-                >
-                  <Archive className="h-4 w-4" aria-hidden="true" />
-                  Archive Event
-                </button>
+                <EventSubmitButton
+                  label="Archive Event"
+                  pendingLabel="Archiving..."
+                  icon={Archive}
+                  tone="danger"
+                />
+              </form>
+            ) : canManage && event.archivedAt ? (
+              <form action={restoreAdminEvent} className="mt-5 grid gap-3">
+                <input type="hidden" name="eventId" value={event.id} />
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" name="confirmRestore" />
+                  Confirm restore as draft
+                </label>
+                <EventSubmitButton
+                  label="Restore Event"
+                  pendingLabel="Restoring..."
+                  icon={RotateCcw}
+                  tone="neutral"
+                />
               </form>
             ) : (
               <p className="mt-4 text-sm text-foreground/[0.58]">
                 {event.archivedAt ? "This event is archived." : "Read-only access."}
+              </p>
+            )}
+          </Card>
+
+          <Card className="border-red-500/25 p-5">
+            <h2 className="text-xl font-black text-red-200">Danger Zone</h2>
+            <p className="mt-2 text-sm leading-6 text-foreground/[0.62]">
+              Permanent deletion is reserved for eligible archived manual/test records. It
+              never cascades protected event data.
+            </p>
+            <div className="mt-4 rounded-md border border-border bg-surface-muted p-4 text-sm">
+              <p className="font-semibold">
+                Dependency check: {deleteEligibility.eligible ? "Eligible" : "Blocked"}
+              </p>
+              {deleteEligibility.blockers.length ? (
+                <ul className="mt-3 grid gap-1 text-foreground/[0.62]">
+                  {deleteEligibility.blockers.map((blocker) => (
+                    <li key={blocker}>- {blocker}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mt-2 text-foreground/[0.62]">
+                  No protected dependencies were found.
+                </p>
+              )}
+            </div>
+            {canDelete ? (
+              <PermanentDeleteForm
+                eventId={event.id}
+                eventName={event.name}
+                eventSlug={event.slug}
+                eligible={deleteEligibility.eligible}
+              />
+            ) : (
+              <p className="mt-4 text-sm text-foreground/[0.58]">
+                Only OWNER users can permanently delete eligible manual/test events.
               </p>
             )}
           </Card>
@@ -299,16 +357,27 @@ export default async function AdminEventDetailPage({ params, searchParams }: Pag
                 <th className="px-5 py-4">User</th>
                 <th className="px-5 py-4">Timestamp</th>
                 <th className="px-5 py-4">Changed Fields</th>
+                <th className="px-5 py-4">Old / New</th>
               </tr>
             </thead>
             <tbody>
               {audit.map((item) => (
                 <tr key={item.id} className="border-t border-border">
                   <td className="px-5 py-4">{item.action}</td>
-                  <td className="px-5 py-4">{item.createdBy ?? "System"}</td>
-                  <td className="px-5 py-4">{formatDate(item.createdAt)}</td>
+                  <td className="px-5 py-4">
+                    <div className="font-semibold">
+                      {item.actor?.displayName ?? item.actor?.email ?? "System"}
+                    </div>
+                    <div className="mt-1 break-all text-xs text-foreground/[0.48]">
+                      {item.actor?.email ?? item.createdBy ?? "System"}
+                    </div>
+                  </td>
+                  <td className="px-5 py-4">{formatAdminTimestamp(item.createdAt)}</td>
                   <td className="px-5 py-4 text-foreground/[0.62]">
                     {formatChangedFields(item.next)}
+                  </td>
+                  <td className="px-5 py-4 text-foreground/[0.62]">
+                    <AuditDiffs value={item.next} />
                   </td>
                 </tr>
               ))}
@@ -421,26 +490,39 @@ function Meta({ label, value }: { label: string; value: string | number }) {
 function EventMessage({ code }: { code?: string }) {
   if (!code) return null;
 
+  const isSuccess = ["created", "updated", "archived", "restored"].includes(code);
   const message =
     code === "created"
-      ? "Event created."
+      ? "✓ Event created successfully"
       : code === "updated"
-        ? "Event updated."
+        ? "✓ Changes saved successfully"
         : code === "archived"
-          ? "Event archived."
-          : code === "slug-exists"
-            ? "Another event already uses this slug."
-            : code === "invalid-date-range"
-              ? "End date must be after start date."
-              : code === "unauthorized"
-                ? "You do not have permission to modify events."
-                : "Please review the form fields and try again.";
+          ? "✓ Event archived successfully"
+          : code === "restored"
+            ? "✓ Event restored successfully"
+            : code === "slug-exists"
+              ? "Another event already uses this slug."
+              : code === "invalid-date-range"
+                ? "End date must be after start date."
+                : code === "unauthorized"
+                  ? "You do not have permission to modify events."
+                  : code === "archive-confirmation"
+                    ? "Confirm archive before submitting."
+                    : code === "restore-confirmation"
+                      ? "Confirm restore before submitting."
+                      : code === "delete-confirmation"
+                        ? "Confirm permanent deletion before submitting."
+                        : code === "delete-confirmation-mismatch"
+                          ? "The delete confirmation did not match the event name or slug."
+                          : code === "delete-reason-required"
+                            ? "A deletion reason is required."
+                            : code === "delete-blocked"
+                              ? "This event cannot be permanently deleted because protected dependencies exist."
+                              : code === "database-unavailable"
+                                ? "The database is temporarily unavailable. Please retry in a moment."
+                                : "Please review the form fields and try again.";
 
-  return (
-    <div className="rounded-md border border-gold/30 bg-gold/10 p-4 text-sm text-gold">
-      {message}
-    </div>
-  );
+  return <EventAlert tone={isSuccess ? "success" : "error"}>{message}</EventAlert>;
 }
 
 function toDateInput(date: Date) {
@@ -454,4 +536,65 @@ function formatChangedFields(value: unknown) {
 
   const fields = (value as { changedFields?: unknown }).changedFields;
   return Array.isArray(fields) && fields.length ? fields.join(", ") : "No fields";
+}
+
+function AuditDiffs({ value }: { value: unknown }) {
+  if (!value || typeof value !== "object" || !("fieldDiffs" in value)) {
+    return <span>No field-level diff</span>;
+  }
+
+  const diffs = (value as { fieldDiffs?: unknown }).fieldDiffs;
+  if (!Array.isArray(diffs) || diffs.length === 0) {
+    return <span>No changed values</span>;
+  }
+
+  return (
+    <div className="grid max-w-[360px] gap-3">
+      {diffs.map((diff, index) => {
+        if (!isAuditDiff(diff)) return null;
+        return (
+          <div key={`${diff.field}-${index}`} className="grid gap-1">
+            <div className="font-semibold text-foreground">{diff.field}</div>
+            <div className="grid gap-1 rounded border border-border bg-surface-muted p-2 text-xs">
+              <span>Old: {formatAuditValue(diff.oldValue)}</span>
+              <span>New: {formatAuditValue(diff.newValue)}</span>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function isAuditDiff(
+  value: unknown,
+): value is { field: string; oldValue: unknown; newValue: unknown } {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "field" in value &&
+    typeof (value as { field?: unknown }).field === "string"
+  );
+}
+
+function formatAuditValue(value: unknown) {
+  if (value === null || value === undefined || value === "") return "Empty";
+  if (Array.isArray(value)) return value.length ? value.join(", ") : "Empty";
+  if (typeof value === "object") return JSON.stringify(value);
+  return String(value);
+}
+
+function formatAdminTimestamp(date: Date) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Jerusalem",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).formatToParts(date);
+  const get = (type: string) => parts.find((part) => part.type === type)?.value ?? "";
+  return `${get("month")} ${get("day")}, ${get("year")}\n${get("hour")}:${get("minute")}:${get("second")} (UTC+3)`;
 }

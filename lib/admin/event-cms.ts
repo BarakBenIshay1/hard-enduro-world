@@ -28,6 +28,10 @@ export function canManageEvents(role: AuthRole) {
   return manageableEventRoles.includes(role);
 }
 
+export function canPermanentlyDeleteEvents(role: AuthRole) {
+  return role === "owner";
+}
+
 export function normalizeEventSlug(value: string) {
   return value
     .toLowerCase()
@@ -61,7 +65,20 @@ export function findChangedCmsFields<T extends Record<string, unknown>>(
   previous: T,
   next: T,
 ) {
-  return Object.keys(next).filter((key) => previous[key] !== next[key]);
+  return Object.keys(next).filter(
+    (key) => stableNormalize(previous[key]) !== stableNormalize(next[key]),
+  );
+}
+
+export function buildChangedFieldDiffs<T extends Record<string, unknown>>(
+  previous: T,
+  next: T,
+) {
+  return findChangedCmsFields(previous, next).map((field) => ({
+    field,
+    oldValue: normalizeDisplayValue(previous[field]),
+    newValue: normalizeDisplayValue(next[field]),
+  }));
 }
 
 function isSafeUrl(value: string) {
@@ -71,4 +88,45 @@ function isSafeUrl(value: string) {
   } catch {
     return false;
   }
+}
+
+function stableNormalize(value: unknown): string {
+  return JSON.stringify(normalizeValue(value));
+}
+
+function normalizeValue(value: unknown): unknown {
+  if (value === undefined || value === null) return null;
+
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    const timestamp = Date.parse(trimmed);
+    if (/^\d{4}-\d{2}-\d{2}T/.test(trimmed) && !Number.isNaN(timestamp)) {
+      return new Date(timestamp).toISOString();
+    }
+    return trimmed;
+  }
+
+  if (value instanceof Date) return value.toISOString();
+
+  if (Array.isArray(value)) {
+    return value.map(normalizeValue).filter(Boolean).sort();
+  }
+
+  if (typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    return Object.fromEntries(
+      Object.keys(record)
+        .sort()
+        .map((key) => [key, normalizeValue(record[key])]),
+    );
+  }
+
+  return value;
+}
+
+function normalizeDisplayValue(value: unknown) {
+  const normalized = normalizeValue(value);
+  if (normalized === null || normalized === undefined) return null;
+  return normalized;
 }

@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import {
+  buildChangedFieldDiffs,
   canManageEvents,
+  canPermanentlyDeleteEvents,
   findChangedCmsFields,
   normalizeEventSlug,
   validateCmsEventInput,
@@ -11,7 +13,10 @@ testSlugGeneration();
 testValidation();
 testDuplicateSlugProtectionModel();
 testArchivePolicyModel();
+testDeletePermissionPolicy();
+testDeleteEligibilityPolicyModel();
 testAuditChangedFields();
+testAuditDiffNormalization();
 
 console.log("Admin events CMS tests passed.");
 
@@ -21,6 +26,9 @@ function testPermissions() {
   assert.equal(canManageEvents("reviewer"), false);
   assert.equal(canManageEvents("editor"), false);
   assert.equal(canManageEvents("viewer"), false);
+  assert.equal(canPermanentlyDeleteEvents("owner"), true);
+  assert.equal(canPermanentlyDeleteEvents("admin"), false);
+  assert.equal(canPermanentlyDeleteEvents("reviewer"), false);
 }
 
 function testSlugGeneration() {
@@ -65,6 +73,17 @@ function testValidation() {
     validateCmsEventInput({ ...valid, officialUrl: "javascript:alert(1)" }),
     "invalid-official-url",
   );
+  assert.equal(
+    validateCmsEventInput({ ...valid, heroImage: "ftp://example.com/image.jpg" }),
+    "invalid-hero-image",
+  );
+  assert.equal(
+    validateCmsEventInput({
+      ...valid,
+      galleryImages: ["https://example.com/one.jpg", "javascript:alert(1)"],
+    }),
+    "invalid-gallery-image",
+  );
 }
 
 function testDuplicateSlugProtectionModel() {
@@ -87,6 +106,33 @@ function testArchivePolicyModel() {
   assert.equal(Boolean(archived.archivedBy), true);
 }
 
+function testDeletePermissionPolicy() {
+  assert.equal(canPermanentlyDeleteEvents("owner"), true);
+  assert.equal(canPermanentlyDeleteEvents("admin"), false);
+  assert.equal(canPermanentlyDeleteEvents("editor"), false);
+  assert.equal(canPermanentlyDeleteEvents("reviewer"), false);
+  assert.equal(canPermanentlyDeleteEvents("viewer"), false);
+}
+
+function testDeleteEligibilityPolicyModel() {
+  const eligible = {
+    archived: true,
+    manualCreateAudit: true,
+    connectorHistory: 0,
+    results: 0,
+    stages: 0,
+    media: 0,
+  };
+  const blockedConnector = { ...eligible, connectorHistory: 1 };
+  const blockedActive = { ...eligible, archived: false };
+  const blockedResults = { ...eligible, results: 1 };
+
+  assert.equal(isPolicyEligible(eligible), true);
+  assert.equal(isPolicyEligible(blockedConnector), false);
+  assert.equal(isPolicyEligible(blockedActive), false);
+  assert.equal(isPolicyEligible(blockedResults), false);
+}
+
 function testAuditChangedFields() {
   const changed = findChangedCmsFields(
     {
@@ -102,4 +148,53 @@ function testAuditChangedFields() {
   );
 
   assert.deepEqual(changed, ["name", "status"]);
+}
+
+function testAuditDiffNormalization() {
+  const changed = findChangedCmsFields(
+    {
+      description: null,
+      galleryImages: ["https://example.com/b.jpg", "https://example.com/a.jpg"],
+      startDate: "2026-06-04T00:00:00.000Z",
+      venue: " Eisenerz ",
+    },
+    {
+      description: "",
+      galleryImages: ["https://example.com/a.jpg", "https://example.com/b.jpg"],
+      startDate: new Date("2026-06-04T00:00:00.000Z").toISOString(),
+      venue: "Eisenerz",
+    },
+  );
+
+  assert.deepEqual(changed, []);
+
+  const diffs = buildChangedFieldDiffs(
+    { description: "Official race overview" },
+    { description: "Official race overview\nQA Test" },
+  );
+  assert.deepEqual(diffs, [
+    {
+      field: "description",
+      oldValue: "Official race overview",
+      newValue: "Official race overview\nQA Test",
+    },
+  ]);
+}
+
+function isPolicyEligible(input: {
+  archived: boolean;
+  manualCreateAudit: boolean;
+  connectorHistory: number;
+  results: number;
+  stages: number;
+  media: number;
+}) {
+  return (
+    input.archived &&
+    input.manualCreateAudit &&
+    input.connectorHistory === 0 &&
+    input.results === 0 &&
+    input.stages === 0 &&
+    input.media === 0
+  );
 }

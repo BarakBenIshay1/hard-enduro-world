@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Eye, Plus } from "lucide-react";
-import type { EventStatus } from "@prisma/client";
+import type { EventStatus, EventVisibility } from "@prisma/client";
 import { AdminStatusBadge } from "@/components/admin/admin-status-badge";
+import { EventAlert } from "@/components/admin/events/event-alert";
 import { Card } from "@/components/ui/card";
 import { getAdminEvents, type AdminEventListFilters } from "@/db/admin-events";
 import { getAdminAccessContext } from "@/lib/admin/access";
@@ -32,6 +33,8 @@ const eventStatuses: EventStatus[] = [
   "COMPLETED",
   "CANCELLED",
 ];
+const eventVisibilities: EventVisibility[] = ["PUBLIC", "DRAFT", "PRIVATE"];
+const lifecycleFilters = ["active", "draft", "archived", "all"] as const;
 
 export default async function AdminEventsPage({ searchParams }: PageProps) {
   const access = await getAdminAccessContext();
@@ -74,7 +77,7 @@ export default async function AdminEventsPage({ searchParams }: PageProps) {
       <EventMessage code={value(params, "error") ?? value(params, "saved")} />
 
       <Card className="p-5">
-        <form className="grid gap-4 lg:grid-cols-[1.4fr_1fr_1fr_1fr_1fr_auto] lg:items-end">
+        <form className="grid gap-4 lg:grid-cols-[1.4fr_1fr_1fr_1fr_1fr_1fr_1fr_auto] lg:items-end">
           <Field label="Search">
             <input
               name="search"
@@ -117,6 +120,32 @@ export default async function AdminEventsPage({ searchParams }: PageProps) {
                   {status}
                 </option>
               ))}
+            </select>
+          </Field>
+          <Field label="Visibility">
+            <select
+              name="visibility"
+              defaultValue={filters.visibility ?? ""}
+              className="h-10 w-full rounded-md border border-border bg-surface-muted px-3 text-sm"
+            >
+              <option value="">All visibility</option>
+              {eventVisibilities.map((visibility) => (
+                <option key={visibility} value={visibility}>
+                  {visibility}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Lifecycle">
+            <select
+              name="lifecycle"
+              defaultValue={filters.lifecycle ?? "active"}
+              className="h-10 w-full rounded-md border border-border bg-surface-muted px-3 text-sm"
+            >
+              <option value="active">Active</option>
+              <option value="draft">Draft</option>
+              <option value="archived">Archived</option>
+              <option value="all">All</option>
             </select>
           </Field>
           <Field label="Sort">
@@ -174,11 +203,12 @@ export default async function AdminEventsPage({ searchParams }: PageProps) {
                     <div className="mt-1 text-xs text-foreground/[0.48]">
                       {event.slug}
                     </div>
-                    {event.archivedAt ? (
-                      <span className="mt-2 inline-flex rounded border border-zinc-500/30 px-2 py-1 text-xs text-zinc-300">
-                        Archived
-                      </span>
-                    ) : null}
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <LifecycleBadge
+                        archived={Boolean(event.archivedAt)}
+                        visibility={event.visibility}
+                      />
+                    </div>
                   </td>
                   <td className="px-5 py-4 text-foreground/[0.66]">
                     {event.season.name}
@@ -224,6 +254,12 @@ function parseFilters(
     season: value(params, "season"),
     championship: value(params, "championship"),
     status: isEventStatus(status) ? status : undefined,
+    visibility: isEventVisibility(value(params, "visibility"))
+      ? (value(params, "visibility") as EventVisibility)
+      : undefined,
+    lifecycle: isLifecycle(value(params, "lifecycle"))
+      ? (value(params, "lifecycle") as AdminEventListFilters["lifecycle"])
+      : "active",
     page: Number(value(params, "page") ?? 1),
     sort: value(params, "sort") ?? "start-asc",
   };
@@ -241,6 +277,16 @@ function isEventStatus(value: string | undefined): value is EventStatus {
   return Boolean(value && eventStatuses.includes(value as EventStatus));
 }
 
+function isEventVisibility(value: string | undefined): value is EventVisibility {
+  return Boolean(value && eventVisibilities.includes(value as EventVisibility));
+}
+
+function isLifecycle(value: string | undefined) {
+  return Boolean(
+    value && lifecycleFilters.includes(value as (typeof lifecycleFilters)[number]),
+  );
+}
+
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="grid gap-2">
@@ -256,6 +302,28 @@ function StatusPill({ value }: { value: EventStatus }) {
   return (
     <span className="rounded-md border border-border bg-surface-muted px-2.5 py-1 text-xs font-semibold">
       {value}
+    </span>
+  );
+}
+
+function LifecycleBadge({
+  archived,
+  visibility,
+}: {
+  archived: boolean;
+  visibility: EventVisibility;
+}) {
+  if (archived) {
+    return (
+      <span className="inline-flex rounded border border-zinc-500/30 px-2 py-1 text-xs text-zinc-300">
+        ARCHIVED
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex rounded border border-border px-2 py-1 text-xs text-foreground/[0.62]">
+      {visibility}
     </span>
   );
 }
@@ -300,6 +368,8 @@ function createEventsHref(filters: AdminEventListFilters, page: number) {
   if (filters.season) params.set("season", filters.season);
   if (filters.championship) params.set("championship", filters.championship);
   if (filters.status) params.set("status", filters.status);
+  if (filters.visibility) params.set("visibility", filters.visibility);
+  if (filters.lifecycle) params.set("lifecycle", filters.lifecycle);
   if (filters.sort) params.set("sort", filters.sort);
   params.set("page", String(page));
   return `/admin/events?${params.toString()}`;
@@ -308,20 +378,25 @@ function createEventsHref(filters: AdminEventListFilters, page: number) {
 function EventMessage({ code }: { code?: string }) {
   if (!code) return null;
 
+  const isSuccess = ["created", "updated", "archived", "restored", "deleted"].includes(
+    code,
+  );
   const message =
     code === "unauthorized"
       ? "You do not have permission to modify events."
-      : code === "created"
-        ? "Event created."
-        : code === "updated"
-          ? "Event updated."
-          : code === "archived"
-            ? "Event archived."
-            : "The requested event action could not be completed.";
+      : code === "database-unavailable"
+        ? "The database is temporarily unavailable. Please retry in a moment."
+        : code === "created"
+          ? "✓ Event created successfully"
+          : code === "updated"
+            ? "✓ Changes saved successfully"
+            : code === "archived"
+              ? "✓ Event archived successfully"
+              : code === "restored"
+                ? "✓ Event restored successfully"
+                : code === "deleted"
+                  ? "✓ Test event permanently deleted"
+                  : "The requested event action could not be completed.";
 
-  return (
-    <div className="rounded-md border border-gold/30 bg-gold/10 p-4 text-sm text-gold">
-      {message}
-    </div>
-  );
+  return <EventAlert tone={isSuccess ? "success" : "error"}>{message}</EventAlert>;
 }

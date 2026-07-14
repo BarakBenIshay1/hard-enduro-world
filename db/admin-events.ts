@@ -6,6 +6,8 @@ export type AdminEventListFilters = {
   season?: string;
   championship?: string;
   status?: EventStatus;
+  visibility?: EventVisibility;
+  lifecycle?: "active" | "draft" | "archived" | "all";
   page?: number;
   sort?: string;
 };
@@ -112,7 +114,7 @@ export async function getAdminEventDetail(id: string) {
 }
 
 export async function getAdminEventAudit(id: string) {
-  return prisma.dataVersion.findMany({
+  const audit = await prisma.dataVersion.findMany({
     where: {
       entityType: "Event",
       entityId: id,
@@ -120,6 +122,22 @@ export async function getAdminEventAudit(id: string) {
     orderBy: { createdAt: "desc" },
     take: 20,
   });
+
+  const userIds = Array.from(
+    new Set(audit.map((item) => item.createdBy).filter(Boolean)),
+  ) as string[];
+  const users = userIds.length
+    ? await prisma.userProfile.findMany({
+        where: { id: { in: userIds } },
+        select: { id: true, email: true, displayName: true },
+      })
+    : [];
+  const userMap = new Map(users.map((user) => [user.id, user]));
+
+  return audit.map((item) => ({
+    ...item,
+    actor: item.createdBy ? (userMap.get(item.createdBy) ?? null) : null,
+  }));
 }
 
 export async function getAdminEventBySlug(slug: string) {
@@ -129,6 +147,108 @@ export async function getAdminEventBySlug(slug: string) {
       id: true,
     },
   });
+}
+
+export async function getAdminEventDeleteEligibility(id: string) {
+  return getEventDeleteEligibility(id, prisma);
+}
+
+export async function getEventDeleteEligibility(
+  id: string,
+  client: Pick<
+    typeof prisma,
+    | "event"
+    | "raceStage"
+    | "eventTimelineItem"
+    | "result"
+    | "weatherSnapshot"
+    | "mediaItem"
+    | "sourceLink"
+    | "connectorReviewItem"
+    | "dataVersion"
+  >,
+) {
+  const event = await client.event.findUnique({
+    where: { id },
+    include: {
+      season: true,
+      country: true,
+    },
+  });
+
+  if (!event) {
+    return {
+      eligible: false,
+      event: null,
+      origin: "unknown",
+      blockers: ["Event no longer exists."],
+      dependencyCounts: {},
+    };
+  }
+
+  const [
+    stages,
+    timelineItems,
+    results,
+    weatherSnapshots,
+    mediaItems,
+    sourceLinks,
+    connectorHistory,
+    manualCreateAudit,
+  ] = await Promise.all([
+    client.raceStage.count({ where: { eventId: id } }),
+    client.eventTimelineItem.count({ where: { eventId: id } }),
+    client.result.count({ where: { eventId: id } }),
+    client.weatherSnapshot.count({ where: { eventId: id } }),
+    client.mediaItem.count({ where: { eventId: id } }),
+    client.sourceLink.count({ where: { entityType: "Event", entityId: id } }),
+    client.connectorReviewItem.count({
+      where: {
+        OR: [{ currentEventId: id }, { appliedEventId: id }],
+      },
+    }),
+    client.dataVersion.findFirst({
+      where: {
+        entityType: "Event",
+        entityId: id,
+        action: "CREATE",
+        createdBy: { not: null },
+      },
+      select: { id: true },
+    }),
+  ]);
+
+  const dependencyCounts = {
+    stages,
+    timelineItems,
+    results,
+    weatherSnapshots,
+    mediaItems,
+    sourceLinks,
+    connectorHistory,
+  };
+  const blockers: string[] = [];
+  const origin = manualCreateAudit ? "manual" : "unverified";
+
+  if (!event.archivedAt) blockers.push("Event must be archived first.");
+  if (!manualCreateAudit) {
+    blockers.push("Event does not have a verified manual CREATE audit.");
+  }
+  if (connectorHistory > 0) blockers.push("Connector review/application history exists.");
+  if (sourceLinks > 0) blockers.push("Source tracking links exist.");
+  if (results > 0) blockers.push("Result rows exist.");
+  if (stages > 0) blockers.push("Stage rows exist.");
+  if (timelineItems > 0) blockers.push("Timeline rows exist.");
+  if (weatherSnapshots > 0) blockers.push("Weather snapshots exist.");
+  if (mediaItems > 0) blockers.push("Media dependencies exist.");
+
+  return {
+    eligible: blockers.length === 0,
+    event,
+    origin,
+    blockers,
+    dependencyCounts,
+  };
 }
 
 function buildEventWhere(filters: AdminEventListFilters): Prisma.EventWhereInput {
@@ -153,7 +273,18 @@ function buildEventWhere(filters: AdminEventListFilters): Prisma.EventWhereInput
         }
       : {}),
     ...(filters.status ? { status: filters.status } : {}),
+    ...(filters.visibility ? { visibility: filters.visibility } : {}),
+    ...buildLifecycleWhere(filters.lifecycle ?? "active"),
   };
+}
+
+function buildLifecycleWhere(
+  lifecycle: NonNullable<AdminEventListFilters["lifecycle"]>,
+): Prisma.EventWhereInput {
+  if (lifecycle === "all") return {};
+  if (lifecycle === "archived") return { archivedAt: { not: null } };
+  if (lifecycle === "draft") return { archivedAt: null, visibility: "DRAFT" };
+  return { archivedAt: null };
 }
 
 function buildEventOrder(sort?: string): Prisma.EventOrderByWithRelationInput[] {

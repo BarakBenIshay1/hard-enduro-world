@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Plus } from "lucide-react";
+import { EventAlert } from "@/components/admin/events/event-alert";
+import { EventSubmitButton } from "@/components/admin/events/event-submit-button";
 import { Card } from "@/components/ui/card";
 import { getAdminAccessContext } from "@/lib/admin/access";
 import { getAdminEventOptions } from "@/db/admin-events";
@@ -153,13 +155,11 @@ export default async function NewAdminEventPage({ searchParams }: PageProps) {
                 Add one approved image URL per line.
               </span>
             </label>
-            <button
-              type="submit"
-              className="inline-flex h-11 w-fit items-center gap-2 rounded-md bg-accent px-5 text-sm font-black uppercase tracking-[0.12em] text-black transition hover:bg-gold"
-            >
-              <Plus className="h-4 w-4" aria-hidden="true" />
-              Create Event
-            </button>
+            <EventSubmitButton
+              label="Create Event"
+              pendingLabel="Creating..."
+              icon={Plus}
+            />
           </form>
         ) : (
           <p className="text-sm text-foreground/[0.62]">
@@ -212,9 +212,5 @@ function EventMessage({ code }: { code?: string }) {
           ? "You do not have permission to create events."
           : "Please review the form fields and try again.";
 
-  return (
-    <div className="rounded-md border border-gold/30 bg-gold/10 p-4 text-sm text-gold">
-      {message}
-    </div>
-  );
+  return <EventAlert tone="error">{message}</EventAlert>;
 }
