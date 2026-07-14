@@ -42,6 +42,21 @@ route remains domain-owned for now so each CMS can enforce its own permissions
 and storage path rules without leaking Rider-specific behavior into future
 Teams, Manufacturers, Motorcycles, Results, or Standings modules.
 
+All entity media should use the single `hard-enduro-media` bucket unless a
+future security review requires a separate bucket. Object paths should follow
+the shared convention:
+
+- `riders/<rider-id>/profile/<filename>`
+- `events/<event-id>/hero/<filename>`
+- `events/<event-id>/gallery/<filename>`
+- `teams/<team-id>/logo/<filename>`
+- `manufacturers/<manufacturer-id>/logo/<filename>`
+- `motorcycles/<motorcycle-id>/hero/<filename>`
+- `motorcycles/<motorcycle-id>/gallery/<filename>`
+
+Filenames must be sanitized and include a generated unique suffix. Entity IDs
+must be validated before being used in an object path.
+
 ## Permission Model
 
 Current implementation reuses the existing role model:

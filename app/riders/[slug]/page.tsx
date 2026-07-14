@@ -88,7 +88,7 @@ export default async function RiderProfilePage({ params }: RiderProfilePageProps
         motorcycle={currentMotorcycle?.model ?? "Motorcycle TBC"}
         status={status}
         bio="Verified biography coming soon."
-        profileImageUrl={null}
+        profileImageUrl={rider.profileImageUrl}
       />
 
       <Container className="grid gap-10 py-12">

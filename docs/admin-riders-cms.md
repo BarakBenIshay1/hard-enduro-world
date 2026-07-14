@@ -38,6 +38,8 @@ Rider profile images use the shared Admin media upload workflow.
   Server Action.
 - Unauthenticated upload requests return a JSON `401` response instead of
   redirecting the image POST body to `/login`.
+- Rider profile images are stored in the shared bucket at
+  `riders/<rider-id>/profile/<sanitized-generated-filename>`.
 - The generated public URL is saved into the rider profile when the editor form is saved.
 - Removing an image clears the rider profile URL on save; it does not delete historical storage objects.
 

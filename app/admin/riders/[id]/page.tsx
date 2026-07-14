@@ -169,6 +169,7 @@ export default async function AdminRiderDetailPage({ params, searchParams }: Pag
                   name="profileImageUrl"
                   defaultValue={rider.profileImageUrl}
                   disabled={!canManage}
+                  entityId={rider.id}
                   uploadEndpoint="/admin/riders/media"
                   help="Upload an approved rider portrait, or use the advanced URL field."
                 />

@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { Card } from "@/components/ui/card";
 import { Container } from "@/components/ui/container";
+import { RiderProfilePortrait } from "@/components/riders/RiderProfilePortrait";
 
 export type RiderHeroProps = {
   name: string;
@@ -59,14 +60,11 @@ export function RiderHero({
         <Card className="relative mx-auto aspect-square w-full max-w-[340px] overflow-hidden border-white/[0.14] bg-white/[0.06] p-5 text-white backdrop-blur">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_34%,hsl(24_94%_52%/0.22),transparent_34%)]" />
           <div className="flex h-full items-center justify-center rounded-full border border-white/[0.16] bg-black/40">
-            {profileImageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={profileImageUrl} alt="" className="h-full w-full object-cover" />
-            ) : (
-              <div className="flex h-40 w-40 items-center justify-center rounded-full border border-accent/40 bg-accent/15 text-5xl font-black text-accent">
-                {initials}
-              </div>
-            )}
+            <RiderProfilePortrait
+              name={name}
+              initials={initials}
+              profileImageUrl={profileImageUrl}
+            />
           </div>
         </Card>
       </Container>

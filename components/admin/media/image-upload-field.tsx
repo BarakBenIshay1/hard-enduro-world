@@ -13,6 +13,7 @@ type ImageUploadFieldProps = {
   label: string;
   defaultValue?: string | null;
   disabled?: boolean;
+  entityId?: string | null;
   uploadEndpoint: string;
   help?: string;
 };
@@ -24,6 +25,7 @@ export function ImageUploadField({
   label,
   defaultValue,
   disabled = false,
+  entityId,
   uploadEndpoint,
   help,
 }: ImageUploadFieldProps) {
@@ -52,6 +54,11 @@ export function ImageUploadField({
 
   function handleFileChange(file: File | null) {
     if (!file) return;
+    if (!entityId) {
+      setStatus("error");
+      setMessage(getAdminImageUploadErrorMessage("missing-entity-id"));
+      return;
+    }
 
     const validationError = validateAdminImageUpload({
       size: file.size,
@@ -71,6 +78,7 @@ export function ImageUploadField({
 
     const body = new FormData();
     body.set("file", file);
+    body.set("riderId", entityId);
 
     const request = new XMLHttpRequest();
     request.open("POST", uploadEndpoint);
@@ -163,13 +171,13 @@ export function ImageUploadField({
             ref={inputRef}
             type="file"
             accept={acceptedTypes}
-            disabled={disabled || status === "uploading"}
+            disabled={disabled || !entityId || status === "uploading"}
             className="sr-only"
             onChange={(event) => handleFileChange(event.target.files?.[0] ?? null)}
           />
           <button
             type="button"
-            disabled={disabled || status === "uploading"}
+            disabled={disabled || !entityId || status === "uploading"}
             onClick={() => inputRef.current?.click()}
             className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-md bg-accent px-4 text-sm font-black uppercase tracking-[0.12em] text-black transition hover:bg-gold disabled:cursor-not-allowed disabled:opacity-60 sm:w-fit"
           >

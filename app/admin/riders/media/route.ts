@@ -1,12 +1,15 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { getAuthSession } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import { canManageRiders } from "@/lib/admin/rider-cms";
 import {
   adminImageUploadConfig,
+  buildAdminMediaObjectPath,
   extensionForImageType,
   getAdminMediaBucket,
   getAdminImageUploadErrorMessage,
+  isSafeAdminMediaEntityId,
   validateAdminImageUpload,
 } from "@/lib/admin/media-upload";
 import { sanitizeAdminError } from "@/lib/admin/platform";
@@ -33,6 +36,18 @@ export async function POST(request: NextRequest) {
     }
 
     const formData = await request.formData();
+    const riderId = stringField(formData, "riderId");
+    if (!riderId) return uploadError("missing-entity-id", 400);
+    if (!isSafeAdminMediaEntityId(riderId)) {
+      return uploadError("invalid-entity-id", 400);
+    }
+
+    const rider = await prisma.rider.findUnique({
+      where: { id: riderId },
+      select: { id: true },
+    });
+    if (!rider) return uploadError("invalid-entity-id", 404);
+
     const file = formData.get("file");
     if (!(file instanceof File)) {
       return uploadError("missing-file", 400);
@@ -48,14 +63,14 @@ export async function POST(request: NextRequest) {
 
     const bucket = getAdminMediaBucket();
     const extension = extensionForImageType(file.type);
-    const now = new Date();
-    const path = [
-      "admin",
-      "riders",
-      String(now.getUTCFullYear()),
-      String(now.getUTCMonth() + 1).padStart(2, "0"),
-      `${randomUUID()}.${extension}`,
-    ].join("/");
+    const path = buildAdminMediaObjectPath({
+      entityType: "riders",
+      entityId: rider.id,
+      slot: "profile",
+      fileName: file.name,
+      extension,
+      uniqueId: randomUUID(),
+    });
 
     const { error } = await supabase.storage.from(bucket).upload(path, file, {
       cacheControl: "31536000",
@@ -99,4 +114,9 @@ function uploadValidationStatus(code: string) {
 
 function isStorageBucketError(error: { message?: string }) {
   return /bucket|storage/i.test(error.message ?? "");
+}
+
+function stringField(formData: FormData, key: string) {
+  const value = formData.get(key);
+  return typeof value === "string" ? value.trim() : "";
 }

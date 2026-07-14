@@ -12,16 +12,24 @@ import {
 } from "@/lib/admin/platform";
 import {
   adminImageUploadConfig,
+  buildAdminMediaObjectPath,
   extensionForImageType,
   getAdminImageUploadErrorMessage,
   isAdminMediaUploadRequest,
+  sanitizeStorageFileName,
   validateAdminImageUpload,
 } from "@/lib/admin/media-upload";
+import {
+  getSafeRiderProfileImageUrl,
+  shouldRenderRiderProfileImage,
+} from "@/lib/riders/profile-image";
 
 testPermissions();
 testSlugGeneration();
 testValidation();
 testImageUploadValidation();
+testSharedMediaPaths();
+testPublicRiderImageRenderingPolicy();
 testPaginationHelpers();
 testDeleteEligibilityPolicyModel();
 
@@ -101,6 +109,45 @@ function testImageUploadValidation() {
   assert.equal(isAdminMediaUploadRequest("POST", "/admin/riders/media"), true);
   assert.equal(isAdminMediaUploadRequest("GET", "/admin/riders/media"), false);
   assert.equal(isAdminMediaUploadRequest("POST", "/login"), false);
+}
+
+function testSharedMediaPaths() {
+  assert.equal(sanitizeStorageFileName("../Manuel Profile.JPG"), "manuel-profile");
+  assert.equal(sanitizeStorageFileName("../../../"), "image");
+
+  assert.equal(
+    buildAdminMediaObjectPath({
+      entityType: "riders",
+      entityId: "clxmanualrider123",
+      slot: "profile",
+      fileName: "../Manuel Profile.JPG",
+      extension: "jpg",
+      uniqueId: "abc-123",
+    }),
+    "riders/clxmanualrider123/profile/manuel-profile-abc-123.jpg",
+  );
+
+  assert.throws(() =>
+    buildAdminMediaObjectPath({
+      entityType: "riders",
+      entityId: "../bad",
+      slot: "profile",
+      fileName: "profile.jpg",
+      extension: "jpg",
+      uniqueId: "abc-123",
+    }),
+  );
+}
+
+function testPublicRiderImageRenderingPolicy() {
+  const url =
+    "https://example.supabase.co/storage/v1/object/public/hard-enduro-media/riders/rider-1/profile/photo.jpg";
+
+  assert.equal(getSafeRiderProfileImageUrl(url), url);
+  assert.equal(shouldRenderRiderProfileImage(url), true);
+  assert.equal(getSafeRiderProfileImageUrl("javascript:alert(1)"), null);
+  assert.equal(shouldRenderRiderProfileImage("not a url"), false);
+  assert.equal(shouldRenderRiderProfileImage(null), false);
 }
 
 function testPaginationHelpers() {

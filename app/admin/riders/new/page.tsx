@@ -93,7 +93,7 @@ export default async function NewAdminRiderPage({ searchParams }: PageProps) {
                   label="Profile Image"
                   name="profileImageUrl"
                   uploadEndpoint="/admin/riders/media"
-                  help="Upload an approved rider portrait, or use the advanced URL field."
+                  help="Create the rider first, then upload the approved portrait from the editor. Advanced URL remains available."
                 />
               </div>
               <label className="grid gap-2">
