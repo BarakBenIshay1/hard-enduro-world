@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import {
   buildChangedFieldDiffs,
   canManageEvents,
@@ -17,6 +18,7 @@ testDeletePermissionPolicy();
 testDeleteEligibilityPolicyModel();
 testAuditChangedFields();
 testAuditDiffNormalization();
+testNoServerComponentFunctionsPassedToEventClientComponents();
 
 console.log("Admin events CMS tests passed.");
 
@@ -197,4 +199,28 @@ function isPolicyEligible(input: {
     input.stages === 0 &&
     input.media === 0
   );
+}
+
+function testNoServerComponentFunctionsPassedToEventClientComponents() {
+  const files = [
+    "app/admin/events/[id]/page.tsx",
+    "app/admin/events/new/page.tsx",
+    "components/admin/events/permanent-delete-form.tsx",
+  ];
+
+  for (const file of files) {
+    const source = readFileSync(file, "utf8");
+    assert.equal(
+      /icon=\{[A-Z][A-Za-z0-9_]*\}/.test(source),
+      false,
+      `${file} must pass serializable icon names, not component functions`,
+    );
+  }
+
+  const submitButton = readFileSync(
+    "components/admin/events/event-submit-button.tsx",
+    "utf8",
+  );
+  assert.equal(submitButton.includes("icon?: EventSubmitIcon"), true);
+  assert.equal(submitButton.includes("LucideIcon"), false);
 }

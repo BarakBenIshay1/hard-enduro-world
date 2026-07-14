@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Plus } from "lucide-react";
 import { EventAlert } from "@/components/admin/events/event-alert";
 import { EventSubmitButton } from "@/components/admin/events/event-submit-button";
 import { Card } from "@/components/ui/card";
@@ -158,7 +157,7 @@ export default async function NewAdminEventPage({ searchParams }: PageProps) {
             <EventSubmitButton
               label="Create Event"
               pendingLabel="Creating..."
-              icon={Plus}
+              icon="plus"
             />
           </form>
         ) : (

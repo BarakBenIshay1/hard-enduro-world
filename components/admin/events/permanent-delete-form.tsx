@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Trash2 } from "lucide-react";
 import { permanentlyDeleteAdminEvent } from "@/app/admin/events/actions";
 import { EventSubmitButton } from "./event-submit-button";
 
@@ -66,7 +65,7 @@ export function PermanentDeleteForm({
       <EventSubmitButton
         label="Permanently Delete Event"
         pendingLabel="Deleting..."
-        icon={Trash2}
+        icon="trash"
         disabled={!canSubmit}
         tone="danger"
       />

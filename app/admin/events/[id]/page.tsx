@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Archive, ExternalLink, RotateCcw, Save } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import { AdminStatusBadge } from "@/components/admin/admin-status-badge";
 import { EventAlert } from "@/components/admin/events/event-alert";
 import { EventEditorForm } from "@/components/admin/events/event-editor-form";
@@ -232,7 +232,7 @@ export default async function AdminEventDetailPage({ params, searchParams }: Pag
               <EventSubmitButton
                 label="Save Event"
                 pendingLabel="Saving..."
-                icon={Save}
+                icon="save"
               />
             ) : null}
           </EventEditorForm>
@@ -279,7 +279,7 @@ export default async function AdminEventDetailPage({ params, searchParams }: Pag
                 <EventSubmitButton
                   label="Archive Event"
                   pendingLabel="Archiving..."
-                  icon={Archive}
+                  icon="archive"
                   tone="danger"
                 />
               </form>
@@ -293,7 +293,7 @@ export default async function AdminEventDetailPage({ params, searchParams }: Pag
                 <EventSubmitButton
                   label="Restore Event"
                   pendingLabel="Restoring..."
-                  icon={RotateCcw}
+                  icon="restore"
                   tone="neutral"
                 />
               </form>
