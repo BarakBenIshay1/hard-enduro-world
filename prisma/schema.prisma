@@ -41,24 +41,30 @@ model Season {
 }
 
 model Event {
-  id          String      @id @default(cuid())
-  seasonId    String
-  countryId   String?
-  name        String
-  slug        String      @unique
-  roundNumber Int?
-  city        String?
-  venue       String?
-  startDate   DateTime
-  endDate     DateTime?
-  status      EventStatus @default(SCHEDULED)
-  liveStatus  LiveStatus  @default(UPCOMING)
-  latitude    Decimal?
-  longitude   Decimal?
-  officialUrl String?
-  description String?
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  id            String          @id @default(cuid())
+  seasonId      String
+  countryId     String?
+  name          String
+  slug          String          @unique
+  roundNumber   Int?
+  city          String?
+  venue         String?
+  startDate     DateTime
+  endDate       DateTime?
+  status        EventStatus     @default(SCHEDULED)
+  visibility    EventVisibility @default(PUBLIC)
+  liveStatus    LiveStatus      @default(UPCOMING)
+  latitude      Decimal?
+  longitude     Decimal?
+  officialUrl   String?
+  organizer     String?
+  heroImage     String?
+  galleryImages String[]        @default([])
+  description   String?
+  archivedAt    DateTime?
+  archivedBy    String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
 
   season           Season              @relation(fields: [seasonId], references: [id])
   country          Country?            @relation(fields: [countryId], references: [id])
@@ -92,9 +98,9 @@ model RaceStage {
   event        Event         @relation(fields: [eventId], references: [id])
   stageResults StageResult[]
 
-  @@index([eventId])
   @@unique([eventId, slug])
   @@unique([eventId, stageOrder])
+  @@index([eventId])
 }
 
 model EventTimelineItem {
@@ -117,17 +123,17 @@ model EventTimelineItem {
 }
 
 model Rider {
-  id                  String   @id @default(cuid())
+  id                  String    @id @default(cuid())
   countryId           String?
   currentMotorcycleId String?
   firstName           String
   lastName            String
-  slug                String   @unique
+  slug                String    @unique
   birthDate           DateTime?
   profileImageUrl     String?
   officialUrl         String?
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
   country           Country?            @relation(fields: [countryId], references: [id])
   currentMotorcycle Motorcycle?         @relation("CurrentRiderMotorcycle", fields: [currentMotorcycleId], references: [id])
@@ -165,12 +171,12 @@ model Manufacturer {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  country             Country?                 @relation(fields: [countryId], references: [id])
-  motorcycles         Motorcycle[]
-  results             Result[]
-  stageResults        StageResult[]
-  riderCareerSeasons  RiderCareerSeason[]
-  seasonStats         ManufacturerSeasonStat[]
+  country            Country?                 @relation(fields: [countryId], references: [id])
+  motorcycles        Motorcycle[]
+  results            Result[]
+  stageResults       StageResult[]
+  riderCareerSeasons RiderCareerSeason[]
+  seasonStats        ManufacturerSeasonStat[]
 
   @@index([countryId])
 }
@@ -193,19 +199,19 @@ model Motorcycle {
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
-  manufacturer       Manufacturer            @relation(fields: [manufacturerId], references: [id])
-  currentRiders      Rider[]                 @relation("CurrentRiderMotorcycle")
+  manufacturer       Manufacturer           @relation(fields: [manufacturerId], references: [id])
+  currentRiders      Rider[]                @relation("CurrentRiderMotorcycle")
   results            Result[]
   stageResults       StageResult[]
   riderCareerSeasons RiderCareerSeason[]
   seasonStats        MotorcycleSeasonStat[]
 
-  @@index([manufacturerId])
   @@unique([manufacturerId, model, year])
+  @@index([manufacturerId])
 }
 
 model TeamMembership {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   riderId   String
   teamId    String
   seasonId  String?
@@ -246,11 +252,11 @@ model RiderCareerSeason {
   manufacturer Manufacturer? @relation(fields: [manufacturerId], references: [id])
   motorcycle   Motorcycle?   @relation(fields: [motorcycleId], references: [id])
 
+  @@unique([riderId, seasonId, className])
   @@index([riderId])
   @@index([seasonId])
   @@index([teamId])
   @@index([motorcycleId])
-  @@unique([riderId, seasonId, className])
 }
 
 model MotorcycleSeasonStat {
@@ -273,9 +279,9 @@ model MotorcycleSeasonStat {
   motorcycle Motorcycle @relation(fields: [motorcycleId], references: [id])
   season     Season     @relation(fields: [seasonId], references: [id])
 
+  @@unique([motorcycleId, seasonId, className])
   @@index([motorcycleId])
   @@index([seasonId])
-  @@unique([motorcycleId, seasonId, className])
 }
 
 model ManufacturerSeasonStat {
@@ -299,9 +305,9 @@ model ManufacturerSeasonStat {
   manufacturer Manufacturer @relation(fields: [manufacturerId], references: [id])
   season       Season       @relation(fields: [seasonId], references: [id])
 
+  @@unique([manufacturerId, seasonId, className])
   @@index([manufacturerId])
   @@index([seasonId])
-  @@unique([manufacturerId, seasonId, className])
 }
 
 model RiderComparisonSnapshot {
@@ -327,8 +333,8 @@ model RiderComparisonSnapshot {
   chartData         Json?
   calculatedAt      DateTime @default(now())
 
-  @@index([riderAId, riderBId])
   @@unique([riderAId, riderBId, className])
+  @@index([riderAId, riderBId])
 }
 
 model StageResult {
@@ -363,10 +369,10 @@ model StageResult {
   motorcycle   Motorcycle?   @relation(fields: [motorcycleId], references: [id])
   manufacturer Manufacturer? @relation(fields: [manufacturerId], references: [id])
 
+  @@unique([stageId, riderId, className])
   @@index([stageId])
   @@index([riderId])
   @@index([motorcycleId])
-  @@unique([stageId, riderId, className])
 }
 
 model Result {
@@ -400,10 +406,10 @@ model Result {
   motorcycle   Motorcycle?   @relation(fields: [motorcycleId], references: [id])
   manufacturer Manufacturer? @relation(fields: [manufacturerId], references: [id])
 
+  @@unique([eventId, riderId, className])
   @@index([eventId])
   @@index([riderId])
   @@index([motorcycleId])
-  @@unique([eventId, riderId, className])
 }
 
 model Standing {
@@ -423,9 +429,9 @@ model Standing {
   season Season @relation(fields: [seasonId], references: [id])
   rider  Rider  @relation(fields: [riderId], references: [id])
 
+  @@unique([seasonId, riderId, className])
   @@index([seasonId])
   @@index([riderId])
-  @@unique([seasonId, riderId, className])
 }
 
 model ChampionshipRecord {
@@ -528,15 +534,15 @@ model MediaEntityLink {
 }
 
 model NewsArticle {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   title       String
-  slug        String   @unique
+  slug        String    @unique
   summary     String?
   body        String?
   sourceUrl   String?
   publishedAt DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
 
 model DataSource {
@@ -562,7 +568,7 @@ model SourceSnapshot {
   statusCode   Int?
   errorMessage String?
 
-  dataSource DataSource @relation(fields: [dataSourceId], references: [id])
+  dataSource DataSource  @relation(fields: [dataSourceId], references: [id])
   importRuns ImportRun[]
 
   @@index([dataSourceId])
@@ -651,49 +657,49 @@ model ConnectorSnapshot {
 
   reviewItems ConnectorReviewItem[]
 
+  @@unique([connectorKey, season, payloadChecksum])
   @@index([connectorKey, season, createdAt])
   @@index([sourceKey])
   @@index([payloadChecksum])
-  @@unique([connectorKey, season, payloadChecksum])
 }
 
 model ConnectorReviewItem {
-  id                  String                @id @default(cuid())
-  snapshotId          String
-  connectorKey        String
-  season              Int
-  sourceEventId       String?
-  currentEventId      String?
-  eventName           String
-  suggestedAction     ConnectorReviewAction
-  reviewStatus        ConnectorReviewStatus @default(PENDING)
-  confidence          Json
-  matchingStrategy    String?
-  ambiguityReason     String?
-  currentValues       Json?
-  proposedValues      Json?
-  changedFields       String[]              @default([])
-  recommendation      String?
-  deduplicationKey    String
-  decidedByUserId     String?
-  decidedByUserEmail  String?
-  decidedAt           DateTime?
-  decisionNote        String?
-  supersededByReviewItemId String?
-  version             Int                   @default(1)
-  applicationStatus   ConnectorReviewApplicationStatus @default(NOT_APPLIED)
-  appliedAt           DateTime?
-  appliedByUserId     String?
-  appliedByUserEmail  String?
-  applicationNote     String?
-  applicationError    String?
-  appliedEventId      String?
-  applicationAttemptCount Int                @default(0)
+  id                           String                           @id @default(cuid())
+  snapshotId                   String
+  connectorKey                 String
+  season                       Int
+  sourceEventId                String?
+  currentEventId               String?
+  eventName                    String
+  suggestedAction              ConnectorReviewAction
+  reviewStatus                 ConnectorReviewStatus            @default(PENDING)
+  confidence                   Json
+  matchingStrategy             String?
+  ambiguityReason              String?
+  currentValues                Json?
+  proposedValues               Json?
+  changedFields                String[]                         @default([])
+  recommendation               String?
+  deduplicationKey             String
+  decidedByUserId              String?
+  decidedByUserEmail           String?
+  decidedAt                    DateTime?
+  decisionNote                 String?
+  supersededByReviewItemId     String?
+  version                      Int                              @default(1)
+  applicationStatus            ConnectorReviewApplicationStatus @default(NOT_APPLIED)
+  appliedAt                    DateTime?
+  appliedByUserId              String?
+  appliedByUserEmail           String?
+  applicationNote              String?
+  applicationError             String?
+  appliedEventId               String?
+  applicationAttemptCount      Int                              @default(0)
   expectedCurrentStateChecksum String?
-  resultingEventStateChecksum String?
-  applicationVersion  Int                    @default(1)
-  createdAt           DateTime              @default(now())
-  updatedAt           DateTime              @updatedAt
+  resultingEventStateChecksum  String?
+  applicationVersion           Int                              @default(1)
+  createdAt                    DateTime                         @default(now())
+  updatedAt                    DateTime                         @updatedAt
 
   snapshot ConnectorSnapshot @relation(fields: [snapshotId], references: [id])
 
@@ -727,9 +733,9 @@ model UserFavorite {
 
   user UserProfile @relation(fields: [userId], references: [id])
 
+  @@unique([userId, entityType, entityId])
   @@index([userId])
   @@index([entityType, entityId])
-  @@unique([userId, entityType, entityId])
 }
 
 model NotificationPreference {
@@ -754,8 +760,8 @@ model SlugRedirect {
   newSlug    String
   createdAt  DateTime @default(now())
 
-  @@index([entityType, entityId])
   @@unique([entityType, oldSlug])
+  @@index([entityType, entityId])
 }
 
 enum SeasonStatus {
@@ -770,6 +776,12 @@ enum EventStatus {
   SUSPENDED
   COMPLETED
   CANCELLED
+}
+
+enum EventVisibility {
+  PUBLIC
+  DRAFT
+  PRIVATE
 }
 
 enum LiveStatus {
