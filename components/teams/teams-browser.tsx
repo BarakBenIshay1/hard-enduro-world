@@ -11,6 +11,7 @@ export type TeamCardData = {
   id: string;
   slug: string;
   name: string;
+  logoUrl: string | null;
   country: string;
   countryCode: string;
   manufacturer: string;
@@ -139,8 +140,19 @@ function TeamCard({ team }: { team: TeamCardData }) {
       <div className="relative min-h-64 bg-black">
         <div className="absolute inset-0 bg-[linear-gradient(135deg,hsl(0_0%_4%),hsl(220_10%_12%)_46%,hsl(18_82%_20%))]" />
         <div className="absolute left-5 top-5 flex h-16 w-16 items-center justify-center rounded-md border border-white/[0.16] bg-white/[0.08] text-white backdrop-blur">
-          <ShieldCheck className="h-7 w-7 text-accent" aria-hidden="true" />
-          <span className="sr-only">Team crest placeholder</span>
+          {team.logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element -- CMS logos are stored in approved media storage.
+            <img
+              src={team.logoUrl}
+              alt={`${team.name} logo`}
+              className="h-full w-full object-contain p-2"
+            />
+          ) : (
+            <>
+              <ShieldCheck className="h-7 w-7 text-accent" aria-hidden="true" />
+              <span className="sr-only">Team crest placeholder</span>
+            </>
+          )}
         </div>
         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/62 to-transparent p-5 text-white">
           <Badge className="border-white/[0.16] bg-white/10 text-white">

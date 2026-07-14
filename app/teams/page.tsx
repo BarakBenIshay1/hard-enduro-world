@@ -38,9 +38,10 @@ export default async function TeamsPage() {
       id: team.id,
       slug: team.slug,
       name: team.name,
+      logoUrl: team.logoUrl,
       country: team.country?.name ?? "International",
       countryCode: team.country?.isoCode ?? "TBC",
-      manufacturer,
+      manufacturer: team.manufacturer?.name ?? manufacturer,
       teamType: getTeamType(team.name),
       riderRoster: team.memberships.map((membership) =>
         [membership.rider.firstName, membership.rider.lastName].filter(Boolean).join(" "),
@@ -51,7 +52,9 @@ export default async function TeamsPage() {
       championships: totals.championships,
       wins: totals.wins,
       podiums: totals.podiums,
-      overview: `${team.name} is a racing structure built around rider support, manufacturer partnership, and Hard Enduro event participation.`,
+      overview:
+        team.description ??
+        `${team.name} is a racing structure built around rider support, manufacturer partnership, and Hard Enduro event participation.`,
     };
   });
 

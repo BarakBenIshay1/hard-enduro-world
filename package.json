@@ -20,6 +20,7 @@
     "test:auth": "node --import tsx scripts/auth-flow-tests.ts",
     "test:admin-events": "node --import tsx scripts/admin-events-cms-tests.ts",
     "test:admin-riders": "node --import tsx scripts/admin-riders-cms-tests.ts",
+    "test:admin-teams": "node --import tsx scripts/admin-teams-cms-tests.ts",
     "test:e2e": "playwright test",
     "prepare": "husky || true"
   },

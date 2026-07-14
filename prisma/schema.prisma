@@ -151,19 +151,32 @@ model Rider {
 }
 
 model Team {
-  id          String   @id @default(cuid())
-  countryId   String?
-  name        String
-  slug        String   @unique
-  officialUrl String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id             String          @id @default(cuid())
+  countryId      String?
+  manufacturerId String?
+  name           String
+  slug           String          @unique
+  officialUrl    String?
+  managerName    String?
+  description    String?
+  status         TeamStatus      @default(ACTIVE)
+  visibility     EventVisibility @default(PUBLIC)
+  logoUrl        String?
+  galleryImages  String[]        @default([])
+  archivedAt     DateTime?
+  archivedBy     String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
 
   country       Country?            @relation(fields: [countryId], references: [id])
+  manufacturer  Manufacturer?       @relation(fields: [manufacturerId], references: [id])
   memberships   TeamMembership[]
   careerSeasons RiderCareerSeason[]
 
   @@index([countryId])
+  @@index([manufacturerId])
+  @@index([visibility])
+  @@index([archivedAt])
 }
 
 model Manufacturer {
@@ -180,6 +193,7 @@ model Manufacturer {
   stageResults       StageResult[]
   riderCareerSeasons RiderCareerSeason[]
   seasonStats        ManufacturerSeasonStat[]
+  teams              Team[]
 
   @@index([countryId])
 }
@@ -785,6 +799,12 @@ enum EventVisibility {
   PUBLIC
   DRAFT
   PRIVATE
+}
+
+enum TeamStatus {
+  ACTIVE
+  HISTORIC
+  INACTIVE
 }
 
 enum LiveStatus {

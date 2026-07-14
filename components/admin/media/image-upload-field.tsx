@@ -14,6 +14,7 @@ type ImageUploadFieldProps = {
   defaultValue?: string | null;
   disabled?: boolean;
   entityId?: string | null;
+  entityIdFieldName?: string;
   uploadEndpoint: string;
   help?: string;
 };
@@ -26,6 +27,7 @@ export function ImageUploadField({
   defaultValue,
   disabled = false,
   entityId,
+  entityIdFieldName = "riderId",
   uploadEndpoint,
   help,
 }: ImageUploadFieldProps) {
@@ -78,7 +80,7 @@ export function ImageUploadField({
 
     const body = new FormData();
     body.set("file", file);
-    body.set("riderId", entityId);
+    body.set(entityIdFieldName, entityId);
 
     const request = new XMLHttpRequest();
     request.open("POST", uploadEndpoint);

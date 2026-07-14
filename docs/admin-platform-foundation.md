@@ -6,6 +6,7 @@ This foundation separates Admin modules into two groups:
 - Operational and System modules
 
 Events and Riders are entity-management CMS modules. Jobs, Imports, Sources, Review, Automation, Security, System, Deployment, Health, Calculations, and Recalculation are operational modules and must not be forced into ordinary CRUD.
+Teams now follow the same entity-management CMS pattern.
 
 ## Shared Components
 
@@ -112,7 +113,15 @@ Audit entries are immutable and must not expose secrets, tokens, credentials, or
 
 ### Phase 2: Teams CMS
 
-Use Team metadata only. Protected dependencies include memberships and career seasons. Migration may be required for lifecycle fields.
+- Prisma models: `Team`, `Country`, `Manufacturer`, `TeamMembership`, `RiderCareerSeason`, `SourceLink`, `DataVersion`
+- Routes: `/admin/teams`, `/admin/teams/new`, `/admin/teams/[id]`
+- Permissions: owner/admin write, reviewer read-only, owner-only permanent delete
+- Operations: list, search, filter, sort, paginate, create, edit, archive, restore, controlled delete
+- Protected dependencies: memberships, career seasons, source links
+- Media path: `teams/<team-id>/logo/<filename>`
+- Migration: additive lifecycle, status, manufacturer, description, manager, logo, and gallery fields on Team
+- Public impact: public team pages can display approved logos when present
+- Tests: `pnpm run test:admin-teams`
 
 ### Phase 3: Manufacturers CMS
 

@@ -8,6 +8,7 @@ export async function getTeamsList() {
     },
     include: {
       country: true,
+      manufacturer: true,
       memberships: {
         include: {
           rider: {
@@ -41,6 +42,7 @@ export async function getTeamDetail(slug: string) {
     where: { slug },
     include: {
       country: true,
+      manufacturer: true,
       memberships: {
         include: {
           rider: {
