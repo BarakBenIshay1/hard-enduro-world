@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
+import type { User } from "@supabase/supabase-js";
 import { rolePermissions } from "@/lib/auth/permissions";
 import {
+  isConfiguredOwnerEmail,
   mapSupabaseUserToAuthUser,
   resolveRoleFromSupabaseUser,
 } from "@/lib/auth/role-mapping";
@@ -55,19 +57,7 @@ export async function getAuthSession(): Promise<AuthSession> {
     return getUnauthenticatedSession(supabaseAuth.status);
   }
 
-  const profile = await prisma.userProfile.findFirst({
-    where: {
-      OR: [
-        { id: supabaseAuth.user.id },
-        ...(supabaseAuth.user.email ? [{ email: supabaseAuth.user.email }] : []),
-      ],
-    },
-    select: {
-      displayName: true,
-      email: true,
-      role: true,
-    },
-  });
+  const profile = await resolveUserProfileForAuthenticatedUser(supabaseAuth.user);
 
   const resolvedRole = resolveRoleFromSupabaseUser(supabaseAuth.user, profile);
   const user = mapSupabaseUserToAuthUser(supabaseAuth.user, profile, resolvedRole.role);
@@ -82,4 +72,52 @@ export async function getAuthSession(): Promise<AuthSession> {
     roleSource: resolvedRole.roleSource,
     expiresAt: null,
   };
+}
+
+async function resolveUserProfileForAuthenticatedUser(user: User) {
+  const existingProfile = await prisma.userProfile.findFirst({
+    where: {
+      OR: [{ id: user.id }, ...(user.email ? [{ email: user.email }] : [])],
+    },
+    select: {
+      displayName: true,
+      email: true,
+      role: true,
+    },
+  });
+
+  if (existingProfile || !isConfiguredOwnerEmail(user.email)) {
+    return existingProfile;
+  }
+
+  try {
+    return await prisma.userProfile.create({
+      data: {
+        id: user.id,
+        email: user.email,
+        displayName:
+          user.user_metadata?.full_name ??
+          user.user_metadata?.name ??
+          user.email ??
+          "Production Owner",
+        role: "OWNER",
+      },
+      select: {
+        displayName: true,
+        email: true,
+        role: true,
+      },
+    });
+  } catch {
+    return prisma.userProfile.findFirst({
+      where: {
+        OR: [{ id: user.id }, ...(user.email ? [{ email: user.email }] : [])],
+      },
+      select: {
+        displayName: true,
+        email: true,
+        role: true,
+      },
+    });
+  }
 }

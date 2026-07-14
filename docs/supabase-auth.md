@@ -39,7 +39,7 @@ in staging, and in production through environment variables.
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
-ADMIN_OWNER_EMAIL=
+ADMIN_OWNER_EMAIL=barakbenishay1@gmail.com
 ```
 
 `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` enable browser and
@@ -96,8 +96,11 @@ enum is mapped into the platform authorization roles:
 | ANALYST          | reviewer      |
 | USER             | viewer        |
 
-`ADMIN_OWNER_EMAIL` can promote one verified Supabase user to `owner` until full
-profile management is implemented.
+`ADMIN_OWNER_EMAIL` can bootstrap one verified Supabase user as `owner` until
+full profile management is implemented. The email does not grant access by
+itself; the user must first authenticate through Supabase Auth. If a matching
+`UserProfile` already exists, that profile remains authoritative and is not
+overwritten by the environment variable.
 
 ## Permissions
 
@@ -141,7 +144,12 @@ Before production launch:
 - Configure Google OAuth in Supabase.
 - Enable email login or magic links if desired.
 - Add production redirect URLs.
-- Set `ADMIN_OWNER_EMAIL` for the initial owner account.
-- Create `UserProfile` records for real admin users.
+- Set `ADMIN_OWNER_EMAIL=barakbenishay1@gmail.com` for the initial owner account
+  in Vercel Production, Vercel Preview, and local `.env.local` where needed.
+- Let the first successful Supabase login create the matching OWNER
+  `UserProfile`, or create `UserProfile` records manually for additional admin
+  users.
 - Keep `SUPABASE_SERVICE_ROLE_KEY` server-only.
 - Verify `/admin/*` redirects unauthenticated users.
+
+See `docs/first-production-owner.md` for the production owner bootstrap steps.

@@ -19,14 +19,25 @@ export function mapDatabaseRoleToAuthRole(role?: string | null): AuthRole {
   return databaseRoleToAuthRole[role] ?? "viewer";
 }
 
+export function isConfiguredOwnerEmail(email?: string | null) {
+  const ownerEmail = process.env.ADMIN_OWNER_EMAIL?.trim().toLowerCase();
+  const userEmail = email?.trim().toLowerCase();
+
+  return Boolean(ownerEmail && userEmail && userEmail === ownerEmail);
+}
+
 export function resolveRoleFromSupabaseUser(
   user: User,
   profile: Pick<UserProfile, "displayName" | "email" | "role"> | null,
 ): { role: AuthRole; roleSource: AuthRoleSource } {
-  const ownerEmail = process.env.ADMIN_OWNER_EMAIL?.trim().toLowerCase();
-  const userEmail = user.email?.toLowerCase();
+  if (profile) {
+    return {
+      role: mapDatabaseRoleToAuthRole(profile.role),
+      roleSource: "supabase-user-profile",
+    };
+  }
 
-  if (ownerEmail && userEmail === ownerEmail) {
+  if (isConfiguredOwnerEmail(user.email)) {
     return {
       role: "owner",
       roleSource: "admin-owner-email",
@@ -34,7 +45,7 @@ export function resolveRoleFromSupabaseUser(
   }
 
   return {
-    role: mapDatabaseRoleToAuthRole(profile?.role),
+    role: "viewer",
     roleSource: "supabase-user-profile",
   };
 }
