@@ -79,6 +79,40 @@ action stores Supabase's one-time PKCE verifier in an HTTP-only cookie, and
 session. Cookies use `SameSite=Lax` so the top-level Google redirect can return
 to the app, and `Secure` is enabled in production.
 
+## Public Header Fast Path
+
+The public header includes a discreet admin shortcut for authorized admins, but
+anonymous public traffic must stay cheap:
+
+```text
+Public request
+        |
+        v
+No validated Supabase user
+        |
+        v
+No UserProfile lookup
+        |
+        v
+No admin shortcut
+        |
+        v
+Public page renders normally
+```
+
+Only a real validated Supabase user may trigger the `UserProfile` lookup needed
+to build the admin shortcut. Temporary OAuth and PKCE cookies are not treated as
+authenticated sessions.
+
+Admin access context is request-scoped and reused within the same server render
+so multiple components do not repeat Supabase auth checks or `UserProfile`
+queries. This cache is not global and must never be used across users.
+
+If optional public-header admin context cannot be resolved because of a temporary
+database or profile lookup problem, the public page should continue rendering and
+the admin shortcut stays hidden. Admin routes still fail closed because they use
+the strict admin layout guard.
+
 ## Authorization Flow
 
 Authorization continues to use the existing project model:
@@ -137,6 +171,27 @@ configured for future trusted server operations, keep it server-only and never
 expose it as a `NEXT_PUBLIC_` variable.
 
 Environment variable changes require a new Vercel deployment.
+
+## Prisma And Vercel Connection Safety
+
+The app uses the shared Prisma singleton in `lib/prisma.ts`. Do not create
+additional `PrismaClient` instances inside components, route handlers, or Server
+Actions. Do not disconnect Prisma after each request.
+
+In Vercel production, `DATABASE_URL` should use the Supabase Transaction Pooler
+runtime connection string. Anonymous public traffic should not consume database
+connections solely to decide whether to show the admin shortcut. If connection
+pressure appears in logs, first verify that anonymous requests are not performing
+admin `UserProfile` lookups before increasing pool sizes.
+
+Optional diagnostics can be enabled with:
+
+```text
+AUTH_DIAGNOSTICS=true
+```
+
+Diagnostics are sanitized and never log cookies, tokens, OAuth codes, database
+URLs, or secrets. Keep this disabled unless actively investigating auth behavior.
 
 ## Supabase Dashboard Setup
 

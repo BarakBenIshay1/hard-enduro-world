@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import type { User } from "@supabase/supabase-js";
+import { cache } from "react";
 import { rolePermissions } from "@/lib/auth/permissions";
 import {
   isConfiguredOwnerEmail,
@@ -47,9 +48,24 @@ export function getDevelopmentFallbackSession(): AuthSession {
   };
 }
 
-export async function getAuthSession(): Promise<AuthSession> {
-  const supabaseAuth = await getSupabaseUserFromRequest();
+type SupabaseAuthResult = Awaited<ReturnType<typeof getSupabaseUserFromRequest>>;
+type UserProfileForSession = Awaited<
+  ReturnType<typeof resolveUserProfileForAuthenticatedUser>
+>;
+type UserProfileResolver = (user: User) => Promise<UserProfileForSession>;
 
+export const getAuthSession = cache(
+  async function getAuthSession(): Promise<AuthSession> {
+    const supabaseAuth = await getSupabaseUserFromRequest();
+
+    return resolveAuthSessionFromSupabaseAuth(supabaseAuth);
+  },
+);
+
+export async function resolveAuthSessionFromSupabaseAuth(
+  supabaseAuth: SupabaseAuthResult,
+  resolveProfile: UserProfileResolver = resolveUserProfileForAuthenticatedUser,
+) {
   if (supabaseAuth.status === "not-configured") {
     if (isProductionLikeEnvironment()) {
       return getUnauthenticatedSession("error");
@@ -62,13 +78,14 @@ export async function getAuthSession(): Promise<AuthSession> {
     return getUnauthenticatedSession(supabaseAuth.status);
   }
 
-  return getAuthSessionForSupabaseUser(supabaseAuth.user);
+  return getAuthSessionForSupabaseUser(supabaseAuth.user, resolveProfile);
 }
 
 export async function getAuthSessionForSupabaseUser(
   userFromSupabase: User,
+  resolveProfile: UserProfileResolver = resolveUserProfileForAuthenticatedUser,
 ): Promise<AuthSession> {
-  const profile = await resolveUserProfileForAuthenticatedUser(userFromSupabase);
+  const profile = await resolveProfile(userFromSupabase);
 
   const resolvedRole = resolveRoleFromSupabaseUser(userFromSupabase, profile);
   const user = mapSupabaseUserToAuthUser(userFromSupabase, profile, resolvedRole.role);

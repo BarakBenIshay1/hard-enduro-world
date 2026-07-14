@@ -2,9 +2,13 @@ import assert from "node:assert/strict";
 import type { User } from "@supabase/supabase-js";
 import { config as middlewareConfig } from "@/middleware";
 import { getPublicAdminShortcut } from "@/lib/admin/public-menu";
+import { resolvePublicAdminShortcut } from "@/lib/admin/public-shortcut";
+import { prisma } from "@/lib/prisma";
+import { prisma as prismaAgain } from "@/lib/prisma";
 import { rolePermissions } from "@/lib/auth/permissions";
 import type { AuthRole, AuthSession } from "@/lib/auth";
 import { resolveRoleFromSupabaseUser } from "@/lib/auth/role-mapping";
+import { resolveAuthSessionFromSupabaseAuth } from "@/lib/auth/session";
 import { buildLoginRedirect, sanitizeAdminRedirect } from "@/lib/auth/redirects";
 import {
   hasSupabaseAuthCookie,
@@ -25,8 +29,12 @@ async function main() {
     testRedirectSafety();
     testCookieDetection();
     await testLoginLogoutLoginCookieLifecycle();
+    await testAnonymousFastPathSkipsProfileLookup();
+    await testAuthenticatedUserResolvesProfileOnce();
+    await testPublicShortcutFailureFallsBackToHidden();
     testRolePrecedence();
     testPermissions();
+    testPrismaSingleton();
     testPublicAdminShortcut();
     testMiddlewareScope();
     console.log("Auth flow tests passed.");
@@ -84,6 +92,59 @@ async function testLoginLogoutLoginCookieLifecycle() {
   assert.equal(hasSupabaseAuthCookie(jar.getAll()), false);
 }
 
+async function testAnonymousFastPathSkipsProfileLookup() {
+  let profileLookups = 0;
+  const session = await resolveAuthSessionFromSupabaseAuth(
+    {
+      status: "configured",
+      user: null,
+      error: null,
+    },
+    async () => {
+      profileLookups += 1;
+      return null;
+    },
+  );
+
+  assert.equal(session.isAuthenticated, false);
+  assert.equal(profileLookups, 0);
+}
+
+async function testAuthenticatedUserResolvesProfileOnce() {
+  let profileLookups = 0;
+  const session = await resolveAuthSessionFromSupabaseAuth(
+    {
+      status: "configured",
+      user: {
+        id: "admin-user",
+        email: "admin@example.com",
+        user_metadata: {},
+      } as User,
+      error: null,
+    },
+    async () => {
+      profileLookups += 1;
+      return {
+        displayName: "Admin User",
+        email: "admin@example.com",
+        role: "ADMIN",
+      };
+    },
+  );
+
+  assert.equal(session.isAuthenticated, true);
+  assert.equal(session.role, "admin");
+  assert.equal(profileLookups, 1);
+}
+
+async function testPublicShortcutFailureFallsBackToHidden() {
+  const shortcut = await resolvePublicAdminShortcut(async () => {
+    throw new Error("simulated profile lookup failure");
+  });
+
+  assert.equal(shortcut, null);
+}
+
 function testRolePrecedence() {
   const ownerUser = {
     id: "supabase-owner",
@@ -125,6 +186,10 @@ function testPermissions() {
 
 function testMiddlewareScope() {
   assert.deepEqual(middlewareConfig.matcher, ["/admin/:path*"]);
+}
+
+function testPrismaSingleton() {
+  assert.equal(prisma, prismaAgain);
 }
 
 function testPublicAdminShortcut() {

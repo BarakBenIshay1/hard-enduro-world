@@ -60,8 +60,10 @@ new Vercel deployment.
 ## 5. Configure Production Database URL
 
 - Set `DATABASE_URL` in Vercel to the Supabase production connection string.
-- Use the pooled connection string for runtime if Supabase recommends it.
+- Use the Supabase Transaction Pooler connection string for Vercel runtime.
 - Use a direct connection string for migrations if needed.
+- Keep runtime connection limits conservative. Anonymous public traffic should not
+  perform admin `UserProfile` lookups just to render the public header.
 
 ## 6. Configure Redis / Upstash Later
 
