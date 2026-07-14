@@ -75,16 +75,7 @@ export const rolePermissions: Record<AuthRole, AuthPermission[]> = {
     "calculations:review",
     "settings:view",
   ],
-  viewer: [
-    "admin:view",
-    "sources:view",
-    "review:view",
-    "imports:view",
-    "automation:view",
-    "calculations:view",
-    "settings:view",
-    "users:view",
-  ],
+  viewer: [],
 };
 
 export function roleHasPermission(role: AuthRole, permission: AuthPermission) {

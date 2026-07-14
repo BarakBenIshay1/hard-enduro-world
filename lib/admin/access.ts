@@ -20,7 +20,7 @@ export async function getAdminAccessContext(): Promise<AdminAccessContext> {
     session,
     authStatus: session.authStatus,
     shouldRedirectUnauthenticated:
-      session.authStatus === "configured" && !session.isAuthenticated,
+      session.authStatus !== "not-configured" && !session.isAuthenticated,
   };
 }
 

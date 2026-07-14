@@ -1,11 +1,20 @@
 import Link from "next/link";
-import { ShieldCheck } from "lucide-react";
+import { LogOut, ShieldCheck } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import type { AdminAccessContext } from "@/lib/admin/access";
+import { logout } from "@/app/logout/actions";
 
 type AdminHeaderProps = {
   access: AdminAccessContext;
 };
+
+const quickLinks = [
+  { label: "Admin Dashboard", href: "/admin" },
+  { label: "Review", href: "/admin/review" },
+  { label: "Imports", href: "/admin/imports" },
+  { label: "Jobs", href: "/admin/jobs" },
+  { label: "Audit", href: "/admin/audit" },
+];
 
 export function AdminHeader({ access }: AdminHeaderProps) {
   return (
@@ -18,22 +27,46 @@ export function AdminHeader({ access }: AdminHeaderProps) {
           <h1 className="mt-1 text-xl font-black">Hard Enduro World Operations</h1>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <span className="inline-flex h-10 items-center gap-2 rounded-md border border-border bg-card px-3 text-sm font-semibold">
-            <ShieldCheck className="h-4 w-4 text-accent" aria-hidden="true" />
-            Role: {access.role}
-          </span>
-          <span className="inline-flex h-10 items-center rounded-md border border-border bg-card px-3 text-sm font-semibold capitalize">
-            Auth: {access.authStatus.replace("-", " ")}
-          </span>
+          {access.session.user ? (
+            <div className="rounded-md border border-border bg-card px-3 py-2 text-sm">
+              <div className="flex items-center gap-2 font-semibold">
+                <ShieldCheck className="h-4 w-4 text-accent" aria-hidden="true" />
+                <span>{access.session.user.name}</span>
+              </div>
+              <p className="mt-1 text-xs text-foreground/[0.56]">
+                {access.session.user.email} • {access.role}
+              </p>
+            </div>
+          ) : null}
           <Link
             href="/"
             className="inline-flex h-10 items-center justify-center rounded-md border border-border bg-card px-4 text-sm font-semibold transition hover:border-accent hover:text-accent"
           >
             Public Site
           </Link>
+          <form action={logout}>
+            <button
+              type="submit"
+              className="inline-flex h-10 items-center gap-2 rounded-md border border-border bg-card px-4 text-sm font-semibold transition hover:border-accent hover:text-accent"
+            >
+              <LogOut className="h-4 w-4" aria-hidden="true" />
+              Logout
+            </button>
+          </form>
           <ThemeToggle />
         </div>
       </div>
+      <nav className="flex gap-2 overflow-x-auto border-t border-border px-5 py-2 lg:px-8">
+        {quickLinks.map((item) => (
+          <Link
+            key={item.href}
+            href={item.href}
+            className="shrink-0 rounded-md px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-foreground/[0.58] transition hover:bg-card hover:text-accent"
+          >
+            {item.label}
+          </Link>
+        ))}
+      </nav>
     </header>
   );
 }

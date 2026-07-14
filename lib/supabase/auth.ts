@@ -1,7 +1,13 @@
 import { cookies } from "next/headers";
-import type { User } from "@supabase/supabase-js";
+import type { ReadonlyRequestCookies } from "next/dist/server/web/spec-extension/adapters/request-cookies";
+import type { Session, User } from "@supabase/supabase-js";
 import type { AuthStatus } from "@/lib/auth/types";
 import { getSupabaseAuthReadiness, getSupabaseConfig } from "@/lib/supabase/config";
+import {
+  isSupabaseAuthCookieName,
+  supabaseAccessTokenCookie,
+  supabaseRefreshTokenCookie,
+} from "@/lib/supabase/cookies";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 function parsePossibleToken(value: string) {
@@ -31,12 +37,7 @@ export async function getSupabaseAccessTokenFromCookies() {
   const cookieStore = await cookies();
   const authCookie = cookieStore
     .getAll()
-    .find(
-      (cookie) =>
-        (cookie.name.startsWith("sb-") && cookie.name.endsWith("-auth-token")) ||
-        cookie.name === "supabase-auth-token" ||
-        cookie.name === "sb-access-token",
-    );
+    .find((cookie) => isSupabaseAuthCookieName(cookie.name));
 
   if (!authCookie?.value) {
     return null;
@@ -87,6 +88,38 @@ export async function getSupabaseUserFromRequest(): Promise<{
     user: data.user ?? null,
     error: error?.message ?? null,
   };
+}
+
+export function setSupabaseSessionCookies(
+  cookieStore: Pick<ReadonlyRequestCookies, "set">,
+  session: Session,
+) {
+  const secure = process.env.NODE_ENV === "production";
+  const maxAge = Math.max(session.expires_in ?? 3600, 60);
+
+  cookieStore.set(supabaseAccessTokenCookie, session.access_token, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure,
+    path: "/",
+    maxAge,
+  });
+
+  cookieStore.set(supabaseRefreshTokenCookie, session.refresh_token, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure,
+    path: "/",
+    maxAge: 60 * 60 * 24 * 30,
+  });
+}
+
+export function clearSupabaseSessionCookies(
+  cookieStore: Pick<ReadonlyRequestCookies, "delete">,
+) {
+  cookieStore.delete(supabaseAccessTokenCookie);
+  cookieStore.delete(supabaseRefreshTokenCookie);
+  cookieStore.delete("supabase-auth-token");
 }
 
 export { getSupabaseAuthReadiness };

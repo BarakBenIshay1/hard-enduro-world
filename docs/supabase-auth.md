@@ -152,4 +152,6 @@ Before production launch:
 - Keep `SUPABASE_SERVICE_ROLE_KEY` server-only.
 - Verify `/admin/*` redirects unauthenticated users.
 
-See `docs/first-production-owner.md` for the production owner bootstrap steps.
+See `docs/first-production-owner.md` for the production owner bootstrap steps
+and `docs/admin-authentication.md` for the complete admin login, callback,
+logout, Access Denied, Vercel, and Supabase configuration guide.

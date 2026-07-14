@@ -28,19 +28,26 @@ Required deployment variables:
 - `NEXT_PUBLIC_APP_ENV`
 - `DATABASE_URL`
 - `DIRECT_DATABASE_URL` if needed for direct migration access
-
-Future service variables:
-
 - `UPSTASH_REDIS_REST_URL`
 - `UPSTASH_REDIS_REST_TOKEN`
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `ADMIN_OWNER_EMAIL=barakbenishay1@gmail.com`
+
+Optional server-only variables:
+
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `CRON_SECRET`
 - `YOUTUBE_API_KEY`
 - `YOUTUBE_CHANNEL_ID`
 
 Never commit real secrets.
+
+Admin authentication uses Supabase Auth. Configure the production Site URL as
+`https://hard-enduro-world.vercel.app`, the production callback as
+`https://hard-enduro-world.vercel.app/auth/callback`, and the local callback as
+`http://localhost:3000/auth/callback`. Environment variable changes require a
+new Vercel deployment.
 
 ## 4. Run Prisma Migrations
 
@@ -84,7 +91,7 @@ Confirm pages load, metadata is correct, and no secret values render.
 
 ## 8. Verify Admin Pages
 
-Before production launch, admin must be protected by authentication.
+Before production launch, admin must be protected by Supabase authentication.
 
 Preview-only checks:
 
@@ -99,7 +106,10 @@ Preview-only checks:
 - `/admin/recalculation`
 - `/admin/system`
 
-Confirm admin pages are no-index and do not expose secrets.
+Confirm anonymous requests redirect to `/login`, authorized administrators can
+access the pages, unauthorized authenticated users see `/access-denied`, and
+admin pages are no-index and do not expose secrets. See
+`docs/admin-authentication.md` for the full auth checklist.
 
 ## 9. Verify No Secrets Are Committed
 

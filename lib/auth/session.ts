@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import type { User } from "@supabase/supabase-js";
 import { rolePermissions } from "@/lib/auth/permissions";
 import {
@@ -50,6 +51,10 @@ export async function getAuthSession(): Promise<AuthSession> {
   const supabaseAuth = await getSupabaseUserFromRequest();
 
   if (supabaseAuth.status === "not-configured") {
+    if (isProductionLikeEnvironment()) {
+      return getUnauthenticatedSession("error");
+    }
+
     return getDevelopmentFallbackSession();
   }
 
@@ -57,10 +62,16 @@ export async function getAuthSession(): Promise<AuthSession> {
     return getUnauthenticatedSession(supabaseAuth.status);
   }
 
-  const profile = await resolveUserProfileForAuthenticatedUser(supabaseAuth.user);
+  return getAuthSessionForSupabaseUser(supabaseAuth.user);
+}
 
-  const resolvedRole = resolveRoleFromSupabaseUser(supabaseAuth.user, profile);
-  const user = mapSupabaseUserToAuthUser(supabaseAuth.user, profile, resolvedRole.role);
+export async function getAuthSessionForSupabaseUser(
+  userFromSupabase: User,
+): Promise<AuthSession> {
+  const profile = await resolveUserProfileForAuthenticatedUser(userFromSupabase);
+
+  const resolvedRole = resolveRoleFromSupabaseUser(userFromSupabase, profile);
+  const user = mapSupabaseUserToAuthUser(userFromSupabase, profile, resolvedRole.role);
 
   return {
     isAuthenticated: true,
@@ -72,6 +83,10 @@ export async function getAuthSession(): Promise<AuthSession> {
     roleSource: resolvedRole.roleSource,
     expiresAt: null,
   };
+}
+
+function isProductionLikeEnvironment() {
+  return process.env.NODE_ENV === "production" || Boolean(process.env.VERCEL);
 }
 
 async function resolveUserProfileForAuthenticatedUser(user: User) {
@@ -91,22 +106,54 @@ async function resolveUserProfileForAuthenticatedUser(user: User) {
   }
 
   try {
-    return await prisma.userProfile.create({
-      data: {
-        id: user.id,
-        email: user.email,
-        displayName:
-          user.user_metadata?.full_name ??
-          user.user_metadata?.name ??
-          user.email ??
-          "Production Owner",
-        role: "OWNER",
-      },
-      select: {
-        displayName: true,
-        email: true,
-        role: true,
-      },
+    return await prisma.$transaction(async (tx) => {
+      const existingOwner = await tx.userProfile.findFirst({
+        where: {
+          role: "OWNER",
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      if (existingOwner) {
+        return null;
+      }
+
+      const createdProfile = await tx.userProfile.create({
+        data: {
+          id: user.id,
+          email: user.email?.trim().toLowerCase(),
+          displayName:
+            user.user_metadata?.full_name ??
+            user.user_metadata?.name ??
+            user.email ??
+            "Production Owner",
+          role: "OWNER",
+        },
+        select: {
+          displayName: true,
+          email: true,
+          role: true,
+        },
+      });
+
+      await tx.dataVersion.create({
+        data: {
+          entityType: "UserProfile",
+          entityId: user.id,
+          action: "CREATE",
+          previous: Prisma.JsonNull,
+          next: {
+            email: createdProfile.email,
+            role: createdProfile.role,
+            reason: "first-owner-bootstrap",
+          },
+          createdBy: user.id,
+        },
+      });
+
+      return createdProfile;
     });
   } catch {
     return prisma.userProfile.findFirst({

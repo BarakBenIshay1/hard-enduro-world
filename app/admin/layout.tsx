@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AdminHeader } from "@/components/admin/admin-header";
 import { adminNavItems } from "@/components/admin/admin-nav";
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
-import { getAdminAccessContext } from "@/lib/admin/access";
+import { canAccessAdmin, getAdminAccessContext } from "@/lib/admin/access";
+import { buildLoginRedirect, sanitizeAdminRedirect } from "@/lib/auth/redirects";
 
 export const metadata: Metadata = {
   title: {
@@ -25,9 +27,17 @@ export default async function AdminLayout({
   children: React.ReactNode;
 }>) {
   const access = await getAdminAccessContext();
+  const headerStore = await headers();
+  const requestedPath = sanitizeAdminRedirect(
+    headerStore.get("x-admin-request-url") ?? "/admin",
+  );
 
   if (access.shouldRedirectUnauthenticated) {
-    redirect("/");
+    redirect(buildLoginRedirect(requestedPath));
+  }
+
+  if (!canAccessAdmin(access, "admin:view")) {
+    redirect(`/access-denied?next=${encodeURIComponent(requestedPath)}`);
   }
 
   return (
