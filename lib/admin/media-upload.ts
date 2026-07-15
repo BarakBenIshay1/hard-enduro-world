@@ -37,7 +37,9 @@ export function validateAdminImageUpload(input: AdminImageUploadValidationInput)
 export function isAdminMediaUploadRequest(method: string, pathname: string) {
   return (
     method.toUpperCase() === "POST" &&
-    ["/admin/riders/media", "/admin/teams/media"].includes(pathname)
+    ["/admin/riders/media", "/admin/teams/media", "/admin/manufacturers/media"].includes(
+      pathname,
+    )
   );
 }
 

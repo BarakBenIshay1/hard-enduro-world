@@ -6,7 +6,7 @@ This foundation separates Admin modules into two groups:
 - Operational and System modules
 
 Events and Riders are entity-management CMS modules. Jobs, Imports, Sources, Review, Automation, Security, System, Deployment, Health, Calculations, and Recalculation are operational modules and must not be forced into ordinary CRUD.
-Teams now follow the same entity-management CMS pattern.
+Teams and Manufacturers now follow the same entity-management CMS pattern.
 
 ## Shared Components
 
@@ -125,7 +125,15 @@ Audit entries are immutable and must not expose secrets, tokens, credentials, or
 
 ### Phase 3: Manufacturers CMS
 
-Use Manufacturer metadata and motorcycle relationships. Protected dependencies include motorcycles, results, stage results, rider career seasons, and season stats.
+- Prisma models: `Manufacturer`, `Country`, `Motorcycle`, `Result`, `StageResult`, `RiderCareerSeason`, `ManufacturerSeasonStat`, `Team`, `SourceLink`, `DataVersion`
+- Routes: `/admin/manufacturers`, `/admin/manufacturers/new`, `/admin/manufacturers/[id]`
+- Permissions: owner/admin write, reviewer read-only, owner-only permanent delete
+- Operations: list, search, filter, sort, paginate, create, edit, archive, restore, controlled delete
+- Protected dependencies: motorcycles, results, stage results, rider career seasons, manufacturer season stats, teams, source links
+- Media path: `manufacturers/<manufacturer-id>/logo/<filename>`
+- Migration: additive lifecycle, status, founded year, website, description, and logo fields on Manufacturer
+- Public impact: public manufacturer pages hide draft/private/archived records and can display approved logos
+- Tests: `pnpm run test:admin-manufacturers`
 
 ### Phase 4: Motorcycles CMS
 

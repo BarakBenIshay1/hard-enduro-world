@@ -60,9 +60,10 @@ export default async function ManufacturersPage() {
       id: manufacturer.id,
       slug: manufacturer.slug,
       name: manufacturer.name,
+      logoUrl: manufacturer.logoUrl,
       country: manufacturer.country?.name ?? "International",
       countryCode: manufacturer.country?.isoCode ?? "TBC",
-      status,
+      status: manufacturer.status === "ACTIVE" ? status : manufacturer.status,
       season: primarySeason ?? "Manufacturer archive",
       motorcycleModels: manufacturer.motorcycles.map((motorcycle) => motorcycle.model),
       riderNames,
@@ -71,7 +72,9 @@ export default async function ManufacturersPage() {
       championships: totals.championships,
       wins: totals.wins,
       podiums: totals.podiums,
-      overview: `${manufacturer.name} is a motorcycle brand represented by riders and teams across Hard Enduro events, with technical model history ready for verified expansion.`,
+      overview:
+        manufacturer.description ??
+        `${manufacturer.name} is a motorcycle brand represented by riders and teams across Hard Enduro events, with technical model history ready for verified expansion.`,
     };
   });
 

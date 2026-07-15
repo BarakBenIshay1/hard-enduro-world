@@ -62,7 +62,7 @@ export default async function ManufacturerProfilePage({
 }: ManufacturerProfilePageProps) {
   const { slug } = await params;
   const manufacturer = await getManufacturerDetail(slug);
-  const foundationYear = getFoundationYear(manufacturer.slug);
+  const foundationYear = manufacturer.foundedYear ?? getFoundationYear(manufacturer.slug);
   const careers = [...manufacturer.riderCareerSeasons].sort(
     (a, b) => b.season.year - a.season.year || b.points - a.points,
   );
@@ -108,7 +108,10 @@ export default async function ManufacturerProfilePage({
         compact
         eyebrow="Manufacturer Profile"
         title={manufacturer.name}
-        description="A production-ready manufacturer hub connecting factory teams, riders, motorcycles, event results, and future statistics."
+        description={
+          manufacturer.description ??
+          "A production-ready manufacturer hub connecting factory teams, riders, motorcycles, event results, and future statistics."
+        }
       >
         <div className="grid gap-5">
           <Breadcrumb
@@ -141,8 +144,19 @@ export default async function ManufacturerProfilePage({
           <div className="relative min-h-[440px] bg-black">
             <div className="absolute inset-0 bg-[linear-gradient(135deg,hsl(0_0%_4%),hsl(220_10%_12%)_46%,hsl(20_86%_18%))]" />
             <div className="absolute left-6 top-6 flex h-24 w-24 items-center justify-center rounded-md border border-white/[0.16] bg-white/[0.08] text-white backdrop-blur">
-              <Factory className="h-10 w-10 text-accent" aria-hidden="true" />
-              <span className="sr-only">Manufacturer logo placeholder</span>
+              {manufacturer.logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element -- CMS logos are stored in approved media storage.
+                <img
+                  src={manufacturer.logoUrl}
+                  alt={`${manufacturer.name} logo`}
+                  className="h-full w-full object-contain p-3"
+                />
+              ) : (
+                <>
+                  <Factory className="h-10 w-10 text-accent" aria-hidden="true" />
+                  <span className="sr-only">Manufacturer logo placeholder</span>
+                </>
+              )}
             </div>
             <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/64 to-transparent p-6 text-white">
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-white/[0.52]">
@@ -157,7 +171,10 @@ export default async function ManufacturerProfilePage({
           <SectionTitle
             eyebrow="History"
             title="Factory profile"
-            description={`${manufacturer.name} is represented with seeded/demo records and a page structure ready for official factory biographies, motorcycle histories, and automated championship statistics.`}
+            description={
+              manufacturer.description ??
+              `${manufacturer.name} is represented with seeded/demo records and a page structure ready for official factory biographies, motorcycle histories, and automated championship statistics.`
+            }
           />
           <div className="mt-8 grid gap-3 sm:grid-cols-2">
             <InfoCard

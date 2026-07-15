@@ -180,12 +180,20 @@ model Team {
 }
 
 model Manufacturer {
-  id        String   @id @default(cuid())
-  countryId String?
-  name      String
-  slug      String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String             @id @default(cuid())
+  countryId   String?
+  name        String
+  slug        String             @unique
+  foundedYear Int?
+  websiteUrl  String?
+  description String?
+  status      ManufacturerStatus @default(ACTIVE)
+  visibility  EventVisibility    @default(PUBLIC)
+  logoUrl     String?
+  archivedAt  DateTime?
+  archivedBy  String?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
 
   country            Country?                 @relation(fields: [countryId], references: [id])
   motorcycles        Motorcycle[]
@@ -196,6 +204,8 @@ model Manufacturer {
   teams              Team[]
 
   @@index([countryId])
+  @@index([visibility])
+  @@index([archivedAt])
 }
 
 model Motorcycle {
@@ -802,6 +812,12 @@ enum EventVisibility {
 }
 
 enum TeamStatus {
+  ACTIVE
+  HISTORIC
+  INACTIVE
+}
+
+enum ManufacturerStatus {
   ACTIVE
   HISTORIC
   INACTIVE

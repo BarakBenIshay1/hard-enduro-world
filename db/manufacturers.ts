@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 
 export async function getManufacturersList() {
   return prisma.manufacturer.findMany({
+    where: { visibility: "PUBLIC", archivedAt: null },
     orderBy: {
       name: "asc",
     },
@@ -109,7 +110,7 @@ export async function getManufacturerDetail(slug: string) {
     },
   });
 
-  if (!manufacturer) {
+  if (!manufacturer || manufacturer.visibility !== "PUBLIC" || manufacturer.archivedAt) {
     notFound();
   }
 
