@@ -12,6 +12,7 @@ export type MotorcycleCardData = {
   slug: string;
   manufacturer: string;
   model: string;
+  heroImage: string | null;
   year: string;
   engineCc: string;
   engineCcValue: number;
@@ -168,11 +169,23 @@ function MotorcycleCard({ motorcycle }: { motorcycle: MotorcycleCardData }) {
   return (
     <Card className="overflow-hidden">
       <div className="relative min-h-64 bg-black">
-        <div className="absolute inset-0 bg-[linear-gradient(135deg,hsl(0_0%_4%),hsl(220_10%_12%)_44%,hsl(22_88%_18%))]" />
-        <div className="absolute left-5 top-5 flex h-16 w-16 items-center justify-center rounded-md border border-white/[0.16] bg-white/[0.08] text-white backdrop-blur">
-          <Bike className="h-7 w-7 text-accent" aria-hidden="true" />
-          <span className="sr-only">Motorcycle image placeholder</span>
-        </div>
+        {motorcycle.heroImage ? (
+          // eslint-disable-next-line @next/next/no-img-element -- CMS media uses approved Supabase Storage URLs.
+          <img
+            src={motorcycle.heroImage}
+            alt={`${motorcycle.manufacturer} ${motorcycle.model}`}
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+        ) : (
+          <>
+            <div className="absolute inset-0 bg-[linear-gradient(135deg,hsl(0_0%_4%),hsl(220_10%_12%)_44%,hsl(22_88%_18%))]" />
+            <div className="absolute left-5 top-5 flex h-16 w-16 items-center justify-center rounded-md border border-white/[0.16] bg-white/[0.08] text-white backdrop-blur">
+              <Bike className="h-7 w-7 text-accent" aria-hidden="true" />
+              <span className="sr-only">Motorcycle image placeholder</span>
+            </div>
+          </>
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/62 to-transparent p-5 text-white">
           <Badge className="border-white/[0.16] bg-white/10 text-white">
             {motorcycle.status}

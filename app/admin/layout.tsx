@@ -51,7 +51,7 @@ export default async function AdminLayout({
         >
           {adminNavItems.map((item) => (
             <Link
-              key={item.href}
+              key={`${item.href}-${item.label}`}
               href={item.href}
               className="shrink-0 rounded-md border border-border bg-card px-3 py-2 text-xs font-semibold"
             >

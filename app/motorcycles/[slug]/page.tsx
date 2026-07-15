@@ -115,6 +115,7 @@ export default async function MotorcycleProfilePage({
     ["Rear suspension", motorcycle.suspensionRear ?? "TBC"],
     ["Horsepower", motorcycle.horsepower ? `${Number(motorcycle.horsepower)} hp` : "TBC"],
     ["Torque", motorcycle.torqueNm ? `${Number(motorcycle.torqueNm)} Nm` : "TBC"],
+    ["Transmission", motorcycle.transmission ?? "TBC"],
     [
       "Fuel capacity",
       motorcycle.fuelCapacityL ? `${Number(motorcycle.fuelCapacityL)} L` : "TBC",
@@ -155,14 +156,28 @@ export default async function MotorcycleProfilePage({
       <Container className="grid gap-10 py-12 lg:grid-cols-[0.82fr_1.18fr]">
         <Card className="overflow-hidden">
           <div className="relative min-h-[460px] bg-black">
-            <div className="absolute inset-0 bg-[linear-gradient(135deg,hsl(0_0%_4%),hsl(220_10%_12%)_46%,hsl(22_88%_18%))]" />
-            <div className="absolute left-6 top-6 flex h-24 w-24 items-center justify-center rounded-md border border-white/[0.16] bg-white/[0.08] text-white backdrop-blur">
-              <Bike className="h-10 w-10 text-accent" aria-hidden="true" />
-              <span className="sr-only">Motorcycle image placeholder</span>
-            </div>
+            {motorcycle.heroImage ? (
+              // eslint-disable-next-line @next/next/no-img-element -- CMS media uses approved Supabase Storage URLs.
+              <img
+                src={motorcycle.heroImage}
+                alt={name}
+                className="absolute inset-0 h-full w-full object-cover"
+              />
+            ) : (
+              <>
+                <div className="absolute inset-0 bg-[linear-gradient(135deg,hsl(0_0%_4%),hsl(220_10%_12%)_46%,hsl(22_88%_18%))]" />
+                <div className="absolute left-6 top-6 flex h-24 w-24 items-center justify-center rounded-md border border-white/[0.16] bg-white/[0.08] text-white backdrop-blur">
+                  <Bike className="h-10 w-10 text-accent" aria-hidden="true" />
+                  <span className="sr-only">Motorcycle image placeholder</span>
+                </div>
+              </>
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/38 to-transparent" />
             <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/64 to-transparent p-6 text-white">
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-white/[0.52]">
-                Motorcycle image placeholder
+                {motorcycle.heroImage
+                  ? "Motorcycle hero image"
+                  : "Motorcycle image placeholder"}
               </p>
               <h2 className="mt-2 text-3xl font-black">{name}</h2>
             </div>

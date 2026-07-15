@@ -42,6 +42,7 @@ export default async function MotorcyclesPage() {
       slug: motorcycle.slug,
       manufacturer: motorcycle.manufacturer.name,
       model: motorcycle.model,
+      heroImage: motorcycle.heroImage,
       year: motorcycle.year ? String(motorcycle.year) : "Year TBC",
       engineCc: motorcycle.engineCc ? `${motorcycle.engineCc} cc` : "Engine TBC",
       engineCcValue: motorcycle.engineCc ?? 0,

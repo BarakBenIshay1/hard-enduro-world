@@ -3,6 +3,10 @@ import { prisma } from "@/lib/prisma";
 
 export async function getMotorcyclesList() {
   return prisma.motorcycle.findMany({
+    where: {
+      visibility: "PUBLIC",
+      archivedAt: null,
+    },
     orderBy: [{ manufacturer: { name: "asc" } }, { model: "asc" }],
     include: {
       manufacturer: {
@@ -122,6 +126,9 @@ export async function getMotorcycleDetail(slug: string) {
   });
 
   if (!motorcycle) {
+    notFound();
+  }
+  if (motorcycle.visibility !== "PUBLIC" || motorcycle.archivedAt) {
     notFound();
   }
 

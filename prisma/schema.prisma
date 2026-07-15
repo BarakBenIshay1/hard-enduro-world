@@ -209,10 +209,10 @@ model Manufacturer {
 }
 
 model Motorcycle {
-  id              String      @id @default(cuid())
+  id              String           @id @default(cuid())
   manufacturerId  String
   model           String
-  slug            String      @unique
+  slug            String           @unique
   year            Int?
   engineCc        Int?
   strokeType      StrokeType?
@@ -222,9 +222,15 @@ model Motorcycle {
   horsepower      Decimal?
   torqueNm        Decimal?
   fuelCapacityL   Decimal?
+  transmission    String?
   description     String?
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  heroImage       String?
+  status          MotorcycleStatus @default(ACTIVE)
+  visibility      EventVisibility  @default(PUBLIC)
+  archivedAt      DateTime?
+  archivedBy      String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
 
   manufacturer       Manufacturer           @relation(fields: [manufacturerId], references: [id])
   currentRiders      Rider[]                @relation("CurrentRiderMotorcycle")
@@ -235,6 +241,8 @@ model Motorcycle {
 
   @@unique([manufacturerId, model, year])
   @@index([manufacturerId])
+  @@index([visibility])
+  @@index([archivedAt])
 }
 
 model TeamMembership {
@@ -818,6 +826,12 @@ enum TeamStatus {
 }
 
 enum ManufacturerStatus {
+  ACTIVE
+  HISTORIC
+  INACTIVE
+}
+
+enum MotorcycleStatus {
   ACTIVE
   HISTORIC
   INACTIVE

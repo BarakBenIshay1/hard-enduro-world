@@ -22,6 +22,7 @@
     "test:admin-riders": "node --import tsx scripts/admin-riders-cms-tests.ts",
     "test:admin-teams": "node --import tsx scripts/admin-teams-cms-tests.ts",
     "test:admin-manufacturers": "node --import tsx scripts/admin-manufacturers-cms-tests.ts",
+    "test:admin-motorcycles": "node --import tsx scripts/admin-motorcycles-cms-tests.ts",
     "test:header": "node --import tsx scripts/header-responsive-tests.ts",
     "test:admin-ui": "node --import tsx scripts/admin-ui-regression-tests.ts",
     "test:e2e": "playwright test",
