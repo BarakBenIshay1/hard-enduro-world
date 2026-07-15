@@ -49,6 +49,7 @@ export default async function AdminReviewDetailPage({ params, searchParams }: Pa
   const canDecide =
     canAccessAdmin(access, "review:approve") && item.reviewStatus === "PENDING";
   const sourceUrl = getOfficialSourceUrl(item);
+  const entityLabel = item.suggestedAction.includes("RESULT") ? "Result" : "Event";
 
   return (
     <div className="grid gap-8">
@@ -64,7 +65,7 @@ export default async function AdminReviewDetailPage({ params, searchParams }: Pa
             <h1 className="text-3xl font-black lg:text-5xl">{item.eventName}</h1>
             <p className="mt-3 max-w-3xl text-sm leading-6 text-foreground/[0.62]">
               Review the source proposal and decide whether this internal proposal should
-              be approved or rejected. This stage does not update public event data.
+              be approved or rejected. This stage does not update public data.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -122,6 +123,11 @@ export default async function AdminReviewDetailPage({ params, searchParams }: Pa
             value={item.currentEventId ?? "None"}
             mono
           />
+          <Meta
+            label="Matched current result ID"
+            value={item.currentResultId ?? "None"}
+            mono
+          />
           <Meta label="Snapshot timestamp" value={formatDate(item.snapshot.createdAt)} />
           <Meta label="Snapshot checksum" value={item.snapshot.payloadChecksum} mono />
           <Meta label="Parser" value={item.snapshot.parserSelected} />
@@ -166,8 +172,7 @@ export default async function AdminReviewDetailPage({ params, searchParams }: Pa
       <Card className="p-5">
         <h2 className="text-xl font-black">Decision</h2>
         <p className="mt-2 text-sm text-foreground/[0.62]">
-          Approval and rejection change only this review item. Public Event records
-          updated: 0.
+          Approval and rejection change only this review item. Public records updated: 0.
         </p>
         <div className="mt-5">
           <ReviewDecisionForm
@@ -185,11 +190,12 @@ export default async function AdminReviewDetailPage({ params, searchParams }: Pa
         <h2 className="text-xl font-black">Application</h2>
         <p className="mt-2 text-sm text-foreground/[0.62]">
           Approved does not mean applied. This action writes one controlled change to the
-          Event database after validation and stale-state checks.
+          {entityLabel} database after validation and stale-state checks.
         </p>
         <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <Meta label="Application status" value={item.applicationStatus} />
           <Meta label="Applied event ID" value={item.appliedEventId ?? "None"} mono />
+          <Meta label="Applied result ID" value={item.appliedResultId ?? "None"} mono />
           <Meta label="Applied by" value={item.appliedByUserEmail ?? "None"} />
           <Meta
             label="Applied at"

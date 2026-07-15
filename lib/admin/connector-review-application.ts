@@ -3,6 +3,7 @@ import {
   Prisma,
   type ConnectorReviewApplicationStatus,
   type EventStatus,
+  type ResultStatus,
 } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import type { AuthUser } from "@/lib/auth";
@@ -89,6 +90,50 @@ const allowedChangedFields = new Set([
   "status",
 ]);
 
+const resultReviewActions = new Set(["NEW_RESULT", "UPDATE_RESULT"]);
+
+const allowedResultProposalFields = new Set([
+  "entityType",
+  "sourceRowId",
+  "sourceId",
+  "eventId",
+  "riderId",
+  "manufacturerId",
+  "motorcycleId",
+  "className",
+  "overallPosition",
+  "status",
+  "totalTimeText",
+  "gapToLeaderText",
+  "gapToPreviousText",
+  "officialRawRow",
+  "officialSourceUrl",
+  "eventSlug",
+  "eventName",
+  "riderSlug",
+  "riderName",
+  "manufacturer",
+  "motorcycle",
+  "team",
+  "entityMatches",
+  "validationWarnings",
+  "applyEligible",
+]);
+
+const allowedResultChangedFields = new Set([
+  "result",
+  "eventId",
+  "riderId",
+  "motorcycleId",
+  "manufacturerId",
+  "className",
+  "overallPosition",
+  "status",
+  "totalTimeText",
+  "gapToLeaderText",
+  "gapToPreviousText",
+]);
+
 const countryCodeAliases: Record<string, string> = {
   FRA: "FR",
   PRT: "PT",
@@ -132,6 +177,9 @@ export function validateConnectorReviewApplicationPolicy(
   }
   if (!input.proposedValues) {
     return { ok: false, reason: "Proposal payload is missing." };
+  }
+  if (resultReviewActions.has(input.suggestedAction)) {
+    return validateResultApplicationPolicy(input);
   }
   for (const field of Object.keys(input.proposedValues)) {
     if (!allowedProposalFields.has(field)) {
@@ -196,6 +244,14 @@ async function applyConnectorReviewItemTransaction(
       }
 
       const context = buildApplicationContext(review);
+      if (resultReviewActions.has(review.suggestedAction)) {
+        return applyResultReviewItem({
+          context,
+          input,
+          tx,
+        });
+      }
+
       validateApplicationContext(context);
 
       if (review.suggestedAction === "SOURCE_REMOVED") {
@@ -319,6 +375,307 @@ async function markApplicationFailed(input: ConnectorReviewApplyInput, message: 
         createdBy: input.actor.id,
       },
     });
+  });
+}
+
+function validateResultApplicationPolicy(
+  input: ConnectorReviewApplicationPolicyInput,
+): ConnectorReviewApplicationPolicyResult {
+  if (!input.proposedValues) {
+    return { ok: false, reason: "Proposal payload is missing." };
+  }
+  for (const field of Object.keys(input.proposedValues)) {
+    if (!allowedResultProposalFields.has(field)) {
+      return { ok: false, reason: `Unsupported Result proposal field: ${field}` };
+    }
+  }
+  for (const field of input.changedFields) {
+    if (!allowedResultChangedFields.has(field)) {
+      return { ok: false, reason: `Unsupported Result changed field: ${field}` };
+    }
+  }
+  if (input.proposedValues.entityType !== "Result") {
+    return { ok: false, reason: "Proposal is not a Result proposal." };
+  }
+  if (input.proposedValues.applyEligible !== true) {
+    return { ok: false, reason: "Proposal is blocked by validation warnings." };
+  }
+  try {
+    mapResultStatus(getString(input.proposedValues, "status"));
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, reason: sanitizeError(error) };
+  }
+}
+
+async function applyResultReviewItem({
+  context,
+  input,
+  tx,
+}: {
+  context: ApplicationContext;
+  input: ConnectorReviewApplyInput;
+  tx: PrismaTransaction;
+}): Promise<ConnectorReviewApplyResult> {
+  validateResultApplicationContext(context);
+  const previousResultState =
+    context.review.suggestedAction === "UPDATE_RESULT"
+      ? await loadCurrentResultForUpdate(context, tx)
+      : null;
+  const expectedChecksum = createStableChecksum(previousResultState ?? null);
+
+  const result =
+    context.review.suggestedAction === "NEW_RESULT"
+      ? await createResultFromReview(context, tx)
+      : await updateResultFromReview(context, previousResultState, tx);
+
+  const resultingResultState = toAuditedResultState(result);
+  const resultingChecksum = createStableChecksum(resultingResultState);
+  const appliedAt = new Date();
+  const sourceUrl = getString(context.proposed, "officialSourceUrl");
+
+  await createResultSourceLink({
+    context,
+    resultId: result.id,
+    sourceUrl,
+    tx,
+  });
+
+  await tx.connectorReviewItem.update({
+    where: { id: context.review.id },
+    data: {
+      applicationStatus: "APPLIED",
+      appliedAt,
+      appliedByUserId: input.actor.id,
+      appliedByUserEmail: input.actor.email,
+      applicationNote: input.note?.trim() || null,
+      applicationError: null,
+      appliedResultId: result.id,
+      expectedCurrentStateChecksum: expectedChecksum,
+      resultingEventStateChecksum: resultingChecksum,
+      applicationVersion: { increment: 1 },
+    },
+  });
+
+  await tx.dataVersion.create({
+    data: {
+      entityType: "Result",
+      entityId: result.id,
+      action: context.review.suggestedAction === "NEW_RESULT" ? "CREATE" : "UPDATE",
+      previous: (previousResultState ?? null) as Prisma.InputJsonValue,
+      next: resultingResultState as Prisma.InputJsonValue,
+      sourceUrl,
+      createdBy: input.actor.id,
+    },
+  });
+
+  await tx.dataVersion.create({
+    data: {
+      entityType: "ConnectorReviewItem",
+      entityId: context.review.id,
+      action: "MANUAL_EDIT",
+      previous: {
+        applicationStatus: input.expectedApplicationStatus,
+        applicationVersion: input.expectedApplicationVersion,
+      },
+      next: {
+        applicationStatus: "APPLIED",
+        appliedResultId: result.id,
+        appliedByUserId: input.actor.id,
+        appliedByUserEmail: input.actor.email,
+        appliedAt: appliedAt.toISOString(),
+        changedFields: context.changedFields,
+        suggestedAction: context.review.suggestedAction,
+      },
+      sourceUrl,
+      createdBy: input.actor.id,
+    },
+  });
+
+  return {
+    ok: true,
+    reviewItemId: context.review.id,
+    eventId: result.id,
+    status: "APPLIED",
+    message: "Approved review item was applied to one Result record.",
+  };
+}
+
+function validateResultApplicationContext(context: ApplicationContext) {
+  if (!context.review.snapshot) throw new Error("Source snapshot is missing.");
+  if (!context.proposed) throw new Error("Proposal payload is missing.");
+  const policy = validateResultApplicationPolicy({
+    reviewStatus: context.review.reviewStatus,
+    applicationStatus: context.review.applicationStatus,
+    suggestedAction: context.review.suggestedAction,
+    changedFields: context.changedFields,
+    proposedValues: context.proposed,
+  });
+  if (!policy.ok) throw new Error(policy.reason);
+  if (
+    context.review.suggestedAction === "UPDATE_RESULT" &&
+    !context.review.currentResultId
+  ) {
+    throw new Error("UPDATE_RESULT requires a matched current Result id.");
+  }
+}
+
+async function createResultFromReview(
+  context: ApplicationContext,
+  client: PrismaExecutor,
+) {
+  const eventId = requiredString(context.proposed, "eventId");
+  const riderId = requiredString(context.proposed, "riderId");
+  const className = getString(context.proposed, "className");
+  const [event, rider, duplicate] = await Promise.all([
+    client.event.findUnique({ where: { id: eventId } }),
+    client.rider.findUnique({ where: { id: riderId } }),
+    client.result.findFirst({ where: { eventId, riderId, className } }),
+  ]);
+  if (!event) throw new Error("Matched Event no longer exists.");
+  if (!rider) throw new Error("Matched Rider no longer exists.");
+  if (duplicate) throw new Error("A Result already exists for this rider and event.");
+  await validateOptionalResultRelations(context, client);
+
+  return client.result.create({
+    data: buildResultCreateData(context),
+  });
+}
+
+async function updateResultFromReview(
+  context: ApplicationContext,
+  previousResultState: Record<string, unknown> | null,
+  client: PrismaExecutor,
+) {
+  if (!previousResultState) throw new Error("Current Result state is missing.");
+  const expected = context.current;
+  if (!expected) throw new Error("Approved expected current values are missing.");
+  for (const field of context.changedFields) {
+    if (field !== "result" && !valuesEqual(previousResultState[field], expected[field])) {
+      throw new Error(
+        `Stale Result state for ${field}. Regenerate review before applying.`,
+      );
+    }
+  }
+  await validateOptionalResultRelations(context, client);
+
+  return client.result.update({
+    where: { id: context.review.currentResultId! },
+    data: buildResultUpdateData(context),
+  });
+}
+
+async function loadCurrentResultForUpdate(
+  context: ApplicationContext,
+  client: PrismaExecutor,
+) {
+  const result = await client.result.findUnique({
+    where: { id: context.review.currentResultId ?? "" },
+  });
+  if (!result) throw new Error("Matched Result no longer exists.");
+  return toAuditedResultState(result);
+}
+
+function buildResultCreateData(
+  context: ApplicationContext,
+): Prisma.ResultUncheckedCreateInput {
+  return {
+    eventId: requiredString(context.proposed, "eventId"),
+    riderId: requiredString(context.proposed, "riderId"),
+    manufacturerId: getString(context.proposed, "manufacturerId"),
+    motorcycleId: getString(context.proposed, "motorcycleId"),
+    className: getString(context.proposed, "className"),
+    overallPosition: getNumber(context.proposed, "overallPosition"),
+    status: mapResultStatus(getString(context.proposed, "status")),
+    totalTimeText: getString(context.proposed, "totalTimeText"),
+    gapToLeaderText: getString(context.proposed, "gapToLeaderText"),
+    gapToPreviousText: getString(context.proposed, "gapToPreviousText"),
+    officialRawRow: context.proposed.officialRawRow as Prisma.InputJsonValue,
+  };
+}
+
+function buildResultUpdateData(context: ApplicationContext): Prisma.ResultUpdateInput {
+  const data: Prisma.ResultUpdateInput = {};
+  const uniqueFields = new Set(
+    context.changedFields.filter((field) => field !== "result"),
+  );
+  for (const field of uniqueFields) {
+    if (field === "manufacturerId") {
+      const id = getString(context.proposed, "manufacturerId");
+      data.manufacturer = id ? { connect: { id } } : { disconnect: true };
+    }
+    if (field === "motorcycleId") {
+      const id = getString(context.proposed, "motorcycleId");
+      data.motorcycle = id ? { connect: { id } } : { disconnect: true };
+    }
+    if (field === "className") data.className = getString(context.proposed, "className");
+    if (field === "overallPosition") {
+      data.overallPosition = getNumber(context.proposed, "overallPosition");
+    }
+    if (field === "status")
+      data.status = mapResultStatus(getString(context.proposed, "status"));
+    if (field === "totalTimeText")
+      data.totalTimeText = getString(context.proposed, "totalTimeText");
+    if (field === "gapToLeaderText") {
+      data.gapToLeaderText = getString(context.proposed, "gapToLeaderText");
+    }
+    if (field === "gapToPreviousText") {
+      data.gapToPreviousText = getString(context.proposed, "gapToPreviousText");
+    }
+  }
+  if (Object.keys(data).length === 0) {
+    throw new Error("No supported Result fields were approved for application.");
+  }
+  return data;
+}
+
+async function validateOptionalResultRelations(
+  context: ApplicationContext,
+  client: PrismaExecutor,
+) {
+  const manufacturerId = getString(context.proposed, "manufacturerId");
+  const motorcycleId = getString(context.proposed, "motorcycleId");
+  const [manufacturer, motorcycle] = await Promise.all([
+    manufacturerId
+      ? client.manufacturer.findUnique({ where: { id: manufacturerId } })
+      : Promise.resolve(null),
+    motorcycleId
+      ? client.motorcycle.findUnique({ where: { id: motorcycleId } })
+      : Promise.resolve(null),
+  ]);
+  if (manufacturerId && !manufacturer)
+    throw new Error("Matched Manufacturer no longer exists.");
+  if (motorcycleId && !motorcycle)
+    throw new Error("Matched Motorcycle no longer exists.");
+}
+
+async function createResultSourceLink({
+  context,
+  resultId,
+  sourceUrl,
+  tx,
+}: {
+  context: ApplicationContext;
+  resultId: string;
+  sourceUrl: string | null;
+  tx: PrismaTransaction;
+}) {
+  const diagnostics = toNullableRecord(context.review.snapshot.diagnostics);
+  const sourceSnapshotId = diagnostics
+    ? getString(diagnostics, "sourceSnapshotId")
+    : null;
+  const snapshot = sourceSnapshotId
+    ? await tx.sourceSnapshot.findUnique({ where: { id: sourceSnapshotId } })
+    : null;
+  if (!snapshot) return;
+  await tx.sourceLink.create({
+    data: {
+      dataSourceId: snapshot.dataSourceId,
+      url: sourceUrl ?? snapshot.url,
+      entityType: "Result",
+      entityId: resultId,
+      note: `Applied from review item ${context.review.id}`,
+    },
   });
 }
 
@@ -573,6 +930,19 @@ function mapEventStatus(status: string | null): EventStatus {
   throw new Error(`Unsupported event status: ${status ?? "missing"}`);
 }
 
+function mapResultStatus(status: string | null): ResultStatus {
+  if (
+    status === "FINISHED" ||
+    status === "DNF" ||
+    status === "DNS" ||
+    status === "DSQ" ||
+    status === "UNKNOWN"
+  ) {
+    return status;
+  }
+  throw new Error(`Unsupported result status: ${status ?? "missing"}`);
+}
+
 function toAuditedEventState(event: {
   id: string;
   name: string;
@@ -604,6 +974,34 @@ function toAuditedEventState(event: {
   };
 }
 
+function toAuditedResultState(result: {
+  id: string;
+  eventId: string;
+  riderId: string;
+  motorcycleId: string | null;
+  manufacturerId: string | null;
+  className: string | null;
+  overallPosition: number | null;
+  status: ResultStatus;
+  totalTimeText: string | null;
+  gapToLeaderText: string | null;
+  gapToPreviousText: string | null;
+}) {
+  return {
+    id: result.id,
+    eventId: result.eventId,
+    riderId: result.riderId,
+    motorcycleId: result.motorcycleId,
+    manufacturerId: result.manufacturerId,
+    className: result.className,
+    overallPosition: result.overallPosition,
+    status: result.status,
+    totalTimeText: result.totalTimeText,
+    gapToLeaderText: result.gapToLeaderText,
+    gapToPreviousText: result.gapToPreviousText,
+  };
+}
+
 function toRecord(value: unknown) {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new Error("Expected object payload.");
@@ -626,6 +1024,11 @@ function requiredNumber(value: Record<string, unknown>, key: string) {
   const field = value[key];
   if (typeof field !== "number") throw new Error(`Missing required field: ${key}`);
   return field;
+}
+
+function getNumber(value: Record<string, unknown>, key: string) {
+  const field = value[key];
+  return typeof field === "number" && Number.isFinite(field) ? field : null;
 }
 
 function getString(value: Record<string, unknown>, key: string) {

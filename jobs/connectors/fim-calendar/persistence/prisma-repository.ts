@@ -1,4 +1,4 @@
-import { Prisma, type PrismaClient } from "@prisma/client";
+import { Prisma, type ConnectorReviewAction, type PrismaClient } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import type {
   FimCalendarPersistenceRepository,
@@ -194,7 +194,7 @@ function mapReviewItem(item: {
   sourceEventId: string | null;
   currentEventId: string | null;
   eventName: string;
-  suggestedAction: "NEW_EVENT" | "UPDATE_EVENT" | "SOURCE_REMOVED" | "MANUAL_REVIEW";
+  suggestedAction: ConnectorReviewAction;
   reviewStatus: "PENDING" | "APPROVED" | "REJECTED" | "SUPERSEDED";
   confidence: Prisma.JsonValue;
   matchingStrategy: string | null;
@@ -215,7 +215,7 @@ function mapReviewItem(item: {
     sourceEventId: item.sourceEventId,
     currentEventId: item.currentEventId,
     eventName: item.eventName,
-    suggestedAction: item.suggestedAction,
+    suggestedAction: toPersistableCalendarAction(item.suggestedAction),
     reviewStatus: item.reviewStatus,
     confidence: item.confidence,
     matchingStrategy: item.matchingStrategy,
@@ -228,4 +228,18 @@ function mapReviewItem(item: {
     createdAt: item.createdAt,
     updatedAt: item.updatedAt,
   };
+}
+
+function toPersistableCalendarAction(
+  action: ConnectorReviewAction,
+): PersistableReviewItem["suggestedAction"] {
+  if (
+    action === "NEW_EVENT" ||
+    action === "UPDATE_EVENT" ||
+    action === "SOURCE_REMOVED" ||
+    action === "MANUAL_REVIEW"
+  ) {
+    return action;
+  }
+  throw new Error(`Unexpected non-calendar review action: ${action}`);
 }

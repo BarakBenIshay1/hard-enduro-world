@@ -705,6 +705,7 @@ model ConnectorReviewItem {
   season                       Int
   sourceEventId                String?
   currentEventId               String?
+  currentResultId              String?
   eventName                    String
   suggestedAction              ConnectorReviewAction
   reviewStatus                 ConnectorReviewStatus            @default(PENDING)
@@ -729,6 +730,7 @@ model ConnectorReviewItem {
   applicationNote              String?
   applicationError             String?
   appliedEventId               String?
+  appliedResultId              String?
   applicationAttemptCount      Int                              @default(0)
   expectedCurrentStateChecksum String?
   resultingEventStateChecksum  String?
@@ -744,6 +746,8 @@ model ConnectorReviewItem {
   @@index([applicationStatus])
   @@index([deduplicationKey])
   @@index([supersededByReviewItemId])
+  @@index([currentResultId])
+  @@index([appliedResultId])
 }
 
 model UserProfile {
@@ -942,6 +946,12 @@ enum ConnectorReviewAction {
   UPDATE_EVENT
   SOURCE_REMOVED
   MANUAL_REVIEW
+  NEW_RESULT
+  UPDATE_RESULT
+  RESULT_CONFLICT
+  RESULT_UNRESOLVED
+  RESULT_INVALID
+  RESULT_MISSING_SOURCE
 }
 
 enum ConnectorReviewStatus {

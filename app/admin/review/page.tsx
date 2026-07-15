@@ -54,6 +54,12 @@ const reviewActions: ConnectorReviewAction[] = [
   "UPDATE_EVENT",
   "SOURCE_REMOVED",
   "MANUAL_REVIEW",
+  "NEW_RESULT",
+  "UPDATE_RESULT",
+  "RESULT_CONFLICT",
+  "RESULT_UNRESOLVED",
+  "RESULT_INVALID",
+  "RESULT_MISSING_SOURCE",
 ];
 
 export default async function AdminReviewPage({ searchParams }: PageProps) {
@@ -92,7 +98,7 @@ export default async function AdminReviewPage({ searchParams }: PageProps) {
       <Card className={adminTableCardClass}>
         <div className="flex flex-col gap-3 border-b border-border p-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <h2 className="text-xl font-black">FIM Calendar proposals</h2>
+            <h2 className="text-xl font-black">Connector proposals</h2>
             <p className="mt-2 text-sm text-foreground/[0.62]">
               Pending items are shown first, then the newest snapshots.
             </p>

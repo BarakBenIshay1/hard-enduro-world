@@ -162,6 +162,7 @@ export function getOfficialSourceUrl(item: {
 }) {
   return (
     getJsonString(item.proposedValues, "officialUrl") ??
+    getJsonString(item.proposedValues, "officialSourceUrl") ??
     getJsonString(item.currentValues, "officialUrl")
   );
 }

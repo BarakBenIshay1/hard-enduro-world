@@ -33,7 +33,13 @@ export function ReviewApplyForm({
   }
 
   const unsupported =
-    suggestedAction === "MANUAL_REVIEW" || suggestedAction === "SOURCE_REMOVED";
+    suggestedAction === "MANUAL_REVIEW" ||
+    suggestedAction === "SOURCE_REMOVED" ||
+    suggestedAction === "RESULT_CONFLICT" ||
+    suggestedAction === "RESULT_UNRESOLVED" ||
+    suggestedAction === "RESULT_INVALID" ||
+    suggestedAction === "RESULT_MISSING_SOURCE";
+  const target = suggestedAction.includes("RESULT") ? "Result" : "Event";
 
   return (
     <form
@@ -51,7 +57,7 @@ export function ReviewApplyForm({
         <div>
           <h3 className="font-black">Apply approved change</h3>
           <p className="mt-1 text-xs leading-5 text-foreground/[0.62]">
-            This is separate from approval. It will modify exactly one Event record if
+            This is separate from approval. It will modify exactly one {target} record if
             validation passes.
           </p>
         </div>
@@ -86,8 +92,8 @@ export function ReviewApplyForm({
           required
           className="mt-1 accent-orange-500"
         />
-        I understand this will write to the Event database but will not run cron, publish
-        automatically, import results, or refresh the website automatically.
+        I understand this will write one approved {target} change but will not run cron,
+        publish automatically, calculate standings, or refresh the website automatically.
       </label>
 
       <ApplySubmitButton disabled={unsupported} />
