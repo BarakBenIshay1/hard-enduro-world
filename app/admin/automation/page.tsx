@@ -8,6 +8,15 @@ import {
   PlayCircle,
 } from "lucide-react";
 import { AdminStatCard } from "@/components/admin/admin-stat-card";
+import {
+  adminCompactTableClass,
+  adminTableCardClass,
+  adminTableCellClass,
+  adminTableHeadClass,
+  adminTableHeaderCellClass,
+  adminTablePrimaryCellClass,
+  adminTableScrollClass,
+} from "@/components/admin/admin-table-styles";
 import { ImportStatusBadge } from "@/components/admin/import-status-badge";
 import { Card } from "@/components/ui/card";
 import { getAutomationDashboardData } from "@/db/automation";
@@ -29,7 +38,7 @@ export default async function AdminAutomationPage() {
   const { overview, importRuns } = await getAutomationDashboardData();
 
   return (
-    <div className="grid gap-8">
+    <div className="grid min-w-0 gap-8">
       <section>
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">
           Automation
@@ -92,7 +101,7 @@ export default async function AdminAutomationPage() {
         />
       </section>
 
-      <Card className="overflow-hidden">
+      <Card className={adminTableCardClass}>
         <div className="border-b border-border p-5">
           <h2 className="text-xl font-black">Recent automation runs</h2>
           <p className="mt-2 text-sm text-foreground/[0.62]">
@@ -100,9 +109,9 @@ export default async function AdminAutomationPage() {
             connected.
           </p>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[900px] text-left text-sm">
-            <thead className="bg-black text-xs uppercase tracking-[0.18em] text-white/[0.64]">
+        <div className={adminTableScrollClass}>
+          <table className={adminCompactTableClass}>
+            <thead className={adminTableHeadClass}>
               <tr>
                 {[
                   "Job",
@@ -113,7 +122,7 @@ export default async function AdminAutomationPage() {
                   "Created",
                   "Updated",
                 ].map((heading) => (
-                  <th key={heading} className="px-5 py-4 font-semibold">
+                  <th key={heading} className={adminTableHeaderCellClass}>
                     {heading}
                   </th>
                 ))}
@@ -122,17 +131,19 @@ export default async function AdminAutomationPage() {
             <tbody>
               {importRuns.map((run) => (
                 <tr key={run.id} className="border-t border-border">
-                  <td className="px-5 py-4 font-semibold">{run.jobName}</td>
-                  <td className="px-5 py-4">
+                  <td className={adminTablePrimaryCellClass}>
+                    <span className="font-semibold">{run.jobName}</span>
+                  </td>
+                  <td className={adminTableCellClass}>
                     {run.sourceSnapshot?.dataSource.name ?? "Internal"}
                   </td>
-                  <td className="px-5 py-4">
+                  <td className={adminTableCellClass}>
                     <ImportStatusBadge status={run.status} />
                   </td>
-                  <td className="px-5 py-4">{formatDate(run.startedAt)}</td>
-                  <td className="px-5 py-4">{run.recordsFound}</td>
-                  <td className="px-5 py-4">{run.recordsCreated}</td>
-                  <td className="px-5 py-4">{run.recordsUpdated}</td>
+                  <td className={adminTableCellClass}>{formatDate(run.startedAt)}</td>
+                  <td className={adminTableCellClass}>{run.recordsFound}</td>
+                  <td className={adminTableCellClass}>{run.recordsCreated}</td>
+                  <td className={adminTableCellClass}>{run.recordsUpdated}</td>
                 </tr>
               ))}
             </tbody>

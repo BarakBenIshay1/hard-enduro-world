@@ -1,6 +1,16 @@
 import type { Metadata } from "next";
 import { ChangeDiffCard } from "@/components/admin/change-diff-card";
 import { ImportStatusBadge } from "@/components/admin/import-status-badge";
+import {
+  adminTableCardClass,
+  adminTableCellClass,
+  adminTableHeadClass,
+  adminTableHeaderCellClass,
+  adminTableMutedCellClass,
+  adminTablePrimaryCellClass,
+  adminTableScrollClass,
+  adminWideTableClass,
+} from "@/components/admin/admin-table-styles";
 import { Card } from "@/components/ui/card";
 import { getAuditLogData } from "@/db/audit";
 import { formatDate, formatOptional } from "@/lib/format";
@@ -22,7 +32,7 @@ export default async function AdminAuditPage() {
   const latest = versions[0];
 
   return (
-    <div className="grid gap-8">
+    <div className="grid min-w-0 gap-8">
       <section>
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">
           Audit Log
@@ -34,10 +44,10 @@ export default async function AdminAuditPage() {
         </p>
       </section>
 
-      <Card className="overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[1280px] text-left text-sm">
-            <thead className="bg-black text-xs uppercase tracking-[0.18em] text-white/[0.64]">
+      <Card className={adminTableCardClass}>
+        <div className={adminTableScrollClass}>
+          <table className={adminWideTableClass}>
+            <thead className={adminTableHeadClass}>
               <tr>
                 {[
                   "Entity type",
@@ -50,7 +60,7 @@ export default async function AdminAuditPage() {
                   "Changed at",
                   "Status",
                 ].map((heading) => (
-                  <th key={heading} className="px-5 py-4 font-semibold">
+                  <th key={heading} className={adminTableHeaderCellClass}>
                     {heading}
                   </th>
                 ))}
@@ -59,25 +69,29 @@ export default async function AdminAuditPage() {
             <tbody>
               {versions.map((version) => (
                 <tr key={version.id} className="border-t border-border">
-                  <td className="px-5 py-4 font-semibold">{version.entityType}</td>
-                  <td className="px-5 py-4 font-mono text-xs">{version.entityId}</td>
-                  <td className="px-5 py-4">{version.action}</td>
-                  <td className="px-5 py-4">
+                  <td className={adminTablePrimaryCellClass}>
+                    <span className="font-semibold">{version.entityType}</span>
+                  </td>
+                  <td className={`${adminTableCellClass} font-mono text-xs`}>
+                    {version.entityId}
+                  </td>
+                  <td className={adminTableCellClass}>{version.action}</td>
+                  <td className={adminTableCellClass}>
                     <pre className="max-h-24 overflow-auto rounded-md bg-surface-muted p-3 text-xs">
                       {JSON.stringify(version.previous ?? {}, null, 2)}
                     </pre>
                   </td>
-                  <td className="px-5 py-4">
+                  <td className={adminTableCellClass}>
                     <pre className="max-h-24 overflow-auto rounded-md bg-surface-muted p-3 text-xs">
                       {JSON.stringify(version.next ?? {}, null, 2)}
                     </pre>
                   </td>
-                  <td className="px-5 py-4 text-foreground/[0.62]">
+                  <td className={adminTableMutedCellClass}>
                     {formatOptional(version.sourceUrl)}
                   </td>
-                  <td className="px-5 py-4">{version.createdBy ?? "system"}</td>
-                  <td className="px-5 py-4">{formatDate(version.createdAt)}</td>
-                  <td className="px-5 py-4">
+                  <td className={adminTableCellClass}>{version.createdBy ?? "system"}</td>
+                  <td className={adminTableCellClass}>{formatDate(version.createdAt)}</td>
+                  <td className={adminTableCellClass}>
                     <ImportStatusBadge
                       status={version.importRun?.status ?? "COMPLETED"}
                     />

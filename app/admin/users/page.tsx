@@ -2,6 +2,16 @@ import type { Metadata } from "next";
 import { KeyRound, ShieldCheck, UserCog, Users } from "lucide-react";
 import { AdminStatCard } from "@/components/admin/admin-stat-card";
 import { AdminStatusBadge } from "@/components/admin/admin-status-badge";
+import {
+  adminCompactTableClass,
+  adminTableCardClass,
+  adminTableCellClass,
+  adminTableHeadClass,
+  adminTableHeaderCellClass,
+  adminTableMutedCellClass,
+  adminTablePrimaryCellClass,
+  adminTableScrollClass,
+} from "@/components/admin/admin-table-styles";
 import { Card } from "@/components/ui/card";
 import {
   authRoles,
@@ -31,7 +41,7 @@ export default async function AdminUsersPage() {
   const readiness = getSupabaseAuthReadiness();
 
   return (
-    <div className="grid gap-8">
+    <div className="grid min-w-0 gap-8">
       <section className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">
@@ -111,7 +121,7 @@ export default async function AdminUsersPage() {
         </Card>
       </section>
 
-      <Card className="overflow-hidden">
+      <Card className={adminTableCardClass}>
         <div className="border-b border-border p-5">
           <h2 className="text-xl font-black">Supabase role mapping</h2>
           <p className="mt-2 text-sm leading-6 text-foreground/[0.62]">
@@ -119,12 +129,12 @@ export default async function AdminUsersPage() {
             UserProfile.role for authorization.
           </p>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[720px] text-left text-sm">
-            <thead className="bg-black text-xs uppercase tracking-[0.18em] text-white/[0.64]">
+        <div className={adminTableScrollClass}>
+          <table className={adminCompactTableClass}>
+            <thead className={adminTableHeadClass}>
               <tr>
                 {["Database Role", "Platform Role", "Purpose"].map((heading) => (
-                  <th key={heading} className="px-5 py-4 font-semibold">
+                  <th key={heading} className={adminTableHeaderCellClass}>
                     {heading}
                   </th>
                 ))}
@@ -133,9 +143,11 @@ export default async function AdminUsersPage() {
             <tbody>
               {Object.entries(databaseRoleToAuthRole).map(([databaseRole, authRole]) => (
                 <tr key={databaseRole} className="border-t border-border">
-                  <td className="px-5 py-4 font-semibold">{databaseRole}</td>
-                  <td className="px-5 py-4">{authRole}</td>
-                  <td className="px-5 py-4 text-foreground/[0.62]">
+                  <td className={adminTablePrimaryCellClass}>
+                    <span className="font-semibold">{databaseRole}</span>
+                  </td>
+                  <td className={adminTableCellClass}>{authRole}</td>
+                  <td className={adminTableMutedCellClass}>
                     {roleDescriptions[authRole]}
                   </td>
                 </tr>
@@ -145,20 +157,20 @@ export default async function AdminUsersPage() {
         </div>
       </Card>
 
-      <Card className="overflow-hidden">
+      <Card className={adminTableCardClass}>
         <div className="border-b border-border p-5">
           <h2 className="text-xl font-black">User list placeholder</h2>
           <p className="mt-2 text-sm leading-6 text-foreground/[0.62]">
             Future user management will read from Supabase Auth and platform profiles.
           </p>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[860px] text-left text-sm">
-            <thead className="bg-black text-xs uppercase tracking-[0.18em] text-white/[0.64]">
+        <div className={adminTableScrollClass}>
+          <table className={adminCompactTableClass}>
+            <thead className={adminTableHeadClass}>
               <tr>
                 {["Name", "Email", "Role", "Provider", "Last Active", "Activity"].map(
                   (heading) => (
-                    <th key={heading} className="px-5 py-4 font-semibold">
+                    <th key={heading} className={adminTableHeaderCellClass}>
                       {heading}
                     </th>
                   ),
@@ -168,16 +180,16 @@ export default async function AdminUsersPage() {
             <tbody>
               {mockAdminUsers.map((user) => (
                 <tr key={user.id} className="border-t border-border">
-                  <td className="px-5 py-4 font-semibold">{user.name}</td>
-                  <td className="px-5 py-4">{user.email}</td>
-                  <td className="px-5 py-4">{user.role}</td>
-                  <td className="px-5 py-4">{user.provider}</td>
-                  <td className="px-5 py-4">
+                  <td className={adminTablePrimaryCellClass}>
+                    <span className="font-semibold">{user.name}</span>
+                  </td>
+                  <td className={adminTableMutedCellClass}>{user.email}</td>
+                  <td className={adminTableCellClass}>{user.role}</td>
+                  <td className={adminTableCellClass}>{user.provider}</td>
+                  <td className={adminTableCellClass}>
                     {user.lastActiveAt ? formatDate(user.lastActiveAt) : "Pending"}
                   </td>
-                  <td className="px-5 py-4 text-foreground/[0.62]">
-                    Activity log placeholder
-                  </td>
+                  <td className={adminTableMutedCellClass}>Activity log placeholder</td>
                 </tr>
               ))}
             </tbody>

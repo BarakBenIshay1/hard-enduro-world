@@ -353,22 +353,34 @@ export default async function AdminEventDetailPage({ params, searchParams }: Pag
             Immutable event changes recorded through `DataVersion`.
           </p>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[780px] text-left text-sm">
-            <thead className="bg-black text-xs uppercase tracking-[0.18em] text-white/[0.64]">
+        <div className="max-w-full overflow-x-auto">
+          <table className="w-full table-fixed text-left text-[13px] sm:text-sm">
+            <thead className="bg-black text-[10px] uppercase tracking-[0.12em] text-white/[0.64] sm:text-xs">
               <tr>
-                <th className="px-5 py-4">Action</th>
-                <th className="px-5 py-4">User</th>
-                <th className="px-5 py-4">Timestamp</th>
-                <th className="px-5 py-4">Changed Fields</th>
-                <th className="px-5 py-4">Old / New</th>
+                <th className="min-w-0 whitespace-normal break-words px-2 py-3 align-top leading-6 sm:px-3">
+                  Action
+                </th>
+                <th className="min-w-0 whitespace-normal break-words px-2 py-3 align-top leading-6 sm:px-3">
+                  User
+                </th>
+                <th className="min-w-0 whitespace-normal break-words px-2 py-3 align-top leading-6 sm:px-3">
+                  Timestamp
+                </th>
+                <th className="min-w-0 whitespace-normal break-words px-2 py-3 align-top leading-6 sm:px-3">
+                  Changed Fields
+                </th>
+                <th className="min-w-0 whitespace-normal break-words px-2 py-3 align-top leading-6 sm:px-3">
+                  Old / New
+                </th>
               </tr>
             </thead>
             <tbody>
               {audit.map((item) => (
                 <tr key={item.id} className="border-t border-border">
-                  <td className="px-5 py-4">{item.action}</td>
-                  <td className="px-5 py-4">
+                  <td className="min-w-0 whitespace-normal break-words px-2 py-3 align-top leading-6 sm:px-3">
+                    {item.action}
+                  </td>
+                  <td className="min-w-0 whitespace-normal break-words px-2 py-3 align-top leading-6 sm:px-3">
                     <div className="font-semibold">
                       {item.actor?.displayName ?? item.actor?.email ?? "System"}
                     </div>
@@ -376,11 +388,13 @@ export default async function AdminEventDetailPage({ params, searchParams }: Pag
                       {item.actor?.email ?? item.createdBy ?? "System"}
                     </div>
                   </td>
-                  <td className="px-5 py-4">{formatAdminTimestamp(item.createdAt)}</td>
-                  <td className="px-5 py-4 text-foreground/[0.62]">
+                  <td className="min-w-0 whitespace-normal break-words px-2 py-3 align-top leading-6 sm:px-3">
+                    {formatAdminTimestamp(item.createdAt)}
+                  </td>
+                  <td className="min-w-0 whitespace-normal break-words px-2 py-3 align-top leading-6 text-foreground/[0.66] sm:px-3">
                     {formatChangedFields(item.next)}
                   </td>
-                  <td className="px-5 py-4 text-foreground/[0.62]">
+                  <td className="min-w-0 whitespace-normal break-words px-2 py-3 align-top leading-6 text-foreground/[0.66] sm:px-3">
                     <AuditDiffs value={item.next} />
                   </td>
                 </tr>

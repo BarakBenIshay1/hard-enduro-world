@@ -143,9 +143,9 @@ export default async function AdminCalculationsPage() {
             calculations. This table is preview-only and does not publish standings.
           </p>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[980px] text-left text-sm">
-            <thead className="bg-black text-xs uppercase tracking-[0.18em] text-white/[0.64]">
+        <div className="max-w-full overflow-x-auto">
+          <table className="w-full table-fixed text-left text-[13px] sm:text-sm">
+            <thead className="bg-black text-[10px] uppercase tracking-[0.12em] text-white/[0.64] sm:text-xs">
               <tr>
                 {[
                   "Rider",
@@ -159,7 +159,10 @@ export default async function AdminCalculationsPage() {
                   "Starts",
                   "DNFs",
                 ].map((heading) => (
-                  <th key={heading} className="px-5 py-4 font-semibold">
+                  <th
+                    key={heading}
+                    className="min-w-0 px-2 py-3 align-bottom leading-5 font-semibold sm:px-3"
+                  >
                     {heading}
                   </th>
                 ))}
@@ -168,19 +171,37 @@ export default async function AdminCalculationsPage() {
             <tbody>
               {topPreviewRows.map((row) => (
                 <tr key={row.riderId} className="border-t border-border">
-                  <td className="px-5 py-4 font-semibold">{row.riderName}</td>
-                  <td className="px-5 py-4">{row.currentPosition ?? "-"}</td>
-                  <td className="px-5 py-4">{row.proposedPosition}</td>
-                  <td className="px-5 py-4">{row.currentPoints}</td>
-                  <td className="px-5 py-4">{row.proposedPoints}</td>
-                  <td className="px-5 py-4 text-accent">
+                  <td className="min-w-0 px-2 py-3 align-bottom leading-5 font-semibold sm:px-3">
+                    {row.riderName}
+                  </td>
+                  <td className="min-w-0 whitespace-normal break-words px-2 py-3 align-top leading-6 sm:px-3">
+                    {row.currentPosition ?? "-"}
+                  </td>
+                  <td className="min-w-0 whitespace-normal break-words px-2 py-3 align-top leading-6 sm:px-3">
+                    {row.proposedPosition}
+                  </td>
+                  <td className="min-w-0 whitespace-normal break-words px-2 py-3 align-top leading-6 sm:px-3">
+                    {row.currentPoints}
+                  </td>
+                  <td className="min-w-0 whitespace-normal break-words px-2 py-3 align-top leading-6 sm:px-3">
+                    {row.proposedPoints}
+                  </td>
+                  <td className="min-w-0 whitespace-normal break-words px-2 py-3 align-top leading-6 text-accent sm:px-3">
                     {row.pointsDifference > 0 ? "+" : ""}
                     {row.pointsDifference}
                   </td>
-                  <td className="px-5 py-4">{row.wins}</td>
-                  <td className="px-5 py-4">{row.podiums}</td>
-                  <td className="px-5 py-4">{row.starts}</td>
-                  <td className="px-5 py-4">{row.dnfs}</td>
+                  <td className="min-w-0 whitespace-normal break-words px-2 py-3 align-top leading-6 sm:px-3">
+                    {row.wins}
+                  </td>
+                  <td className="min-w-0 whitespace-normal break-words px-2 py-3 align-top leading-6 sm:px-3">
+                    {row.podiums}
+                  </td>
+                  <td className="min-w-0 whitespace-normal break-words px-2 py-3 align-top leading-6 sm:px-3">
+                    {row.starts}
+                  </td>
+                  <td className="min-w-0 whitespace-normal break-words px-2 py-3 align-top leading-6 sm:px-3">
+                    {row.dnfs}
+                  </td>
                 </tr>
               ))}
             </tbody>

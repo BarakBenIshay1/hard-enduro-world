@@ -5,6 +5,17 @@ import { Eye } from "lucide-react";
 import type { ConnectorReviewAction, ConnectorReviewStatus } from "@prisma/client";
 import { Card } from "@/components/ui/card";
 import {
+  adminTableActionCellClass,
+  adminTableCardClass,
+  adminTableCellClass,
+  adminTableHeadClass,
+  adminTableHeaderCellClass,
+  adminTableMutedCellClass,
+  adminTablePrimaryCellClass,
+  adminTableScrollClass,
+  adminWideTableClass,
+} from "@/components/admin/admin-table-styles";
+import {
   ActionBadge,
   ConfidenceValue,
   ReviewStatusBadge,
@@ -57,7 +68,7 @@ export default async function AdminReviewPage({ searchParams }: PageProps) {
   ).length;
 
   return (
-    <div className="grid gap-8">
+    <div className="grid min-w-0 gap-8">
       <section>
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">
           Import Review
@@ -78,7 +89,7 @@ export default async function AdminReviewPage({ searchParams }: PageProps) {
 
       <ReviewFilters filters={filters} options={data.filterOptions} />
 
-      <Card className="overflow-hidden">
+      <Card className={adminTableCardClass}>
         <div className="flex flex-col gap-3 border-b border-border p-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <h2 className="text-xl font-black">FIM Calendar proposals</h2>
@@ -90,9 +101,9 @@ export default async function AdminReviewPage({ searchParams }: PageProps) {
             {data.total} total
           </p>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[1180px] text-left text-sm">
-            <thead className="bg-black text-xs uppercase tracking-[0.18em] text-white/[0.64]">
+        <div className={adminTableScrollClass}>
+          <table className={adminWideTableClass}>
+            <thead className={adminTableHeadClass}>
               <tr>
                 {[
                   "Season",
@@ -107,7 +118,7 @@ export default async function AdminReviewPage({ searchParams }: PageProps) {
                   "Updated",
                   "Open",
                 ].map((heading) => (
-                  <th key={heading} className="px-5 py-4 font-semibold">
+                  <th key={heading} className={adminTableHeaderCellClass}>
                     {heading}
                   </th>
                 ))}
@@ -116,39 +127,41 @@ export default async function AdminReviewPage({ searchParams }: PageProps) {
             <tbody>
               {data.items.map((item) => (
                 <tr key={item.id} className="border-t border-border">
-                  <td className="px-5 py-4 font-semibold">{item.season}</td>
-                  <td className="px-5 py-4">
+                  <td className={adminTableCellClass}>
+                    <span className="font-semibold">{item.season}</span>
+                  </td>
+                  <td className={adminTablePrimaryCellClass}>
                     <div className="font-semibold">{item.eventName}</div>
                     <div className="mt-1 font-mono text-xs text-foreground/[0.45]">
                       {item.id}
                     </div>
                   </td>
-                  <td className="px-5 py-4">
+                  <td className={adminTableCellClass}>
                     <ActionBadge action={item.suggestedAction} />
                   </td>
-                  <td className="px-5 py-4">
+                  <td className={adminTableCellClass}>
                     <ConfidenceValue value={item.confidence} />
                   </td>
-                  <td className="px-5 py-4 text-foreground/[0.62]">
+                  <td className={adminTableMutedCellClass}>
                     {item.matchingStrategy ?? "manual"}
                   </td>
-                  <td className="px-5 py-4">
+                  <td className={adminTableCellClass}>
                     <ReviewStatusBadge status={item.reviewStatus} />
                   </td>
-                  <td className="px-5 py-4">
+                  <td className={adminTableCellClass}>
                     <span className="inline-flex rounded-sm border border-border bg-surface-muted px-2.5 py-1 text-xs font-semibold uppercase tracking-[0.14em]">
                       {item.applicationStatus.replaceAll("_", " ")}
                     </span>
                   </td>
-                  <td className="px-5 py-4">
+                  <td className={adminTableCellClass}>
                     <div>{formatDate(item.snapshot.createdAt)}</div>
                     <div className="mt-1 font-mono text-xs text-foreground/[0.45]">
                       {item.snapshot.id}
                     </div>
                   </td>
-                  <td className="px-5 py-4">{formatDate(item.createdAt)}</td>
-                  <td className="px-5 py-4">{formatDate(item.updatedAt)}</td>
-                  <td className="px-5 py-4">
+                  <td className={adminTableCellClass}>{formatDate(item.createdAt)}</td>
+                  <td className={adminTableCellClass}>{formatDate(item.updatedAt)}</td>
+                  <td className={adminTableActionCellClass}>
                     <Link
                       href={`/admin/review/${item.id}`}
                       className="inline-flex h-9 items-center gap-2 rounded-md border border-border bg-surface-muted px-3 text-xs font-semibold hover:border-accent/50"

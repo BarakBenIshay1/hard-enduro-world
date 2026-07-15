@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { join } from "node:path";
 
 const headerSource = readFileSync("components/site-header.tsx", "utf8");
 const imageUploadSource = readFileSync(
@@ -11,6 +12,7 @@ testHeaderResponsiveBreakpoints();
 testManufacturerMediaCopyIsNotRiderSpecific();
 testAdminCmsListsUseSharedResponsiveTables();
 testSharedAdminTableStylesAvoidLargeFixedWidths();
+testAdminTablesDoNotUseLegacyFixedWidths();
 
 console.log("Admin UI regression tests passed.");
 
@@ -108,4 +110,33 @@ function testSharedAdminTableStylesAvoidLargeFixedWidths() {
     /whitespace-nowrap/,
     "shared admin table action cells should remain no-wrap",
   );
+}
+
+function testAdminTablesDoNotUseLegacyFixedWidths() {
+  for (const file of findTsxFiles("app/admin")) {
+    const source = readFileSync(file, "utf8");
+
+    assert.doesNotMatch(
+      source,
+      /<table className="w-full min-w-\[[0-9]+px\] text-left text-sm">/,
+      `${file} should not use legacy fixed-width admin tables`,
+    );
+  }
+}
+
+function findTsxFiles(directory: string): string[] {
+  const entries = readdirSync(directory);
+  const files: string[] = [];
+
+  for (const entry of entries) {
+    const path = join(directory, entry);
+    const stat = statSync(path);
+    if (stat.isDirectory()) {
+      files.push(...findTsxFiles(path));
+    } else if (path.endsWith(".tsx")) {
+      files.push(path);
+    }
+  }
+
+  return files;
 }

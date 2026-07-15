@@ -2,6 +2,17 @@ import { Edit3, Eye } from "lucide-react";
 import { AdminActionButton } from "@/components/admin/admin-action-button";
 import { AdminEmptyState } from "@/components/admin/admin-empty-state";
 import { AdminStatusBadge } from "@/components/admin/admin-status-badge";
+import {
+  adminCompactTableClass,
+  adminTableActionCellClass,
+  adminTableCardClass,
+  adminTableCellClass,
+  adminTableHeadClass,
+  adminTableHeaderCellClass,
+  adminTableMutedCellClass,
+  adminTablePrimaryCellClass,
+  adminTableScrollClass,
+} from "@/components/admin/admin-table-styles";
 import { Card } from "@/components/ui/card";
 
 type AdminTableShellProps = {
@@ -22,7 +33,7 @@ export function AdminTableShell({
   rows,
 }: AdminTableShellProps) {
   return (
-    <Card className="overflow-hidden">
+    <Card className={adminTableCardClass}>
       <div className="flex flex-col gap-4 border-b border-border p-5 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h2 className="text-xl font-black">{title}</h2>
@@ -31,26 +42,28 @@ export function AdminTableShell({
         <AdminActionButton disabled>{createLabel}</AdminActionButton>
       </div>
       {rows.length > 0 ? (
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[760px] text-left text-sm">
-            <thead className="bg-black text-xs uppercase tracking-[0.18em] text-white/[0.64]">
+        <div className={adminTableScrollClass}>
+          <table className={adminCompactTableClass}>
+            <thead className={adminTableHeadClass}>
               <tr>
-                <th className="px-5 py-4">Item</th>
-                <th className="px-5 py-4">Purpose</th>
-                <th className="px-5 py-4">Status</th>
-                <th className="px-5 py-4">Actions</th>
+                <th className={adminTablePrimaryCellClass}>Item</th>
+                <th className={adminTableHeaderCellClass}>Purpose</th>
+                <th className={adminTableHeaderCellClass}>Status</th>
+                <th className={adminTableActionCellClass}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((row) => (
                 <tr key={row.label} className="border-t border-border">
-                  <td className="px-5 py-4 font-semibold">{row.label}</td>
-                  <td className="px-5 py-4 text-foreground/[0.62]">{row.detail}</td>
-                  <td className="px-5 py-4">
+                  <td className={adminTablePrimaryCellClass}>
+                    <span className="font-semibold">{row.label}</span>
+                  </td>
+                  <td className={adminTableMutedCellClass}>{row.detail}</td>
+                  <td className={adminTableCellClass}>
                     <AdminStatusBadge status={row.status ?? "placeholder"} />
                   </td>
-                  <td className="px-5 py-4">
-                    <div className="flex gap-2">
+                  <td className={adminTableActionCellClass}>
+                    <div className="flex flex-wrap justify-end gap-2">
                       <button
                         type="button"
                         disabled

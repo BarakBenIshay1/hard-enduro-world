@@ -146,13 +146,16 @@ export default async function AdminSourceDetailPage({
         <div className="border-b border-border p-5">
           <h2 className="text-xl font-black">Import run history placeholder</h2>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[820px] text-left text-sm">
-            <thead className="bg-black text-xs uppercase tracking-[0.18em] text-white/[0.64]">
+        <div className="max-w-full overflow-x-auto">
+          <table className="w-full table-fixed text-left text-[13px] sm:text-sm">
+            <thead className="bg-black text-[10px] uppercase tracking-[0.12em] text-white/[0.64] sm:text-xs">
               <tr>
                 {["Job", "Status", "Found", "Created", "Updated", "Skipped"].map(
                   (heading) => (
-                    <th key={heading} className="px-5 py-4 font-semibold">
+                    <th
+                      key={heading}
+                      className="min-w-0 px-2 py-3 align-bottom leading-5 font-semibold sm:px-3"
+                    >
                       {heading}
                     </th>
                   ),
@@ -162,14 +165,24 @@ export default async function AdminSourceDetailPage({
             <tbody>
               {importRuns.map((run) => (
                 <tr key={run.id} className="border-t border-border">
-                  <td className="px-5 py-4 font-semibold">{run.jobName}</td>
-                  <td className="px-5 py-4">
+                  <td className="min-w-0 px-2 py-3 align-bottom leading-5 font-semibold sm:px-3">
+                    {run.jobName}
+                  </td>
+                  <td className="min-w-0 whitespace-normal break-words px-2 py-3 align-top leading-6 sm:px-3">
                     <ImportStatusBadge status={run.status} />
                   </td>
-                  <td className="px-5 py-4">{run.recordsFound}</td>
-                  <td className="px-5 py-4">{run.recordsCreated}</td>
-                  <td className="px-5 py-4">{run.recordsUpdated}</td>
-                  <td className="px-5 py-4">{run.recordsSkipped}</td>
+                  <td className="min-w-0 whitespace-normal break-words px-2 py-3 align-top leading-6 sm:px-3">
+                    {run.recordsFound}
+                  </td>
+                  <td className="min-w-0 whitespace-normal break-words px-2 py-3 align-top leading-6 sm:px-3">
+                    {run.recordsCreated}
+                  </td>
+                  <td className="min-w-0 whitespace-normal break-words px-2 py-3 align-top leading-6 sm:px-3">
+                    {run.recordsUpdated}
+                  </td>
+                  <td className="min-w-0 whitespace-normal break-words px-2 py-3 align-top leading-6 sm:px-3">
+                    {run.recordsSkipped}
+                  </td>
                 </tr>
               ))}
             </tbody>

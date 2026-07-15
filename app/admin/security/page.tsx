@@ -2,6 +2,17 @@ import type { Metadata } from "next";
 import { KeyRound, LockKeyhole, Route, ShieldCheck, TableProperties } from "lucide-react";
 import { AdminStatCard } from "@/components/admin/admin-stat-card";
 import { AdminStatusBadge } from "@/components/admin/admin-status-badge";
+import {
+  adminCompactTableClass,
+  adminTableCardClass,
+  adminTableCellClass,
+  adminTableHeadClass,
+  adminTableHeaderCellClass,
+  adminTableMutedCellClass,
+  adminTablePrimaryCellClass,
+  adminTableScrollClass,
+  adminWideTableClass,
+} from "@/components/admin/admin-table-styles";
 import { Card } from "@/components/ui/card";
 import {
   authPermissions,
@@ -30,7 +41,7 @@ export default async function AdminSecurityPage() {
   const readiness = getSupabaseAuthReadiness();
 
   return (
-    <div className="grid gap-8">
+    <div className="grid min-w-0 gap-8">
       <section className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">
@@ -119,7 +130,7 @@ export default async function AdminSecurityPage() {
         </Card>
       </section>
 
-      <Card className="overflow-hidden">
+      <Card className={adminTableCardClass}>
         <div className="border-b border-border p-5">
           <h2 className="text-xl font-black">Protected areas</h2>
           <p className="mt-2 text-sm leading-6 text-foreground/[0.62]">
@@ -127,12 +138,12 @@ export default async function AdminSecurityPage() {
             automation actions, calculations, and settings.
           </p>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[860px] text-left text-sm">
-            <thead className="bg-black text-xs uppercase tracking-[0.18em] text-white/[0.64]">
+        <div className={adminTableScrollClass}>
+          <table className={adminCompactTableClass}>
+            <thead className={adminTableHeadClass}>
               <tr>
                 {["Area", "Route", "Required Permissions", "Purpose"].map((heading) => (
-                  <th key={heading} className="px-5 py-4 font-semibold">
+                  <th key={heading} className={adminTableHeaderCellClass}>
                     {heading}
                   </th>
                 ))}
@@ -141,10 +152,14 @@ export default async function AdminSecurityPage() {
             <tbody>
               {protectedAreas.map((area) => (
                 <tr key={area.id} className="border-t border-border">
-                  <td className="px-5 py-4 font-semibold">{area.label}</td>
-                  <td className="px-5 py-4">{area.href}</td>
-                  <td className="px-5 py-4">{area.requiredPermissions.join(", ")}</td>
-                  <td className="px-5 py-4 text-foreground/[0.62]">{area.description}</td>
+                  <td className={adminTablePrimaryCellClass}>
+                    <span className="font-semibold">{area.label}</span>
+                  </td>
+                  <td className={adminTableCellClass}>{area.href}</td>
+                  <td className={adminTableCellClass}>
+                    {area.requiredPermissions.join(", ")}
+                  </td>
+                  <td className={adminTableMutedCellClass}>{area.description}</td>
                 </tr>
               ))}
             </tbody>
@@ -152,7 +167,7 @@ export default async function AdminSecurityPage() {
         </div>
       </Card>
 
-      <Card className="overflow-hidden">
+      <Card className={adminTableCardClass}>
         <div className="border-b border-border p-5">
           <h2 className="text-xl font-black">Access matrix</h2>
           <p className="mt-2 text-sm leading-6 text-foreground/[0.62]">
@@ -160,29 +175,31 @@ export default async function AdminSecurityPage() {
             actions and route handlers.
           </p>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[980px] text-left text-sm">
-            <thead className="bg-black text-xs uppercase tracking-[0.18em] text-white/[0.64]">
+        <div className={adminTableScrollClass}>
+          <table className={adminWideTableClass}>
+            <thead className={adminTableHeadClass}>
               <tr>
-                <th className="px-5 py-4 font-semibold">Permission</th>
+                <th className={adminTablePrimaryCellClass}>Permission</th>
                 {authRoles.map((role) => (
-                  <th key={role} className="px-5 py-4 font-semibold">
+                  <th key={role} className={adminTableHeaderCellClass}>
                     {role}
                   </th>
                 ))}
-                <th className="px-5 py-4 font-semibold">Description</th>
+                <th className={adminTableHeaderCellClass}>Description</th>
               </tr>
             </thead>
             <tbody>
               {authPermissions.map((permission) => (
                 <tr key={permission} className="border-t border-border">
-                  <td className="px-5 py-4 font-semibold">{permission}</td>
+                  <td className={adminTablePrimaryCellClass}>
+                    <span className="font-semibold">{permission}</span>
+                  </td>
                   {authRoles.map((role) => (
-                    <td key={`${role}-${permission}`} className="px-5 py-4">
+                    <td key={`${role}-${permission}`} className={adminTableCellClass}>
                       {roleHasPermission(role, permission) ? "Yes" : "-"}
                     </td>
                   ))}
-                  <td className="px-5 py-4 text-foreground/[0.62]">
+                  <td className={adminTableMutedCellClass}>
                     {permissionDescriptions[permission]}
                   </td>
                 </tr>

@@ -10,6 +10,16 @@ import {
 } from "lucide-react";
 import { AdminStatCard } from "@/components/admin/admin-stat-card";
 import { AdminStatusBadge } from "@/components/admin/admin-status-badge";
+import {
+  adminCompactTableClass,
+  adminTableCardClass,
+  adminTableCellClass,
+  adminTableHeadClass,
+  adminTableHeaderCellClass,
+  adminTableMutedCellClass,
+  adminTablePrimaryCellClass,
+  adminTableScrollClass,
+} from "@/components/admin/admin-table-styles";
 import { Card } from "@/components/ui/card";
 import { getPreflightAuditData } from "@/db/preflight";
 import { cn } from "@/lib/cn";
@@ -31,7 +41,7 @@ export default async function AdminPreflightPage() {
   const data = await getPreflightAuditData();
 
   return (
-    <div className="grid gap-8">
+    <div className="grid min-w-0 gap-8">
       <section className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">
@@ -75,7 +85,7 @@ export default async function AdminPreflightPage() {
         />
       </section>
 
-      <section className="grid gap-6 lg:grid-cols-[1fr_0.9fr]">
+      <section className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)]">
         <Card className="overflow-hidden">
           <div className="border-b border-border p-5">
             <h2 className="text-xl font-black">Pre-deployment checks</h2>
@@ -88,7 +98,7 @@ export default async function AdminPreflightPage() {
             {data.checks.map((check) => (
               <div
                 key={check.id}
-                className="grid gap-3 p-5 text-sm lg:grid-cols-[190px_110px_1fr_130px]"
+                className="grid min-w-0 gap-3 p-5 text-sm lg:grid-cols-[minmax(0,190px)_110px_minmax(0,1fr)_130px]"
               >
                 <span className="font-semibold">{check.label}</span>
                 <PreflightBadge status={check.status} />
@@ -170,7 +180,7 @@ export default async function AdminPreflightPage() {
         </Card>
       </section>
 
-      <Card className="overflow-hidden">
+      <Card className={adminTableCardClass}>
         <div className="border-b border-border p-5">
           <div className="flex items-center gap-3">
             <ListChecks className="h-5 w-5 text-accent" aria-hidden="true" />
@@ -182,12 +192,12 @@ export default async function AdminPreflightPage() {
             </div>
           </div>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[980px] text-left text-sm">
-            <thead className="bg-black text-xs uppercase tracking-[0.18em] text-white/[0.64]">
+        <div className={adminTableScrollClass}>
+          <table className={adminCompactTableClass}>
+            <thead className={adminTableHeadClass}>
               <tr>
                 {["Route", "Kind", "Exposure", "SEO", "Notes"].map((heading) => (
-                  <th key={heading} className="px-5 py-4 font-semibold">
+                  <th key={heading} className={adminTableHeaderCellClass}>
                     {heading}
                   </th>
                 ))}
@@ -199,16 +209,16 @@ export default async function AdminPreflightPage() {
                   key={`${route.path}-${route.label}`}
                   className="border-t border-border"
                 >
-                  <td className="px-5 py-4">
+                  <td className={adminTablePrimaryCellClass}>
                     <p className="font-semibold">{route.label}</p>
                     <p className="mt-1 font-mono text-xs text-foreground/[0.58]">
                       {route.path}
                     </p>
                   </td>
-                  <td className="px-5 py-4">{route.kind}</td>
-                  <td className="px-5 py-4">{route.exposure}</td>
-                  <td className="px-5 py-4">{route.seoStatus}</td>
-                  <td className="px-5 py-4 text-foreground/[0.62]">{route.notes}</td>
+                  <td className={adminTableCellClass}>{route.kind}</td>
+                  <td className={adminTableCellClass}>{route.exposure}</td>
+                  <td className={adminTableCellClass}>{route.seoStatus}</td>
+                  <td className={adminTableMutedCellClass}>{route.notes}</td>
                 </tr>
               ))}
             </tbody>

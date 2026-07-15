@@ -2,6 +2,16 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Database, ExternalLink } from "lucide-react";
 import { AdminStatusBadge } from "@/components/admin/admin-status-badge";
+import {
+  adminCompactTableClass,
+  adminTableCardClass,
+  adminTableCellClass,
+  adminTableHeadClass,
+  adminTableHeaderCellClass,
+  adminTableMutedCellClass,
+  adminTablePrimaryCellClass,
+  adminTableScrollClass,
+} from "@/components/admin/admin-table-styles";
 import { ConfidenceBadge } from "@/components/admin/confidence-badge";
 import { SourceBadge } from "@/components/admin/source-badge";
 import { Card } from "@/components/ui/card";
@@ -24,7 +34,7 @@ export default async function AdminSourcesPage() {
   const { sources } = await getSourcesAdminData();
 
   return (
-    <div className="grid gap-8">
+    <div className="grid min-w-0 gap-8">
       <section>
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">
           Source Tracking
@@ -36,13 +46,13 @@ export default async function AdminSourcesPage() {
         </p>
       </section>
 
-      <Card className="overflow-hidden">
+      <Card className={adminTableCardClass}>
         <div className="border-b border-border p-5">
           <h2 className="text-xl font-black">Sources overview</h2>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[1100px] text-left text-sm">
-            <thead className="bg-black text-xs uppercase tracking-[0.18em] text-white/[0.64]">
+        <div className={adminTableScrollClass}>
+          <table className={adminCompactTableClass}>
+            <thead className={adminTableHeadClass}>
               <tr>
                 {[
                   "Source",
@@ -54,7 +64,7 @@ export default async function AdminSourcesPage() {
                   "Confidence",
                   "Status",
                 ].map((heading) => (
-                  <th key={heading} className="px-5 py-4 font-semibold">
+                  <th key={heading} className={adminTableHeaderCellClass}>
                     {heading}
                   </th>
                 ))}
@@ -68,7 +78,7 @@ export default async function AdminSourcesPage() {
 
                 return (
                   <tr key={source.id} className="border-t border-border">
-                    <td className="px-5 py-4">
+                    <td className={adminTablePrimaryCellClass}>
                       <Link
                         href={`/admin/sources/${source.id}`}
                         className="inline-flex items-center gap-2 font-semibold hover:text-accent"
@@ -77,12 +87,12 @@ export default async function AdminSourcesPage() {
                         {source.name}
                       </Link>
                     </td>
-                    <td className="px-5 py-4">{source.type}</td>
-                    <td className="px-5 py-4">
+                    <td className={adminTableCellClass}>{source.type}</td>
+                    <td className={adminTableMutedCellClass}>
                       {source.baseUrl ? (
                         <a
                           href={source.baseUrl}
-                          className="inline-flex items-center gap-2 text-foreground/[0.64] hover:text-accent"
+                          className="inline-flex min-w-0 items-center gap-2 break-all text-foreground/[0.64] hover:text-accent"
                         >
                           {source.baseUrl}
                           <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
@@ -91,19 +101,19 @@ export default async function AdminSourcesPage() {
                         "Manual"
                       )}
                     </td>
-                    <td className="px-5 py-4">
+                    <td className={adminTableCellClass}>
                       <SourceBadge reliability={source.reliability} />
                     </td>
-                    <td className="px-5 py-4">
+                    <td className={adminTableCellClass}>
                       {latestSnapshot ? formatDate(latestSnapshot.fetchedAt) : "Pending"}
                     </td>
-                    <td className="px-5 py-4">
+                    <td className={adminTableCellClass}>
                       {source.reliability === "OFFICIAL" ? "Yes" : "Review"}
                     </td>
-                    <td className="px-5 py-4">
+                    <td className={adminTableCellClass}>
                       <ConfidenceBadge score={confidence} />
                     </td>
-                    <td className="px-5 py-4">
+                    <td className={adminTableCellClass}>
                       <AdminStatusBadge
                         status={latestRun?.status === "FAILED" ? "review" : "ready"}
                       />

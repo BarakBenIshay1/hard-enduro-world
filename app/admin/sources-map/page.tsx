@@ -8,6 +8,16 @@ import {
 } from "lucide-react";
 import { AdminStatCard } from "@/components/admin/admin-stat-card";
 import { AdminStatusBadge } from "@/components/admin/admin-status-badge";
+import {
+  adminWideTableClass,
+  adminTableCardClass,
+  adminTableCellClass,
+  adminTableHeadClass,
+  adminTableHeaderCellClass,
+  adminTableMutedCellClass,
+  adminTablePrimaryCellClass,
+  adminTableScrollClass,
+} from "@/components/admin/admin-table-styles";
 import { Card } from "@/components/ui/card";
 import { getSourceMapAdminData } from "@/db/source-map";
 
@@ -27,7 +37,7 @@ export default async function AdminSourceMapPage() {
   const data = await getSourceMapAdminData();
 
   return (
-    <div className="grid gap-8">
+    <div className="grid min-w-0 gap-8">
       <section className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">
@@ -78,7 +88,7 @@ export default async function AdminSourceMapPage() {
         />
       </section>
 
-      <Card className="overflow-hidden">
+      <Card className={adminTableCardClass}>
         <div className="border-b border-border p-5">
           <h2 className="text-xl font-black">Source map</h2>
           <p className="mt-2 text-sm leading-6 text-foreground/[0.62]">
@@ -86,9 +96,9 @@ export default async function AdminSourceMapPage() {
             begin.
           </p>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[1360px] text-left text-sm">
-            <thead className="bg-black text-xs uppercase tracking-[0.18em] text-white/[0.64]">
+        <div className={adminTableScrollClass}>
+          <table className={adminWideTableClass}>
+            <thead className={adminTableHeadClass}>
               <tr>
                 {[
                   "Data type",
@@ -101,7 +111,7 @@ export default async function AdminSourceMapPage() {
                   "Automation",
                   "Notes",
                 ].map((heading) => (
-                  <th key={heading} className="px-5 py-4 font-semibold">
+                  <th key={heading} className={adminTableHeaderCellClass}>
                     {heading}
                   </th>
                 ))}
@@ -110,15 +120,19 @@ export default async function AdminSourceMapPage() {
             <tbody>
               {data.items.map((item) => (
                 <tr key={item.dataType} className="border-t border-border">
-                  <td className="px-5 py-4 font-semibold">{item.dataType}</td>
-                  <td className="px-5 py-4">{item.primarySource}</td>
-                  <td className="px-5 py-4">{item.secondarySource}</td>
-                  <td className="px-5 py-4">{item.currentConnector}</td>
-                  <td className="px-5 py-4">{item.importFrequency}</td>
-                  <td className="px-5 py-4">{item.riskLevel}</td>
-                  <td className="px-5 py-4">{item.reviewRequired ? "Yes" : "No"}</td>
-                  <td className="px-5 py-4">{item.automationStatus}</td>
-                  <td className="px-5 py-4 text-foreground/[0.62]">{item.notes}</td>
+                  <td className={adminTablePrimaryCellClass}>
+                    <span className="font-semibold">{item.dataType}</span>
+                  </td>
+                  <td className={adminTableCellClass}>{item.primarySource}</td>
+                  <td className={adminTableCellClass}>{item.secondarySource}</td>
+                  <td className={adminTableCellClass}>{item.currentConnector}</td>
+                  <td className={adminTableCellClass}>{item.importFrequency}</td>
+                  <td className={adminTableCellClass}>{item.riskLevel}</td>
+                  <td className={adminTableCellClass}>
+                    {item.reviewRequired ? "Yes" : "No"}
+                  </td>
+                  <td className={adminTableCellClass}>{item.automationStatus}</td>
+                  <td className={adminTableMutedCellClass}>{item.notes}</td>
                 </tr>
               ))}
             </tbody>

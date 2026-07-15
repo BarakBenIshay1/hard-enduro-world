@@ -155,9 +155,9 @@ function YouTubePreview({ preview }: { preview: YouTubeImportPreview }) {
           </div>
         ) : null}
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[1120px] text-left text-sm">
-          <thead className="bg-black text-xs uppercase tracking-[0.18em] text-white/[0.64]">
+      <div className="max-w-full overflow-x-auto">
+        <table className="w-full table-fixed text-left text-[13px] sm:text-sm">
+          <thead className="bg-black text-[10px] uppercase tracking-[0.12em] text-white/[0.64] sm:text-xs">
             <tr>
               {[
                 "Title",
@@ -167,7 +167,10 @@ function YouTubePreview({ preview }: { preview: YouTubeImportPreview }) {
                 "Video URL",
                 "Would create",
               ].map((heading) => (
-                <th key={heading} className="px-5 py-4 font-semibold">
+                <th
+                  key={heading}
+                  className="min-w-0 px-2 py-3 align-bottom leading-5 font-semibold sm:px-3"
+                >
                   {heading}
                 </th>
               ))}
@@ -176,12 +179,22 @@ function YouTubePreview({ preview }: { preview: YouTubeImportPreview }) {
           <tbody>
             {preview.normalizedVideos.map((video) => (
               <tr key={video.providerId} className="border-t border-border">
-                <td className="px-5 py-4 font-semibold">{video.title}</td>
-                <td className="px-5 py-4">{video.channelTitle}</td>
-                <td className="px-5 py-4">{formatDate(video.publishedAt)}</td>
-                <td className="px-5 py-4 font-mono text-xs">{video.providerId}</td>
-                <td className="px-5 py-4 text-foreground/[0.62]">{video.watchUrl}</td>
-                <td className="px-5 py-4">
+                <td className="min-w-0 px-2 py-3 align-bottom leading-5 font-semibold sm:px-3">
+                  {video.title}
+                </td>
+                <td className="min-w-0 whitespace-normal break-words px-2 py-3 align-top leading-6 sm:px-3">
+                  {video.channelTitle}
+                </td>
+                <td className="min-w-0 whitespace-normal break-words px-2 py-3 align-top leading-6 sm:px-3">
+                  {formatDate(video.publishedAt)}
+                </td>
+                <td className="min-w-0 whitespace-normal break-words px-2 py-3 align-top font-mono text-xs leading-6 sm:px-3">
+                  {video.providerId}
+                </td>
+                <td className="min-w-0 whitespace-normal break-words px-2 py-3 align-top leading-6 text-foreground/[0.66] sm:px-3">
+                  {video.watchUrl}
+                </td>
+                <td className="min-w-0 whitespace-normal break-words px-2 py-3 align-top leading-6 sm:px-3">
                   <span className="inline-flex items-center gap-2 text-accent">
                     <Check className="h-4 w-4" aria-hidden="true" />
                     Pending MediaItem review
@@ -238,9 +251,9 @@ function EventsPreview({ preview }: { preview: EventsImportPreview }) {
           </div>
         ) : null}
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[1120px] text-left text-sm">
-          <thead className="bg-black text-xs uppercase tracking-[0.18em] text-white/[0.64]">
+      <div className="max-w-full overflow-x-auto">
+        <table className="w-full table-fixed text-left text-[13px] sm:text-sm">
+          <thead className="bg-black text-[10px] uppercase tracking-[0.12em] text-white/[0.64] sm:text-xs">
             <tr>
               {[
                 "Event",
@@ -252,7 +265,10 @@ function EventsPreview({ preview }: { preview: EventsImportPreview }) {
                 "Official URL",
                 "Would create/update",
               ].map((heading) => (
-                <th key={heading} className="px-5 py-4 font-semibold">
+                <th
+                  key={heading}
+                  className="min-w-0 px-2 py-3 align-bottom leading-5 font-semibold sm:px-3"
+                >
                   {heading}
                 </th>
               ))}
@@ -261,18 +277,28 @@ function EventsPreview({ preview }: { preview: EventsImportPreview }) {
           <tbody>
             {preview.normalizedEvents.map((event) => (
               <tr key={event.externalId} className="border-t border-border">
-                <td className="px-5 py-4 font-semibold">{event.name}</td>
-                <td className="px-5 py-4">{event.seasonYear}</td>
-                <td className="px-5 py-4">{formatDate(event.startDate)}</td>
-                <td className="px-5 py-4">
+                <td className="min-w-0 px-2 py-3 align-bottom leading-5 font-semibold sm:px-3">
+                  {event.name}
+                </td>
+                <td className="min-w-0 whitespace-normal break-words px-2 py-3 align-top leading-6 sm:px-3">
+                  {event.seasonYear}
+                </td>
+                <td className="min-w-0 whitespace-normal break-words px-2 py-3 align-top leading-6 sm:px-3">
+                  {formatDate(event.startDate)}
+                </td>
+                <td className="min-w-0 whitespace-normal break-words px-2 py-3 align-top leading-6 sm:px-3">
                   {event.countryName} ({event.countryCode})
                 </td>
-                <td className="px-5 py-4">
+                <td className="min-w-0 whitespace-normal break-words px-2 py-3 align-top leading-6 sm:px-3">
                   {[event.city, event.venue].filter(Boolean).join(" / ")}
                 </td>
-                <td className="px-5 py-4">{event.status}</td>
-                <td className="px-5 py-4 text-foreground/[0.62]">{event.officialUrl}</td>
-                <td className="px-5 py-4">
+                <td className="min-w-0 whitespace-normal break-words px-2 py-3 align-top leading-6 sm:px-3">
+                  {event.status}
+                </td>
+                <td className="min-w-0 whitespace-normal break-words px-2 py-3 align-top leading-6 text-foreground/[0.66] sm:px-3">
+                  {event.officialUrl}
+                </td>
+                <td className="min-w-0 whitespace-normal break-words px-2 py-3 align-top leading-6 sm:px-3">
                   <span className="inline-flex items-center gap-2 text-accent">
                     <Check className="h-4 w-4" aria-hidden="true" />
                     Pending Event review
@@ -338,9 +364,9 @@ function ResultsPreview({ preview }: { preview: ResultsImportPreview }) {
           </div>
         ) : null}
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[1360px] text-left text-sm">
-          <thead className="bg-black text-xs uppercase tracking-[0.18em] text-white/[0.64]">
+      <div className="max-w-full overflow-x-auto">
+        <table className="w-full table-fixed text-left text-[13px] sm:text-sm">
+          <thead className="bg-black text-[10px] uppercase tracking-[0.12em] text-white/[0.64] sm:text-xs">
             <tr>
               {[
                 "Event",
@@ -359,7 +385,10 @@ function ResultsPreview({ preview }: { preview: ResultsImportPreview }) {
                 "Status",
                 "Review action",
               ].map((heading) => (
-                <th key={heading} className="px-5 py-4 font-semibold">
+                <th
+                  key={heading}
+                  className="min-w-0 px-2 py-3 align-bottom leading-5 font-semibold sm:px-3"
+                >
                   {heading}
                 </th>
               ))}
@@ -368,21 +397,49 @@ function ResultsPreview({ preview }: { preview: ResultsImportPreview }) {
           <tbody>
             {preview.normalizedResults.map((result) => (
               <tr key={result.externalId} className="border-t border-border">
-                <td className="px-5 py-4 font-semibold">{result.event}</td>
-                <td className="px-5 py-4">{result.stage}</td>
-                <td className="px-5 py-4">{result.rider}</td>
-                <td className="px-5 py-4">{result.country}</td>
-                <td className="px-5 py-4">{result.team}</td>
-                <td className="px-5 py-4">{result.manufacturer}</td>
-                <td className="px-5 py-4">{result.motorcycle}</td>
-                <td className="px-5 py-4">{result.position ?? "-"}</td>
-                <td className="px-5 py-4">{result.time ?? "-"}</td>
-                <td className="px-5 py-4">{result.gapToLeader ?? "-"}</td>
-                <td className="px-5 py-4">{result.gapToPrevious ?? "-"}</td>
-                <td className="px-5 py-4">{result.penalties ?? "-"}</td>
-                <td className="px-5 py-4">{result.points ?? "-"}</td>
-                <td className="px-5 py-4">{result.status}</td>
-                <td className="px-5 py-4">
+                <td className="min-w-0 px-2 py-3 align-bottom leading-5 font-semibold sm:px-3">
+                  {result.event}
+                </td>
+                <td className="min-w-0 whitespace-normal break-words px-2 py-3 align-top leading-6 sm:px-3">
+                  {result.stage}
+                </td>
+                <td className="min-w-0 whitespace-normal break-words px-2 py-3 align-top leading-6 sm:px-3">
+                  {result.rider}
+                </td>
+                <td className="min-w-0 whitespace-normal break-words px-2 py-3 align-top leading-6 sm:px-3">
+                  {result.country}
+                </td>
+                <td className="min-w-0 whitespace-normal break-words px-2 py-3 align-top leading-6 sm:px-3">
+                  {result.team}
+                </td>
+                <td className="min-w-0 whitespace-normal break-words px-2 py-3 align-top leading-6 sm:px-3">
+                  {result.manufacturer}
+                </td>
+                <td className="min-w-0 whitespace-normal break-words px-2 py-3 align-top leading-6 sm:px-3">
+                  {result.motorcycle}
+                </td>
+                <td className="min-w-0 whitespace-normal break-words px-2 py-3 align-top leading-6 sm:px-3">
+                  {result.position ?? "-"}
+                </td>
+                <td className="min-w-0 whitespace-normal break-words px-2 py-3 align-top leading-6 sm:px-3">
+                  {result.time ?? "-"}
+                </td>
+                <td className="min-w-0 whitespace-normal break-words px-2 py-3 align-top leading-6 sm:px-3">
+                  {result.gapToLeader ?? "-"}
+                </td>
+                <td className="min-w-0 whitespace-normal break-words px-2 py-3 align-top leading-6 sm:px-3">
+                  {result.gapToPrevious ?? "-"}
+                </td>
+                <td className="min-w-0 whitespace-normal break-words px-2 py-3 align-top leading-6 sm:px-3">
+                  {result.penalties ?? "-"}
+                </td>
+                <td className="min-w-0 whitespace-normal break-words px-2 py-3 align-top leading-6 sm:px-3">
+                  {result.points ?? "-"}
+                </td>
+                <td className="min-w-0 whitespace-normal break-words px-2 py-3 align-top leading-6 sm:px-3">
+                  {result.status}
+                </td>
+                <td className="min-w-0 whitespace-normal break-words px-2 py-3 align-top leading-6 sm:px-3">
                   <span className="inline-flex items-center gap-2 text-accent">
                     <Check className="h-4 w-4" aria-hidden="true" />
                     Pending Result review
