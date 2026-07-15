@@ -9,7 +9,10 @@ import {
 } from "@/jobs/connectors/results/official-erzbergrodeo-overall";
 import { matchOverallResultProposals } from "@/jobs/connectors/results/overall-matching";
 import { createReviewDeduplicationKey } from "@/jobs/connectors/results/overall-persistence";
-import { validateConnectorReviewApplicationPolicy } from "@/lib/admin/connector-review-application";
+import {
+  assertNoStaleChangedFields,
+  validateConnectorReviewApplicationPolicy,
+} from "@/lib/admin/connector-review-application";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -19,8 +22,10 @@ async function main() {
   await test("official fixture parses verified overall rows without invented timing", () => {
     const raw = readFixture();
     const rows = parseOverallResultsCsv(raw);
-    assert.equal(rows.length, 3);
+    assert.equal(rows.length, 6);
     assert.equal(rows[0]?.riderName, "Manuel Lettenbichler");
+    assert.equal(rows[3]?.riderName, "Teodor Kabakchiev");
+    assert.equal(rows[5]?.position, 7);
     assert.equal(rows[0]?.totalTimeText, null);
     assert.equal(rows[0]?.status, "FINISHED");
   });
@@ -153,6 +158,29 @@ async function main() {
       },
     });
     assert.equal(result.ok, false);
+  });
+
+  await test("stale result state is rejected before apply", () => {
+    assert.throws(
+      () =>
+        assertNoStaleChangedFields({
+          entityLabel: "Result",
+          changedFields: ["overallPosition"],
+          aggregateField: "result",
+          previousState: { overallPosition: 3 },
+          expectedState: { overallPosition: 2 },
+        }),
+      /Stale Result state for overallPosition/,
+    );
+    assert.doesNotThrow(() =>
+      assertNoStaleChangedFields({
+        entityLabel: "Result",
+        changedFields: ["overallPosition"],
+        aggregateField: "result",
+        previousState: { overallPosition: 2 },
+        expectedState: { overallPosition: 2 },
+      }),
+    );
   });
 
   console.log("Results import pipeline tests passed.");

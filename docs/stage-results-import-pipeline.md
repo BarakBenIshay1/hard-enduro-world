@@ -31,7 +31,7 @@ The selected event already has stored stage rows from the schedule/course seed. 
 - Payload format: CSV fixture or explicitly configured official source URL
 - Fixture: `jobs/connectors/results/fixtures/erzbergrodeo-2026-main-race-stage-results.csv`
 
-The first fixture is intentionally limited to the verified Erzbergrodeo 2026 podium subset. It does not invent stage times, gaps, lower finishers, points, standings, statistics, records, or stage rows.
+The first fixture is intentionally limited to verified Erzbergrodeo 2026 main-race rows that can be matched to existing Rider and Manufacturer records. It starts with the podium and a small additional official subset. It does not invent stage times, gaps, lower finishers, points, standings, statistics, records, or stage rows.
 
 ## Flow
 
@@ -161,6 +161,7 @@ StageResult apply does not modify overall `Result`, standings, points, records, 
 - No overall Result recalculation is included.
 - No standings, points, statistics, or records are calculated.
 - The first source is a narrow Erzbergrodeo main-race stage subset.
+- The official race PDF contains more rows than the current fixture, but rows are added only when required entities already resolve deterministically.
 - Stored official source stage ID matching is not available until `RaceStage` or a source-mapping table stores source-stage identifiers.
 
 ## Next Sprint

@@ -10,7 +10,7 @@ This pipeline imports official overall event classifications through the existin
 - Payload format: CSV fixture or explicitly configured official source URL
 - Fixture: `jobs/connectors/results/fixtures/erzbergrodeo-2026-overall-results.csv`
 
-The first source is intentionally limited to the verified Erzbergrodeo 2026 podium rows already used by the site. It does not invent lower finishers, timing, points, standings, stage results, or statistics.
+The first source is intentionally limited to verified Erzbergrodeo 2026 rows that can be matched to existing Rider and Manufacturer records. It starts with the podium and a small additional official subset. It does not invent lower finishers, timing, points, standings, stage results, or statistics.
 
 ## Flow
 
@@ -121,6 +121,7 @@ Approved Result review items require a second explicit apply action. Apply:
 - Standings are not recalculated.
 - Missing-source rows are warnings only and never delete Results.
 - The first source is a narrow Erzbergrodeo overall classification path.
+- The official race PDF contains more rows than the current fixture, but rows are added only when required entities already resolve deterministically.
 
 ## Next Sprint
 

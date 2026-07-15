@@ -99,6 +99,12 @@ export async function persistStageResultsReviewRun({
         orderBy: { createdAt: "desc" },
       });
 
+      let superseded = await supersedeReturnedMissingSourceWarnings({
+        rows,
+        seasonYear: config.seasonYear,
+        client: tx,
+      });
+
       if (existingSnapshot) {
         return buildReport({
           config,
@@ -111,7 +117,7 @@ export async function persistStageResultsReviewRun({
           duplicateDetected: true,
           created: 0,
           reused: 0,
-          superseded: 0,
+          superseded,
           pendingTotal: await countPending(tx),
         });
       }
@@ -154,31 +160,6 @@ export async function persistStageResultsReviewRun({
 
       let created = 0;
       let reused = 0;
-      let superseded = 0;
-      const returnedSourceManagedStageResultIds = rows
-        .map((row) => row.currentStageResultId)
-        .filter(
-          (id, index, values): id is string =>
-            Boolean(id) && values.indexOf(id) === index,
-        );
-      if (returnedSourceManagedStageResultIds.length > 0) {
-        const obsoleteMissingWarnings = await tx.connectorReviewItem.findMany({
-          where: {
-            connectorKey: stageResultsConnectorKey,
-            season: config.seasonYear,
-            reviewStatus: "PENDING",
-            suggestedAction: "STAGE_RESULT_MISSING_SOURCE",
-            currentStageResultId: { in: returnedSourceManagedStageResultIds },
-          },
-        });
-        for (const item of obsoleteMissingWarnings) {
-          await tx.connectorReviewItem.update({
-            where: { id: item.id },
-            data: { reviewStatus: "SUPERSEDED" },
-          });
-          superseded += 1;
-        }
-      }
 
       for (const row of rows) {
         if (row.reviewAction === "UNCHANGED") continue;
@@ -280,6 +261,44 @@ export function createStageReviewDeduplicationKey(row: MatchedStageResultProposa
     proposedValues: row.proposedValues,
     changedFields: row.changedFields,
   });
+}
+
+async function supersedeReturnedMissingSourceWarnings({
+  rows,
+  seasonYear,
+  client,
+}: {
+  rows: MatchedStageResultProposal[];
+  seasonYear: number;
+  client: PrismaExecutor;
+}) {
+  const returnedSourceManagedStageResultIds = rows
+    .map((row) => row.currentStageResultId)
+    .filter(
+      (id, index, values): id is string => Boolean(id) && values.indexOf(id) === index,
+    );
+  if (returnedSourceManagedStageResultIds.length === 0) return 0;
+
+  const obsoleteMissingWarnings = await client.connectorReviewItem.findMany({
+    where: {
+      connectorKey: stageResultsConnectorKey,
+      season: seasonYear,
+      reviewStatus: "PENDING",
+      suggestedAction: "STAGE_RESULT_MISSING_SOURCE",
+      currentStageResultId: { in: returnedSourceManagedStageResultIds },
+    },
+  });
+
+  let superseded = 0;
+  for (const item of obsoleteMissingWarnings) {
+    await client.connectorReviewItem.update({
+      where: { id: item.id },
+      data: { reviewStatus: "SUPERSEDED" },
+    });
+    superseded += 1;
+  }
+
+  return superseded;
 }
 
 async function findOrCreateDataSource(

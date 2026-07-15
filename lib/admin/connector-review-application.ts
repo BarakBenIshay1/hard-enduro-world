@@ -611,13 +611,13 @@ async function updateResultFromReview(
   if (!previousResultState) throw new Error("Current Result state is missing.");
   const expected = context.current;
   if (!expected) throw new Error("Approved expected current values are missing.");
-  for (const field of context.changedFields) {
-    if (field !== "result" && !valuesEqual(previousResultState[field], expected[field])) {
-      throw new Error(
-        `Stale Result state for ${field}. Regenerate review before applying.`,
-      );
-    }
-  }
+  assertNoStaleChangedFields({
+    entityLabel: "Result",
+    changedFields: context.changedFields,
+    aggregateField: "result",
+    previousState: previousResultState,
+    expectedState: expected,
+  });
   await validateOptionalResultRelations(context, client);
 
   return client.result.update({
@@ -917,16 +917,13 @@ async function updateStageResultFromReview(
   if (!previousStageResultState) throw new Error("Current StageResult state is missing.");
   const expected = context.current;
   if (!expected) throw new Error("Approved expected current values are missing.");
-  for (const field of context.changedFields) {
-    if (
-      field !== "stageResult" &&
-      !valuesEqual(previousStageResultState[field], expected[field])
-    ) {
-      throw new Error(
-        `Stale StageResult state for ${field}. Regenerate review before applying.`,
-      );
-    }
-  }
+  assertNoStaleChangedFields({
+    entityLabel: "StageResult",
+    changedFields: context.changedFields,
+    aggregateField: "stageResult",
+    previousState: previousStageResultState,
+    expectedState: expected,
+  });
   const stage = await client.raceStage.findUnique({
     where: { id: requiredString(context.proposed, "stageId") },
   });
@@ -1480,4 +1477,27 @@ function failure(
   message: string,
 ): ConnectorReviewApplyResult {
   return { ok: false, code, message };
+}
+
+export function assertNoStaleChangedFields({
+  entityLabel,
+  changedFields,
+  aggregateField,
+  previousState,
+  expectedState,
+}: {
+  entityLabel: string;
+  changedFields: string[];
+  aggregateField: string;
+  previousState: Record<string, unknown>;
+  expectedState: Record<string, unknown>;
+}) {
+  for (const field of changedFields) {
+    if (field === aggregateField) continue;
+    if (!valuesEqual(previousState[field], expectedState[field])) {
+      throw new Error(
+        `Stale ${entityLabel} state for ${field}. Regenerate review before applying.`,
+      );
+    }
+  }
 }

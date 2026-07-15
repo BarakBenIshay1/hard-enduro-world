@@ -14,7 +14,10 @@ import {
   resolveStage,
 } from "@/jobs/connectors/results/stage-matching";
 import { createStageReviewDeduplicationKey } from "@/jobs/connectors/results/stage-persistence";
-import { validateConnectorReviewApplicationPolicy } from "@/lib/admin/connector-review-application";
+import {
+  assertNoStaleChangedFields,
+  validateConnectorReviewApplicationPolicy,
+} from "@/lib/admin/connector-review-application";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -23,8 +26,10 @@ const projectRoot = path.resolve(__dirname, "..");
 async function main() {
   await test("null-preserving stage parsing", () => {
     const rows = parseStageResultsCsv(readFixture());
-    assert.equal(rows.length, 3);
+    assert.equal(rows.length, 6);
     assert.equal(rows[0]?.sourceStageName, "Main Race");
+    assert.equal(rows[3]?.riderName, "Teodor Kabakchiev");
+    assert.equal(rows[5]?.position, 7);
     assert.equal(rows[0]?.totalTimeText, null);
     assert.equal(rows[0]?.status, "FINISHED");
   });
@@ -273,6 +278,29 @@ async function main() {
     assert.equal(
       withWarnings.some((row) => row.reviewAction === "STAGE_RESULT_MISSING_SOURCE"),
       false,
+    );
+  });
+
+  await test("stale StageResult state is rejected before apply", () => {
+    assert.throws(
+      () =>
+        assertNoStaleChangedFields({
+          entityLabel: "StageResult",
+          changedFields: ["overallPosition"],
+          aggregateField: "stageResult",
+          previousState: { overallPosition: 4 },
+          expectedState: { overallPosition: 3 },
+        }),
+      /Stale StageResult state for overallPosition/,
+    );
+    assert.doesNotThrow(() =>
+      assertNoStaleChangedFields({
+        entityLabel: "StageResult",
+        changedFields: ["overallPosition"],
+        aggregateField: "stageResult",
+        previousState: { overallPosition: 3 },
+        expectedState: { overallPosition: 3 },
+      }),
     );
   });
 
