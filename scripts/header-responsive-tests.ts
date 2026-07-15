@@ -35,8 +35,28 @@ function testDesktopNavigationBreakpoint() {
 function testMobileMenuBreakpoint() {
   assert.match(
     headerSource,
-    /fixed inset-0 z-50 bg-\[#06080d\] text-white[\s\S]*?lg:hidden/,
-    "mobile overlay should use an opaque dark surface and the same standard breakpoint as the hamburger",
+    /createPortal\(/,
+    "mobile overlay should render through a body-level portal instead of staying inside the header stacking context",
+  );
+  assert.match(
+    headerSource,
+    /document\.body\.style\.overflow = "hidden"/,
+    "mobile overlay should lock body scrolling while open",
+  );
+  assert.match(
+    headerSource,
+    /document\.documentElement\.style\.overflow = "hidden"/,
+    "mobile overlay should lock document scrolling while open",
+  );
+  assert.match(
+    headerSource,
+    /fixed inset-0 z-\[9999\][\s\S]*?bg-\[#06080d\][\s\S]*?lg:hidden/,
+    "mobile overlay should use an isolated high-z-index opaque dark surface and the same standard breakpoint as the hamburger",
+  );
+  assert.match(
+    headerSource,
+    /flex-1 content-start gap-1 overflow-y-auto overscroll-contain/,
+    "mobile navigation content should scroll internally",
   );
 }
 

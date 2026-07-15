@@ -55,7 +55,7 @@ export default async function AdminEventsPage({ searchParams }: PageProps) {
   const canManage = canManageEvents(access.role);
 
   return (
-    <div className="grid gap-8">
+    <div className="grid min-w-0 gap-8">
       <section className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">
@@ -195,7 +195,7 @@ export default async function AdminEventsPage({ searchParams }: PageProps) {
           <table className={adminWideTableClass}>
             <thead className={adminTableHeadClass}>
               <tr>
-                <th className={adminTableHeaderCellClass}>Event</th>
+                <th className={adminTablePrimaryCellClass}>Event</th>
                 <th className={adminTableHeaderCellClass}>Championship</th>
                 <th className={adminTableHeaderCellClass}>Season</th>
                 <th className={adminTableHeaderCellClass}>Country</th>
@@ -203,7 +203,7 @@ export default async function AdminEventsPage({ searchParams }: PageProps) {
                 <th className={adminTableHeaderCellClass}>Start Date</th>
                 <th className={adminTableHeaderCellClass}>End Date</th>
                 <th className={adminTableHeaderCellClass}>Last Updated</th>
-                <th className={adminTableHeaderCellClass}>Actions</th>
+                <th className={adminTableActionCellClass}>Actions</th>
               </tr>
             </thead>
             <tbody>

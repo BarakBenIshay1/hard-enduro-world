@@ -160,13 +160,13 @@ export default async function AdminRidersPage({ searchParams }: PageProps) {
           <table className={adminCompactTableClass}>
             <thead className={adminTableHeadClass}>
               <tr>
-                <th className={adminTableHeaderCellClass}>Rider</th>
+                <th className={adminTablePrimaryCellClass}>Rider</th>
                 <th className={adminTableHeaderCellClass}>Country</th>
                 <th className={adminTableHeaderCellClass}>Motorcycle</th>
                 <th className={adminTableHeaderCellClass}>Visibility</th>
                 <th className={adminTableHeaderCellClass}>Dependencies</th>
                 <th className={adminTableHeaderCellClass}>Last Updated</th>
-                <th className={adminTableHeaderCellClass}>Actions</th>
+                <th className={adminTableActionCellClass}>Actions</th>
               </tr>
             </thead>
             <tbody>

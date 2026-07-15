@@ -3,23 +3,24 @@ export const adminTableCardClass = "min-w-0 overflow-hidden";
 export const adminTableScrollClass = "max-w-full overflow-x-auto";
 
 export const adminCompactTableClass =
-  "w-full min-w-[760px] table-auto text-left text-sm md:min-w-[820px]";
+  "w-full table-fixed text-left text-[13px] sm:text-sm";
 
-export const adminWideTableClass =
-  "w-full min-w-[880px] table-auto text-left text-sm lg:min-w-[980px]";
+export const adminWideTableClass = "w-full table-fixed text-left text-[13px] sm:text-sm";
 
 export const adminTableHeadClass =
-  "bg-black text-xs uppercase tracking-[0.16em] text-white/[0.64]";
+  "bg-black text-[10px] uppercase tracking-[0.12em] text-white/[0.64] sm:text-xs";
 
-export const adminTableHeaderCellClass = "px-3 py-3 align-bottom sm:px-4";
+export const adminTableHeaderCellClass =
+  "min-w-0 px-2 py-3 align-bottom leading-5 sm:px-3";
 
-export const adminTableCellClass = "min-w-0 px-3 py-3 align-top leading-6 sm:px-4";
+export const adminTableCellClass =
+  "min-w-0 whitespace-normal break-words px-2 py-3 align-top leading-6 sm:px-3";
 
 export const adminTablePrimaryCellClass =
-  "min-w-[180px] max-w-[280px] px-3 py-3 align-top leading-6 sm:px-4";
+  "w-[24%] min-w-0 whitespace-normal break-words px-2 py-3 align-top leading-6 sm:px-3";
 
 export const adminTableMutedCellClass =
-  "min-w-0 px-3 py-3 align-top leading-6 text-foreground/[0.66] sm:px-4";
+  "min-w-0 whitespace-normal break-words px-2 py-3 align-top leading-6 text-foreground/[0.66] sm:px-3";
 
 export const adminTableActionCellClass =
-  "w-[1%] whitespace-nowrap px-3 py-3 align-top sm:px-4";
+  "w-20 whitespace-nowrap px-2 py-3 align-top sm:w-24 sm:px-3";

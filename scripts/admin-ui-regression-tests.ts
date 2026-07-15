@@ -10,6 +10,7 @@ const imageUploadSource = readFileSync(
 testHeaderResponsiveBreakpoints();
 testManufacturerMediaCopyIsNotRiderSpecific();
 testAdminCmsListsUseSharedResponsiveTables();
+testSharedAdminTableStylesAvoidLargeFixedWidths();
 
 console.log("Admin UI regression tests passed.");
 
@@ -82,4 +83,29 @@ function testAdminCmsListsUseSharedResponsiveTables() {
       `${file} should not use one-off fixed table sizing`,
     );
   }
+}
+
+function testSharedAdminTableStylesAvoidLargeFixedWidths() {
+  const tableStyleSource = readFileSync("components/admin/admin-table-styles.ts", "utf8");
+
+  assert.doesNotMatch(
+    tableStyleSource,
+    /min-w-\[[0-9]+px\]/,
+    "shared admin tables should not rely on large fixed min-width values",
+  );
+  assert.match(
+    tableStyleSource,
+    /table-fixed/,
+    "shared admin tables should use fixed layout so columns adapt inside the card",
+  );
+  assert.match(
+    tableStyleSource,
+    /break-words/,
+    "shared admin table cells should wrap long content instead of forcing overflow",
+  );
+  assert.match(
+    tableStyleSource,
+    /whitespace-nowrap/,
+    "shared admin table action cells should remain no-wrap",
+  );
 }

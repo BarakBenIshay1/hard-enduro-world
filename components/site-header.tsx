@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Globe2, LockKeyhole, Menu, Search, ShieldCheck, X } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { logout } from "@/app/logout/actions";
 import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -35,6 +36,21 @@ export function SiteHeader({
   useEffect(() => {
     setIsMobileOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    if (!isMobileOpen) return;
+
+    const originalBodyOverflow = document.body.style.overflow;
+    const originalDocumentOverflow = document.documentElement.style.overflow;
+
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = originalBodyOverflow;
+      document.documentElement.style.overflow = originalDocumentOverflow;
+    };
+  }, [isMobileOpen]);
 
   if (pathname.startsWith("/admin")) {
     return null;
@@ -105,61 +121,68 @@ export function SiteHeader({
         </button>
       </Container>
 
-      <AnimatePresence>
-        {isMobileOpen ? (
-          <motion.div
-            className="fixed inset-0 z-50 bg-[#06080d] text-white shadow-[inset_0_1px_0_hsl(0_0%_100%/0.08)] lg:hidden"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.18 }}
-          >
-            <div className="flex h-20 items-center justify-between border-b border-border px-5">
-              <Logo />
-              <button
-                type="button"
-                onClick={() => setIsMobileOpen(false)}
-                aria-label="Close navigation menu"
-                className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-border"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <motion.nav
-              aria-label="Mobile navigation"
-              className="grid max-h-[calc(100vh-80px)] gap-1 overflow-y-auto px-5 py-6"
-              initial="closed"
-              animate="open"
-              variants={{
-                open: { transition: { staggerChildren: 0.025 } },
-                closed: {},
-              }}
-            >
-              {allNavigationItems.map((item) => (
+      {typeof document !== "undefined"
+        ? createPortal(
+            <AnimatePresence>
+              {isMobileOpen ? (
                 <motion.div
-                  key={item.href}
-                  variants={{
-                    open: { opacity: 1, x: 0 },
-                    closed: { opacity: 0, x: -12 },
-                  }}
+                  className="fixed inset-0 z-[9999] flex h-dvh flex-col overflow-hidden bg-[#06080d] text-white shadow-[inset_0_1px_0_hsl(0_0%_100%/0.08)] isolate lg:hidden"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.18 }}
                 >
-                  <NavigationItem
-                    href={item.href}
-                    label={item.label}
-                    onClick={() => setIsMobileOpen(false)}
-                    showLiveIndicator={hasLiveRace && item.href === "/future-events"}
-                  />
+                  <div className="flex h-20 shrink-0 items-center justify-between border-b border-white/10 px-5">
+                    <Logo />
+                    <button
+                      type="button"
+                      onClick={() => setIsMobileOpen(false)}
+                      aria-label="Close navigation menu"
+                      className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-white/15 bg-white/[0.04]"
+                    >
+                      <X className="h-5 w-5" />
+                    </button>
+                  </div>
+                  <motion.nav
+                    aria-label="Mobile navigation"
+                    className="grid flex-1 content-start gap-1 overflow-y-auto overscroll-contain px-5 py-6"
+                    initial="closed"
+                    animate="open"
+                    variants={{
+                      open: { transition: { staggerChildren: 0.025 } },
+                      closed: {},
+                    }}
+                  >
+                    {allNavigationItems.map((item) => (
+                      <motion.div
+                        key={item.href}
+                        variants={{
+                          open: { opacity: 1, x: 0 },
+                          closed: { opacity: 0, x: -12 },
+                        }}
+                      >
+                        <NavigationItem
+                          href={item.href}
+                          label={item.label}
+                          onClick={() => setIsMobileOpen(false)}
+                          showLiveIndicator={
+                            hasLiveRace && item.href === "/future-events"
+                          }
+                        />
+                      </motion.div>
+                    ))}
+                    <div className="mt-5 grid grid-cols-[1fr_auto] gap-3">
+                      <ButtonLink href="/future-events">Race Live Center</ButtonLink>
+                      <ThemeToggle />
+                    </div>
+                    <MobileAdminShortcut adminShortcut={adminShortcut} />
+                  </motion.nav>
                 </motion.div>
-              ))}
-              <div className="mt-5 grid grid-cols-[1fr_auto] gap-3">
-                <ButtonLink href="/future-events">Race Live Center</ButtonLink>
-                <ThemeToggle />
-              </div>
-              <MobileAdminShortcut adminShortcut={adminShortcut} />
-            </motion.nav>
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
+              ) : null}
+            </AnimatePresence>,
+            document.body,
+          )
+        : null}
     </header>
   );
 }

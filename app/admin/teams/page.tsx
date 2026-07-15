@@ -159,13 +159,13 @@ export default async function AdminTeamsPage({ searchParams }: PageProps) {
           <table className={adminCompactTableClass}>
             <thead className={adminTableHeadClass}>
               <tr>
-                <th className={adminTableHeaderCellClass}>Team</th>
+                <th className={adminTablePrimaryCellClass}>Team</th>
                 <th className={adminTableHeaderCellClass}>Country</th>
                 <th className={adminTableHeaderCellClass}>Manufacturer</th>
                 <th className={adminTableHeaderCellClass}>Status</th>
                 <th className={adminTableHeaderCellClass}>Visibility</th>
                 <th className={adminTableHeaderCellClass}>Last Updated</th>
-                <th className={adminTableHeaderCellClass}>Actions</th>
+                <th className={adminTableActionCellClass}>Actions</th>
               </tr>
             </thead>
             <tbody>
