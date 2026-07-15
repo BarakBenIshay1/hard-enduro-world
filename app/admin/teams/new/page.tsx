@@ -93,6 +93,8 @@ export default async function NewAdminTeamPage({ searchParams }: PageProps) {
                   name="logoUrl"
                   uploadEndpoint="/admin/teams/media"
                   entityIdFieldName="teamId"
+                  entityLabel="team"
+                  assetDescription="team logo"
                   help="Create the team first, then upload the approved logo from the editor. Advanced URL remains available."
                 />
               </div>

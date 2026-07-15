@@ -3,6 +3,17 @@ import Link from "next/link";
 import { Eye, Plus } from "lucide-react";
 import type { EventVisibility, ManufacturerStatus } from "@prisma/client";
 import { AdminStatusBadge } from "@/components/admin/admin-status-badge";
+import {
+  adminCompactTableClass,
+  adminTableActionCellClass,
+  adminTableCardClass,
+  adminTableCellClass,
+  adminTableHeadClass,
+  adminTableHeaderCellClass,
+  adminTableMutedCellClass,
+  adminTablePrimaryCellClass,
+  adminTableScrollClass,
+} from "@/components/admin/admin-table-styles";
 import { EventAlert } from "@/components/admin/events/event-alert";
 import { Card } from "@/components/ui/card";
 import { getAdminAccessContext } from "@/lib/admin/access";
@@ -143,48 +154,50 @@ export default async function AdminManufacturersPage({ searchParams }: PageProps
         </form>
       </Card>
 
-      <Card className="min-w-0 overflow-hidden">
+      <Card className={adminTableCardClass}>
         <div className="border-b border-border p-5">
           <h2 className="text-xl font-black">Manufacturer records</h2>
           <p className="mt-2 text-sm text-foreground/[0.62]">
             {data.total} manufacturers found. Page {data.page} of {data.totalPages}.
           </p>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[900px] text-left text-sm">
-            <thead className="bg-black text-xs uppercase tracking-[0.18em] text-white/[0.64]">
+        <div className={adminTableScrollClass}>
+          <table className={adminCompactTableClass}>
+            <thead className={adminTableHeadClass}>
               <tr>
-                <th className="px-5 py-4">Manufacturer</th>
-                <th className="px-5 py-4">Country</th>
-                <th className="px-5 py-4">Status</th>
-                <th className="px-5 py-4">Visibility</th>
-                <th className="px-5 py-4">Dependencies</th>
-                <th className="px-5 py-4">Last Updated</th>
-                <th className="px-5 py-4">Actions</th>
+                <th className={adminTableHeaderCellClass}>Manufacturer</th>
+                <th className={adminTableHeaderCellClass}>Country</th>
+                <th className={adminTableHeaderCellClass}>Status</th>
+                <th className={adminTableHeaderCellClass}>Visibility</th>
+                <th className={adminTableHeaderCellClass}>Dependencies</th>
+                <th className={adminTableHeaderCellClass}>Last Updated</th>
+                <th className={adminTableHeaderCellClass}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {data.manufacturers.map((manufacturer) => (
                 <tr key={manufacturer.id} className="border-t border-border">
-                  <td className="px-5 py-4">
+                  <td className={adminTablePrimaryCellClass}>
                     <div className="font-semibold">{manufacturer.name}</div>
                     <div className="mt-1 text-xs text-foreground/[0.48]">
                       {manufacturer.slug}
                     </div>
                   </td>
-                  <td className="px-5 py-4">
+                  <td className={adminTableCellClass}>
                     {manufacturer.country?.name ?? "Unassigned"}
                   </td>
-                  <td className="px-5 py-4">{manufacturer.status}</td>
-                  <td className="px-5 py-4">
+                  <td className={adminTableCellClass}>{manufacturer.status}</td>
+                  <td className={adminTableCellClass}>
                     {manufacturer.archivedAt ? "ARCHIVED" : manufacturer.visibility}
                   </td>
-                  <td className="px-5 py-4 text-foreground/[0.62]">
+                  <td className={adminTableMutedCellClass}>
                     Bikes {manufacturer._count.motorcycles} / Results{" "}
                     {manufacturer._count.results}
                   </td>
-                  <td className="px-5 py-4">{formatDate(manufacturer.updatedAt)}</td>
-                  <td className="px-5 py-4">
+                  <td className={adminTableCellClass}>
+                    {formatDate(manufacturer.updatedAt)}
+                  </td>
+                  <td className={adminTableActionCellClass}>
                     <Link
                       href={`/admin/manufacturers/${manufacturer.id}`}
                       className="inline-flex h-9 items-center gap-2 rounded-md border border-border bg-surface-muted px-3 text-xs font-semibold transition hover:border-accent hover:text-accent"

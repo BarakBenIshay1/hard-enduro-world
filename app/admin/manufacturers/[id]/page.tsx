@@ -188,6 +188,8 @@ export default async function AdminManufacturerDetailPage({
                   disabled={!canManage}
                   entityId={manufacturer.id}
                   entityIdFieldName="manufacturerId"
+                  entityLabel="manufacturer"
+                  assetDescription="manufacturer logo"
                   uploadEndpoint="/admin/manufacturers/media"
                   help="Upload an approved manufacturer logo, or use the advanced URL field."
                 />

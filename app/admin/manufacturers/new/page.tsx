@@ -85,6 +85,8 @@ export default async function NewAdminManufacturerPage({ searchParams }: PagePro
                   name="logoUrl"
                   uploadEndpoint="/admin/manufacturers/media"
                   entityIdFieldName="manufacturerId"
+                  entityLabel="manufacturer"
+                  assetDescription="manufacturer logo"
                   help="Create the manufacturer first, then upload the approved logo from the editor. Advanced URL remains available."
                 />
               </div>

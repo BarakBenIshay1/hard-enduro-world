@@ -3,6 +3,16 @@ import Link from "next/link";
 import { Eye, Plus } from "lucide-react";
 import type { EventVisibility, TeamStatus } from "@prisma/client";
 import { AdminStatusBadge } from "@/components/admin/admin-status-badge";
+import {
+  adminCompactTableClass,
+  adminTableActionCellClass,
+  adminTableCardClass,
+  adminTableCellClass,
+  adminTableHeadClass,
+  adminTableHeaderCellClass,
+  adminTablePrimaryCellClass,
+  adminTableScrollClass,
+} from "@/components/admin/admin-table-styles";
 import { EventAlert } from "@/components/admin/events/event-alert";
 import { Card } from "@/components/ui/card";
 import { getAdminAccessContext } from "@/lib/admin/access";
@@ -138,43 +148,45 @@ export default async function AdminTeamsPage({ searchParams }: PageProps) {
         </form>
       </Card>
 
-      <Card className="min-w-0 overflow-hidden">
+      <Card className={adminTableCardClass}>
         <div className="border-b border-border p-5">
           <h2 className="text-xl font-black">Team records</h2>
           <p className="mt-2 text-sm text-foreground/[0.62]">
             {data.total} teams found. Page {data.page} of {data.totalPages}.
           </p>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[900px] text-left text-sm">
-            <thead className="bg-black text-xs uppercase tracking-[0.18em] text-white/[0.64]">
+        <div className={adminTableScrollClass}>
+          <table className={adminCompactTableClass}>
+            <thead className={adminTableHeadClass}>
               <tr>
-                <th className="px-5 py-4">Team</th>
-                <th className="px-5 py-4">Country</th>
-                <th className="px-5 py-4">Manufacturer</th>
-                <th className="px-5 py-4">Status</th>
-                <th className="px-5 py-4">Visibility</th>
-                <th className="px-5 py-4">Last Updated</th>
-                <th className="px-5 py-4">Actions</th>
+                <th className={adminTableHeaderCellClass}>Team</th>
+                <th className={adminTableHeaderCellClass}>Country</th>
+                <th className={adminTableHeaderCellClass}>Manufacturer</th>
+                <th className={adminTableHeaderCellClass}>Status</th>
+                <th className={adminTableHeaderCellClass}>Visibility</th>
+                <th className={adminTableHeaderCellClass}>Last Updated</th>
+                <th className={adminTableHeaderCellClass}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {data.teams.map((team) => (
                 <tr key={team.id} className="border-t border-border">
-                  <td className="px-5 py-4">
+                  <td className={adminTablePrimaryCellClass}>
                     <div className="font-semibold">{team.name}</div>
                     <div className="mt-1 text-xs text-foreground/[0.48]">{team.slug}</div>
                   </td>
-                  <td className="px-5 py-4">{team.country?.name ?? "Unassigned"}</td>
-                  <td className="px-5 py-4">
+                  <td className={adminTableCellClass}>
+                    {team.country?.name ?? "Unassigned"}
+                  </td>
+                  <td className={adminTableCellClass}>
                     {team.manufacturer?.name ?? "Independent"}
                   </td>
-                  <td className="px-5 py-4">{team.status}</td>
-                  <td className="px-5 py-4">
+                  <td className={adminTableCellClass}>{team.status}</td>
+                  <td className={adminTableCellClass}>
                     {team.archivedAt ? "ARCHIVED" : team.visibility}
                   </td>
-                  <td className="px-5 py-4">{formatDate(team.updatedAt)}</td>
-                  <td className="px-5 py-4">
+                  <td className={adminTableCellClass}>{formatDate(team.updatedAt)}</td>
+                  <td className={adminTableActionCellClass}>
                     <Link
                       href={`/admin/teams/${team.id}`}
                       className="inline-flex h-9 items-center gap-2 rounded-md border border-border bg-surface-muted px-3 text-xs font-semibold transition hover:border-accent hover:text-accent"

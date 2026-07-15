@@ -194,6 +194,8 @@ export default async function AdminTeamDetailPage({ params, searchParams }: Page
                   disabled={!canManage}
                   entityId={team.id}
                   entityIdFieldName="teamId"
+                  entityLabel="team"
+                  assetDescription="team logo"
                   uploadEndpoint="/admin/teams/media"
                   help="Upload an approved team logo, or use the advanced URL field."
                 />

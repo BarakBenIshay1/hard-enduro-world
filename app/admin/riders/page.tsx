@@ -3,6 +3,17 @@ import Link from "next/link";
 import { Eye, Plus } from "lucide-react";
 import type { EventVisibility } from "@prisma/client";
 import { AdminStatusBadge } from "@/components/admin/admin-status-badge";
+import {
+  adminCompactTableClass,
+  adminTableActionCellClass,
+  adminTableCardClass,
+  adminTableCellClass,
+  adminTableHeadClass,
+  adminTableHeaderCellClass,
+  adminTableMutedCellClass,
+  adminTablePrimaryCellClass,
+  adminTableScrollClass,
+} from "@/components/admin/admin-table-styles";
 import { EventAlert } from "@/components/admin/events/event-alert";
 import { Card } from "@/components/ui/card";
 import { getAdminAccessContext } from "@/lib/admin/access";
@@ -138,30 +149,30 @@ export default async function AdminRidersPage({ searchParams }: PageProps) {
         </form>
       </Card>
 
-      <Card className="min-w-0 overflow-hidden">
+      <Card className={adminTableCardClass}>
         <div className="border-b border-border p-5">
           <h2 className="text-xl font-black">Rider records</h2>
           <p className="mt-2 text-sm text-foreground/[0.62]">
             {data.total} riders found. Page {data.page} of {data.totalPages}.
           </p>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[920px] text-left text-sm">
-            <thead className="bg-black text-xs uppercase tracking-[0.18em] text-white/[0.64]">
+        <div className={adminTableScrollClass}>
+          <table className={adminCompactTableClass}>
+            <thead className={adminTableHeadClass}>
               <tr>
-                <th className="px-5 py-4">Rider</th>
-                <th className="px-5 py-4">Country</th>
-                <th className="px-5 py-4">Motorcycle</th>
-                <th className="px-5 py-4">Visibility</th>
-                <th className="px-5 py-4">Dependencies</th>
-                <th className="px-5 py-4">Last Updated</th>
-                <th className="px-5 py-4">Actions</th>
+                <th className={adminTableHeaderCellClass}>Rider</th>
+                <th className={adminTableHeaderCellClass}>Country</th>
+                <th className={adminTableHeaderCellClass}>Motorcycle</th>
+                <th className={adminTableHeaderCellClass}>Visibility</th>
+                <th className={adminTableHeaderCellClass}>Dependencies</th>
+                <th className={adminTableHeaderCellClass}>Last Updated</th>
+                <th className={adminTableHeaderCellClass}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {data.riders.map((rider) => (
                 <tr key={rider.id} className="border-t border-border">
-                  <td className="px-5 py-4">
+                  <td className={adminTablePrimaryCellClass}>
                     <div className="font-semibold">
                       {rider.firstName} {rider.lastName}
                     </div>
@@ -169,20 +180,22 @@ export default async function AdminRidersPage({ searchParams }: PageProps) {
                       {rider.slug}
                     </div>
                   </td>
-                  <td className="px-5 py-4">{rider.country?.name ?? "Unassigned"}</td>
-                  <td className="px-5 py-4">
+                  <td className={adminTableCellClass}>
+                    {rider.country?.name ?? "Unassigned"}
+                  </td>
+                  <td className={adminTableCellClass}>
                     {rider.currentMotorcycle
                       ? `${rider.currentMotorcycle.manufacturer.name} ${rider.currentMotorcycle.model}`
                       : "Unassigned"}
                   </td>
-                  <td className="px-5 py-4">
+                  <td className={adminTableCellClass}>
                     {rider.archivedAt ? "ARCHIVED" : rider.visibility}
                   </td>
-                  <td className="px-5 py-4 text-foreground/[0.62]">
+                  <td className={adminTableMutedCellClass}>
                     Results {rider._count.results} / Standings {rider._count.standings}
                   </td>
-                  <td className="px-5 py-4">{formatDate(rider.updatedAt)}</td>
-                  <td className="px-5 py-4">
+                  <td className={adminTableCellClass}>{formatDate(rider.updatedAt)}</td>
+                  <td className={adminTableActionCellClass}>
                     <Link
                       href={`/admin/riders/${rider.id}`}
                       className="inline-flex h-9 items-center gap-2 rounded-md border border-border bg-surface-muted px-3 text-xs font-semibold transition hover:border-accent hover:text-accent"

@@ -3,6 +3,17 @@ import Link from "next/link";
 import { Eye, Plus } from "lucide-react";
 import type { EventStatus, EventVisibility } from "@prisma/client";
 import { AdminStatusBadge } from "@/components/admin/admin-status-badge";
+import {
+  adminTableActionCellClass,
+  adminTableCardClass,
+  adminTableCellClass,
+  adminTableHeadClass,
+  adminTableHeaderCellClass,
+  adminTableMutedCellClass,
+  adminTablePrimaryCellClass,
+  adminTableScrollClass,
+  adminWideTableClass,
+} from "@/components/admin/admin-table-styles";
 import { EventAlert } from "@/components/admin/events/event-alert";
 import { Card } from "@/components/ui/card";
 import { getAdminEvents, type AdminEventListFilters } from "@/db/admin-events";
@@ -171,7 +182,7 @@ export default async function AdminEventsPage({ searchParams }: PageProps) {
         </form>
       </Card>
 
-      <Card className="overflow-hidden">
+      <Card className={adminTableCardClass}>
         <div className="flex flex-col gap-3 border-b border-border p-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <h2 className="text-xl font-black">Event records</h2>
@@ -180,25 +191,25 @@ export default async function AdminEventsPage({ searchParams }: PageProps) {
             </p>
           </div>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[1080px] text-left text-sm">
-            <thead className="bg-black text-xs uppercase tracking-[0.18em] text-white/[0.64]">
+        <div className={adminTableScrollClass}>
+          <table className={adminWideTableClass}>
+            <thead className={adminTableHeadClass}>
               <tr>
-                <th className="px-5 py-4">Event</th>
-                <th className="px-5 py-4">Championship</th>
-                <th className="px-5 py-4">Season</th>
-                <th className="px-5 py-4">Country</th>
-                <th className="px-5 py-4">Status</th>
-                <th className="px-5 py-4">Start Date</th>
-                <th className="px-5 py-4">End Date</th>
-                <th className="px-5 py-4">Last Updated</th>
-                <th className="px-5 py-4">Actions</th>
+                <th className={adminTableHeaderCellClass}>Event</th>
+                <th className={adminTableHeaderCellClass}>Championship</th>
+                <th className={adminTableHeaderCellClass}>Season</th>
+                <th className={adminTableHeaderCellClass}>Country</th>
+                <th className={adminTableHeaderCellClass}>Status</th>
+                <th className={adminTableHeaderCellClass}>Start Date</th>
+                <th className={adminTableHeaderCellClass}>End Date</th>
+                <th className={adminTableHeaderCellClass}>Last Updated</th>
+                <th className={adminTableHeaderCellClass}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {data.events.map((event) => (
                 <tr key={event.id} className="border-t border-border">
-                  <td className="px-5 py-4">
+                  <td className={adminTablePrimaryCellClass}>
                     <div className="font-semibold">{event.name}</div>
                     <div className="mt-1 text-xs text-foreground/[0.48]">
                       {event.slug}
@@ -210,20 +221,20 @@ export default async function AdminEventsPage({ searchParams }: PageProps) {
                       />
                     </div>
                   </td>
-                  <td className="px-5 py-4 text-foreground/[0.66]">
-                    {event.season.name}
+                  <td className={adminTableMutedCellClass}>{event.season.name}</td>
+                  <td className={adminTableCellClass}>{event.season.year}</td>
+                  <td className={adminTableCellClass}>
+                    {event.country?.name ?? "Unassigned"}
                   </td>
-                  <td className="px-5 py-4">{event.season.year}</td>
-                  <td className="px-5 py-4">{event.country?.name ?? "Unassigned"}</td>
-                  <td className="px-5 py-4">
+                  <td className={adminTableCellClass}>
                     <StatusPill value={event.status} />
                   </td>
-                  <td className="px-5 py-4">{formatDate(event.startDate)}</td>
-                  <td className="px-5 py-4">
+                  <td className={adminTableCellClass}>{formatDate(event.startDate)}</td>
+                  <td className={adminTableCellClass}>
                     {event.endDate ? formatDate(event.endDate) : "None"}
                   </td>
-                  <td className="px-5 py-4">{formatDate(event.updatedAt)}</td>
-                  <td className="px-5 py-4">
+                  <td className={adminTableCellClass}>{formatDate(event.updatedAt)}</td>
+                  <td className={adminTableActionCellClass}>
                     <Link
                       href={`/admin/events/${event.id}`}
                       className="inline-flex h-9 items-center gap-2 rounded-md border border-border bg-surface-muted px-3 text-xs font-semibold transition hover:border-accent hover:text-accent"

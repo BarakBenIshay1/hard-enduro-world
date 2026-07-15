@@ -15,6 +15,8 @@ type ImageUploadFieldProps = {
   disabled?: boolean;
   entityId?: string | null;
   entityIdFieldName?: string;
+  entityLabel?: string;
+  assetDescription?: string;
   uploadEndpoint: string;
   help?: string;
 };
@@ -28,6 +30,8 @@ export function ImageUploadField({
   disabled = false,
   entityId,
   entityIdFieldName = "riderId",
+  entityLabel = "rider",
+  assetDescription = "profile image",
   uploadEndpoint,
   help,
 }: ImageUploadFieldProps) {
@@ -96,7 +100,9 @@ export function ImageUploadField({
         updateValue(payload.url);
         setProgress(100);
         setStatus("success");
-        setMessage("Image uploaded. Save the rider to keep this profile image.");
+        setMessage(
+          `Image uploaded. Save the ${entityLabel} to keep this ${assetDescription}.`,
+        );
         return;
       }
 
@@ -120,7 +126,7 @@ export function ImageUploadField({
     updateValue("");
     setStatus("success");
     setProgress(0);
-    setMessage("Image removed. Save the rider to keep this change.");
+    setMessage(`Image removed. Save the ${entityLabel} to keep this change.`);
     if (inputRef.current) inputRef.current.value = "";
   }
 
@@ -162,7 +168,7 @@ export function ImageUploadField({
             <div className="grid place-items-center gap-2 text-center text-foreground/[0.52]">
               <ImageIcon className="h-8 w-8 text-accent" aria-hidden="true" />
               <span className="px-4 text-xs font-semibold uppercase tracking-[0.14em]">
-                Profile image
+                {assetDescription}
               </span>
             </div>
           )}

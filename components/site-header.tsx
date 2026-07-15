@@ -49,12 +49,14 @@ export function SiteHeader({
           : "border-b border-white/10 bg-black/[0.14] text-white backdrop-blur-sm",
       )}
     >
-      <Container className="flex h-20 items-center justify-between gap-5">
-        <Logo />
+      <Container className="flex h-20 items-center justify-between gap-3 xl:gap-5">
+        <div className="shrink-0">
+          <Logo />
+        </div>
 
         <nav
           aria-label="Primary navigation"
-          className="hidden items-center gap-0 xl:flex"
+          className="hidden min-w-0 flex-1 items-center justify-center gap-0 min-[1180px]:flex"
         >
           {primaryNavigation.map((item) => (
             <NavigationItem
@@ -66,7 +68,7 @@ export function SiteHeader({
           ))}
         </nav>
 
-        <div className="hidden items-center gap-2 2xl:flex">
+        <div className="hidden shrink-0 items-center gap-2 2xl:flex">
           <button
             type="button"
             aria-label="Search"
@@ -89,7 +91,7 @@ export function SiteHeader({
           </ButtonLink>
         </div>
 
-        <div className="hidden items-center lg:flex 2xl:hidden">
+        <div className="hidden shrink-0 items-center min-[1180px]:flex 2xl:hidden">
           <AdminShortcutMenu adminShortcut={adminShortcut} />
         </div>
 
@@ -97,7 +99,7 @@ export function SiteHeader({
           type="button"
           onClick={() => setIsMobileOpen(true)}
           aria-label="Open navigation menu"
-          className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-border bg-surface/70 text-current lg:hidden"
+          className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-border bg-surface/70 text-current min-[1180px]:hidden"
         >
           <Menu className="h-5 w-5" />
         </button>
@@ -106,7 +108,7 @@ export function SiteHeader({
       <AnimatePresence>
         {isMobileOpen ? (
           <motion.div
-            className="fixed inset-0 z-50 bg-surface text-foreground lg:hidden"
+            className="fixed inset-0 z-50 bg-surface text-foreground min-[1180px]:hidden"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
