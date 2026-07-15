@@ -16,13 +16,18 @@ console.log("Admin UI regression tests passed.");
 function testHeaderResponsiveBreakpoints() {
   assert.match(
     headerSource,
-    /aria-label="Primary navigation"[\s\S]*?min-\[1180px\]:flex/,
-    "desktop navigation should appear at the shared desktop breakpoint",
+    /aria-label="Primary navigation"[\s\S]*?lg:flex/,
+    "desktop navigation should appear at the standard Tailwind lg breakpoint",
   );
   assert.match(
     headerSource,
-    /aria-label="Open navigation menu"[\s\S]*?min-\[1180px\]:hidden/,
-    "hamburger should hide at the same breakpoint where desktop navigation appears",
+    /aria-label="Open navigation menu"[\s\S]*?lg:hidden/,
+    "hamburger should hide at the same standard breakpoint where desktop navigation appears",
+  );
+  assert.doesNotMatch(
+    headerSource,
+    /min-\[1180px\]/,
+    "header should not use the removed custom desktop breakpoint",
   );
 }
 

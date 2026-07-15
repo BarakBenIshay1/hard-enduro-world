@@ -12,13 +12,18 @@ console.log("Header responsive tests passed.");
 function testDesktopNavigationBreakpoint() {
   assert.match(
     headerSource,
-    /aria-label="Primary navigation"[\s\S]*?min-\[1180px\]:flex/,
-    "desktop primary navigation should appear at the desktop header breakpoint",
+    /aria-label="Primary navigation"[\s\S]*?lg:flex/,
+    "desktop primary navigation should appear at the standard Tailwind lg breakpoint",
   );
   assert.match(
     headerSource,
-    /aria-label="Open navigation menu"[\s\S]*?min-\[1180px\]:hidden/,
-    "hamburger should hide at the same breakpoint where desktop nav appears",
+    /aria-label="Open navigation menu"[\s\S]*?lg:hidden/,
+    "hamburger should hide at the same standard breakpoint where desktop nav appears",
+  );
+  assert.doesNotMatch(
+    headerSource,
+    /min-\[1180px\]/,
+    "header must not use the removed custom desktop breakpoint",
   );
   assert.doesNotMatch(
     headerSource,
@@ -30,8 +35,8 @@ function testDesktopNavigationBreakpoint() {
 function testMobileMenuBreakpoint() {
   assert.match(
     headerSource,
-    /fixed inset-0 z-50 bg-surface text-foreground min-\[1180px\]:hidden/,
-    "mobile overlay should use the same desktop breakpoint as the hamburger",
+    /fixed inset-0 z-50 bg-surface text-foreground lg:hidden/,
+    "mobile overlay should use the same standard breakpoint as the hamburger",
   );
 }
 

@@ -56,7 +56,7 @@ export function SiteHeader({
 
         <nav
           aria-label="Primary navigation"
-          className="hidden min-w-0 flex-1 items-center justify-center gap-0 min-[1180px]:flex"
+          className="hidden min-w-0 flex-1 items-center justify-center gap-0 lg:flex"
         >
           {primaryNavigation.map((item) => (
             <NavigationItem
@@ -91,7 +91,7 @@ export function SiteHeader({
           </ButtonLink>
         </div>
 
-        <div className="hidden shrink-0 items-center min-[1180px]:flex 2xl:hidden">
+        <div className="hidden shrink-0 items-center lg:flex 2xl:hidden">
           <AdminShortcutMenu adminShortcut={adminShortcut} />
         </div>
 
@@ -99,7 +99,7 @@ export function SiteHeader({
           type="button"
           onClick={() => setIsMobileOpen(true)}
           aria-label="Open navigation menu"
-          className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-border bg-surface/70 text-current min-[1180px]:hidden"
+          className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-border bg-surface/70 text-current lg:hidden"
         >
           <Menu className="h-5 w-5" />
         </button>
@@ -108,7 +108,7 @@ export function SiteHeader({
       <AnimatePresence>
         {isMobileOpen ? (
           <motion.div
-            className="fixed inset-0 z-50 bg-surface text-foreground min-[1180px]:hidden"
+            className="fixed inset-0 z-50 bg-surface text-foreground lg:hidden"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
