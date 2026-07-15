@@ -1,0 +1,4 @@
+sourceRowId,sourceStageId,sourceStageName,eventSlug,eventName,seasonYear,stageSlug,stageOrder,riderSlug,riderName,countryCode,position,status,manufacturer,motorcycle,totalTimeText,gapToLeaderText,gapToPreviousText,className,officialSourceUrl
+erzbergrodeo-2026-main-race-stage-1,erzbergrodeo-2026-main-race,Main Race,erzbergrodeo-2026,Red Bull Erzbergrodeo,2026,final,4,manuel-lettenbichler,Manuel Lettenbichler,DE,1,FINISHED,KTM,,,,,Pro,https://www.redbullerzbergrodeo.com
+erzbergrodeo-2026-main-race-stage-2,erzbergrodeo-2026-main-race,Main Race,erzbergrodeo-2026,Red Bull Erzbergrodeo,2026,final,4,trystan-hart,Trystan Hart,CA,2,FINISHED,KTM,,,,,Pro,https://www.redbullerzbergrodeo.com
+erzbergrodeo-2026-main-race-stage-3,erzbergrodeo-2026-main-race,Main Race,erzbergrodeo-2026,Red Bull Erzbergrodeo,2026,final,4,mario-roman,Mario Roman,ES,3,FINISHED,Sherco,,,,,Pro,https://www.redbullerzbergrodeo.com

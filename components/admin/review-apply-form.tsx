@@ -38,8 +38,16 @@ export function ReviewApplyForm({
     suggestedAction === "RESULT_CONFLICT" ||
     suggestedAction === "RESULT_UNRESOLVED" ||
     suggestedAction === "RESULT_INVALID" ||
-    suggestedAction === "RESULT_MISSING_SOURCE";
-  const target = suggestedAction.includes("RESULT") ? "Result" : "Event";
+    suggestedAction === "RESULT_MISSING_SOURCE" ||
+    suggestedAction === "STAGE_RESULT_CONFLICT" ||
+    suggestedAction === "STAGE_RESULT_UNRESOLVED" ||
+    suggestedAction === "STAGE_RESULT_INVALID" ||
+    suggestedAction === "STAGE_RESULT_MISSING_SOURCE";
+  const target = suggestedAction.includes("STAGE_RESULT")
+    ? "StageResult"
+    : suggestedAction.includes("RESULT")
+      ? "Result"
+      : "Event";
 
   return (
     <form

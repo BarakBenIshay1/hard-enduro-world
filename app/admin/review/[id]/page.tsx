@@ -49,7 +49,11 @@ export default async function AdminReviewDetailPage({ params, searchParams }: Pa
   const canDecide =
     canAccessAdmin(access, "review:approve") && item.reviewStatus === "PENDING";
   const sourceUrl = getOfficialSourceUrl(item);
-  const entityLabel = item.suggestedAction.includes("RESULT") ? "Result" : "Event";
+  const entityLabel = item.suggestedAction.includes("STAGE_RESULT")
+    ? "StageResult"
+    : item.suggestedAction.includes("RESULT")
+      ? "Result"
+      : "Event";
 
   return (
     <div className="grid gap-8">
@@ -128,6 +132,11 @@ export default async function AdminReviewDetailPage({ params, searchParams }: Pa
             value={item.currentResultId ?? "None"}
             mono
           />
+          <Meta
+            label="Matched current stage result ID"
+            value={item.currentStageResultId ?? "None"}
+            mono
+          />
           <Meta label="Snapshot timestamp" value={formatDate(item.snapshot.createdAt)} />
           <Meta label="Snapshot checksum" value={item.snapshot.payloadChecksum} mono />
           <Meta label="Parser" value={item.snapshot.parserSelected} />
@@ -196,6 +205,11 @@ export default async function AdminReviewDetailPage({ params, searchParams }: Pa
           <Meta label="Application status" value={item.applicationStatus} />
           <Meta label="Applied event ID" value={item.appliedEventId ?? "None"} mono />
           <Meta label="Applied result ID" value={item.appliedResultId ?? "None"} mono />
+          <Meta
+            label="Applied stage result ID"
+            value={item.appliedStageResultId ?? "None"}
+            mono
+          />
           <Meta label="Applied by" value={item.appliedByUserEmail ?? "None"} />
           <Meta
             label="Applied at"

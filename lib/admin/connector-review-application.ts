@@ -91,6 +91,7 @@ const allowedChangedFields = new Set([
 ]);
 
 const resultReviewActions = new Set(["NEW_RESULT", "UPDATE_RESULT"]);
+const stageResultReviewActions = new Set(["NEW_STAGE_RESULT", "UPDATE_STAGE_RESULT"]);
 
 const allowedResultProposalFields = new Set([
   "entityType",
@@ -129,6 +130,56 @@ const allowedResultChangedFields = new Set([
   "className",
   "overallPosition",
   "status",
+  "totalTimeText",
+  "gapToLeaderText",
+  "gapToPreviousText",
+]);
+
+const allowedStageResultProposalFields = new Set([
+  "entityType",
+  "sourceRowId",
+  "sourceStageId",
+  "sourceStageName",
+  "sourceId",
+  "eventId",
+  "stageId",
+  "riderId",
+  "manufacturerId",
+  "motorcycleId",
+  "className",
+  "overallPosition",
+  "status",
+  "totalTimeMs",
+  "totalTimeText",
+  "gapToLeaderText",
+  "gapToPreviousText",
+  "officialRawRow",
+  "officialSourceUrl",
+  "eventSlug",
+  "eventName",
+  "stageSlug",
+  "stageOrder",
+  "riderSlug",
+  "riderName",
+  "manufacturer",
+  "motorcycle",
+  "team",
+  "stageMatch",
+  "entityMatches",
+  "validationWarnings",
+  "applyEligible",
+]);
+
+const allowedStageResultChangedFields = new Set([
+  "stageResult",
+  "stageId",
+  "riderId",
+  "motorcycleId",
+  "manufacturerId",
+  "className",
+  "overallPosition",
+  "status",
+  "totalTimeMs",
   "totalTimeText",
   "gapToLeaderText",
   "gapToPreviousText",
@@ -180,6 +231,9 @@ export function validateConnectorReviewApplicationPolicy(
   }
   if (resultReviewActions.has(input.suggestedAction)) {
     return validateResultApplicationPolicy(input);
+  }
+  if (stageResultReviewActions.has(input.suggestedAction)) {
+    return validateStageResultApplicationPolicy(input);
   }
   for (const field of Object.keys(input.proposedValues)) {
     if (!allowedProposalFields.has(field)) {
@@ -246,6 +300,13 @@ async function applyConnectorReviewItemTransaction(
       const context = buildApplicationContext(review);
       if (resultReviewActions.has(review.suggestedAction)) {
         return applyResultReviewItem({
+          context,
+          input,
+          tx,
+        });
+      }
+      if (stageResultReviewActions.has(review.suggestedAction)) {
+        return applyStageResultReviewItem({
           context,
           input,
           tx,
@@ -679,6 +740,307 @@ async function createResultSourceLink({
   });
 }
 
+function validateStageResultApplicationPolicy(
+  input: ConnectorReviewApplicationPolicyInput,
+): ConnectorReviewApplicationPolicyResult {
+  if (!input.proposedValues) {
+    return { ok: false, reason: "Proposal payload is missing." };
+  }
+  for (const field of Object.keys(input.proposedValues)) {
+    if (!allowedStageResultProposalFields.has(field)) {
+      return { ok: false, reason: `Unsupported StageResult proposal field: ${field}` };
+    }
+  }
+  for (const field of input.changedFields) {
+    if (!allowedStageResultChangedFields.has(field)) {
+      return { ok: false, reason: `Unsupported StageResult changed field: ${field}` };
+    }
+  }
+  if (input.proposedValues.entityType !== "StageResult") {
+    return { ok: false, reason: "Proposal is not a StageResult proposal." };
+  }
+  if (input.proposedValues.applyEligible !== true) {
+    return { ok: false, reason: "Proposal is blocked by validation warnings." };
+  }
+  try {
+    mapResultStatus(getString(input.proposedValues, "status"));
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, reason: sanitizeError(error) };
+  }
+}
+
+async function applyStageResultReviewItem({
+  context,
+  input,
+  tx,
+}: {
+  context: ApplicationContext;
+  input: ConnectorReviewApplyInput;
+  tx: PrismaTransaction;
+}): Promise<ConnectorReviewApplyResult> {
+  validateStageResultApplicationContext(context);
+  const previousStageResultState =
+    context.review.suggestedAction === "UPDATE_STAGE_RESULT"
+      ? await loadCurrentStageResultForUpdate(context, tx)
+      : null;
+  const expectedChecksum = createStableChecksum(previousStageResultState ?? null);
+
+  const stageResult =
+    context.review.suggestedAction === "NEW_STAGE_RESULT"
+      ? await createStageResultFromReview(context, tx)
+      : await updateStageResultFromReview(context, previousStageResultState, tx);
+
+  const resultingState = toAuditedStageResultState(stageResult);
+  const resultingChecksum = createStableChecksum(resultingState);
+  const appliedAt = new Date();
+  const sourceUrl = getString(context.proposed, "officialSourceUrl");
+
+  await createStageResultSourceLink({
+    context,
+    stageResultId: stageResult.id,
+    sourceUrl,
+    tx,
+  });
+
+  await tx.connectorReviewItem.update({
+    where: { id: context.review.id },
+    data: {
+      applicationStatus: "APPLIED",
+      appliedAt,
+      appliedByUserId: input.actor.id,
+      appliedByUserEmail: input.actor.email,
+      applicationNote: input.note?.trim() || null,
+      applicationError: null,
+      appliedStageResultId: stageResult.id,
+      expectedCurrentStateChecksum: expectedChecksum,
+      resultingEventStateChecksum: resultingChecksum,
+      applicationVersion: { increment: 1 },
+    },
+  });
+
+  await tx.dataVersion.create({
+    data: {
+      entityType: "StageResult",
+      entityId: stageResult.id,
+      action: context.review.suggestedAction === "NEW_STAGE_RESULT" ? "CREATE" : "UPDATE",
+      previous: (previousStageResultState ?? null) as Prisma.InputJsonValue,
+      next: resultingState as Prisma.InputJsonValue,
+      sourceUrl,
+      createdBy: input.actor.id,
+    },
+  });
+
+  await tx.dataVersion.create({
+    data: {
+      entityType: "ConnectorReviewItem",
+      entityId: context.review.id,
+      action: "MANUAL_EDIT",
+      previous: {
+        applicationStatus: input.expectedApplicationStatus,
+        applicationVersion: input.expectedApplicationVersion,
+      },
+      next: {
+        applicationStatus: "APPLIED",
+        appliedStageResultId: stageResult.id,
+        appliedByUserId: input.actor.id,
+        appliedByUserEmail: input.actor.email,
+        appliedAt: appliedAt.toISOString(),
+        changedFields: context.changedFields,
+        suggestedAction: context.review.suggestedAction,
+      },
+      sourceUrl,
+      createdBy: input.actor.id,
+    },
+  });
+
+  return {
+    ok: true,
+    reviewItemId: context.review.id,
+    eventId: stageResult.id,
+    status: "APPLIED",
+    message: "Approved review item was applied to one StageResult record.",
+  };
+}
+
+function validateStageResultApplicationContext(context: ApplicationContext) {
+  if (!context.review.snapshot) throw new Error("Source snapshot is missing.");
+  if (!context.proposed) throw new Error("Proposal payload is missing.");
+  const policy = validateStageResultApplicationPolicy({
+    reviewStatus: context.review.reviewStatus,
+    applicationStatus: context.review.applicationStatus,
+    suggestedAction: context.review.suggestedAction,
+    changedFields: context.changedFields,
+    proposedValues: context.proposed,
+  });
+  if (!policy.ok) throw new Error(policy.reason);
+  if (
+    context.review.suggestedAction === "UPDATE_STAGE_RESULT" &&
+    !context.review.currentStageResultId
+  ) {
+    throw new Error("UPDATE_STAGE_RESULT requires a matched current StageResult id.");
+  }
+}
+
+async function createStageResultFromReview(
+  context: ApplicationContext,
+  client: PrismaExecutor,
+) {
+  const stageId = requiredString(context.proposed, "stageId");
+  const riderId = requiredString(context.proposed, "riderId");
+  const className = getString(context.proposed, "className");
+  const [stage, rider, duplicate] = await Promise.all([
+    client.raceStage.findUnique({ where: { id: stageId } }),
+    client.rider.findUnique({ where: { id: riderId } }),
+    client.stageResult.findFirst({ where: { stageId, riderId, className } }),
+  ]);
+  if (!stage) throw new Error("Matched RaceStage no longer exists.");
+  if (!rider) throw new Error("Matched Rider no longer exists.");
+  if (stage.eventId !== requiredString(context.proposed, "eventId")) {
+    throw new Error("Matched RaceStage does not belong to the matched Event.");
+  }
+  if (duplicate) {
+    throw new Error("A StageResult already exists for this rider and stage.");
+  }
+  await validateOptionalResultRelations(context, client);
+
+  return client.stageResult.create({
+    data: buildStageResultCreateData(context),
+  });
+}
+
+async function updateStageResultFromReview(
+  context: ApplicationContext,
+  previousStageResultState: Record<string, unknown> | null,
+  client: PrismaExecutor,
+) {
+  if (!previousStageResultState) throw new Error("Current StageResult state is missing.");
+  const expected = context.current;
+  if (!expected) throw new Error("Approved expected current values are missing.");
+  for (const field of context.changedFields) {
+    if (
+      field !== "stageResult" &&
+      !valuesEqual(previousStageResultState[field], expected[field])
+    ) {
+      throw new Error(
+        `Stale StageResult state for ${field}. Regenerate review before applying.`,
+      );
+    }
+  }
+  const stage = await client.raceStage.findUnique({
+    where: { id: requiredString(context.proposed, "stageId") },
+  });
+  if (!stage) throw new Error("Matched RaceStage no longer exists.");
+  if (stage.eventId !== requiredString(context.proposed, "eventId")) {
+    throw new Error("Matched RaceStage does not belong to the matched Event.");
+  }
+  await validateOptionalResultRelations(context, client);
+
+  return client.stageResult.update({
+    where: { id: context.review.currentStageResultId! },
+    data: buildStageResultUpdateData(context),
+  });
+}
+
+async function loadCurrentStageResultForUpdate(
+  context: ApplicationContext,
+  client: PrismaExecutor,
+) {
+  const result = await client.stageResult.findUnique({
+    where: { id: context.review.currentStageResultId ?? "" },
+  });
+  if (!result) throw new Error("Matched StageResult no longer exists.");
+  return toAuditedStageResultState(result);
+}
+
+function buildStageResultCreateData(
+  context: ApplicationContext,
+): Prisma.StageResultUncheckedCreateInput {
+  return {
+    stageId: requiredString(context.proposed, "stageId"),
+    riderId: requiredString(context.proposed, "riderId"),
+    manufacturerId: getString(context.proposed, "manufacturerId"),
+    motorcycleId: getString(context.proposed, "motorcycleId"),
+    className: getString(context.proposed, "className"),
+    overallPosition: getNumber(context.proposed, "overallPosition"),
+    status: mapResultStatus(getString(context.proposed, "status")),
+    totalTimeMs: getNumber(context.proposed, "totalTimeMs"),
+    totalTimeText: getString(context.proposed, "totalTimeText"),
+    gapToLeaderText: getString(context.proposed, "gapToLeaderText"),
+    gapToPreviousText: getString(context.proposed, "gapToPreviousText"),
+    officialRawRow: context.proposed.officialRawRow as Prisma.InputJsonValue,
+  };
+}
+
+function buildStageResultUpdateData(
+  context: ApplicationContext,
+): Prisma.StageResultUpdateInput {
+  const data: Prisma.StageResultUpdateInput = {};
+  const uniqueFields = new Set(
+    context.changedFields.filter((field) => field !== "stageResult"),
+  );
+  for (const field of uniqueFields) {
+    if (field === "manufacturerId") {
+      const id = getString(context.proposed, "manufacturerId");
+      data.manufacturer = id ? { connect: { id } } : { disconnect: true };
+    }
+    if (field === "motorcycleId") {
+      const id = getString(context.proposed, "motorcycleId");
+      data.motorcycle = id ? { connect: { id } } : { disconnect: true };
+    }
+    if (field === "className") data.className = getString(context.proposed, "className");
+    if (field === "overallPosition") {
+      data.overallPosition = getNumber(context.proposed, "overallPosition");
+    }
+    if (field === "status")
+      data.status = mapResultStatus(getString(context.proposed, "status"));
+    if (field === "totalTimeMs")
+      data.totalTimeMs = getNumber(context.proposed, "totalTimeMs");
+    if (field === "totalTimeText")
+      data.totalTimeText = getString(context.proposed, "totalTimeText");
+    if (field === "gapToLeaderText") {
+      data.gapToLeaderText = getString(context.proposed, "gapToLeaderText");
+    }
+    if (field === "gapToPreviousText") {
+      data.gapToPreviousText = getString(context.proposed, "gapToPreviousText");
+    }
+  }
+  if (Object.keys(data).length === 0) {
+    throw new Error("No supported StageResult fields were approved for application.");
+  }
+  return data;
+}
+
+async function createStageResultSourceLink({
+  context,
+  stageResultId,
+  sourceUrl,
+  tx,
+}: {
+  context: ApplicationContext;
+  stageResultId: string;
+  sourceUrl: string | null;
+  tx: PrismaTransaction;
+}) {
+  const diagnostics = toNullableRecord(context.review.snapshot.diagnostics);
+  const sourceSnapshotId = diagnostics
+    ? getString(diagnostics, "sourceSnapshotId")
+    : null;
+  const snapshot = sourceSnapshotId
+    ? await tx.sourceSnapshot.findUnique({ where: { id: sourceSnapshotId } })
+    : null;
+  if (!snapshot) return;
+  await tx.sourceLink.create({
+    data: {
+      dataSourceId: snapshot.dataSourceId,
+      url: sourceUrl ?? snapshot.url,
+      entityType: "StageResult",
+      entityId: stageResultId,
+      note: `Applied from review item ${context.review.id}`,
+    },
+  });
+}
+
 async function loadReviewForApplication(id: string, client: PrismaExecutor) {
   return client.connectorReviewItem.findUnique({
     where: { id },
@@ -996,6 +1358,36 @@ function toAuditedResultState(result: {
     className: result.className,
     overallPosition: result.overallPosition,
     status: result.status,
+    totalTimeText: result.totalTimeText,
+    gapToLeaderText: result.gapToLeaderText,
+    gapToPreviousText: result.gapToPreviousText,
+  };
+}
+
+function toAuditedStageResultState(result: {
+  id: string;
+  stageId: string;
+  riderId: string;
+  motorcycleId: string | null;
+  manufacturerId: string | null;
+  className: string | null;
+  overallPosition: number | null;
+  status: ResultStatus;
+  totalTimeMs: number | null;
+  totalTimeText: string | null;
+  gapToLeaderText: string | null;
+  gapToPreviousText: string | null;
+}) {
+  return {
+    id: result.id,
+    stageId: result.stageId,
+    riderId: result.riderId,
+    motorcycleId: result.motorcycleId,
+    manufacturerId: result.manufacturerId,
+    className: result.className,
+    overallPosition: result.overallPosition,
+    status: result.status,
+    totalTimeMs: result.totalTimeMs,
     totalTimeText: result.totalTimeText,
     gapToLeaderText: result.gapToLeaderText,
     gapToPreviousText: result.gapToPreviousText,

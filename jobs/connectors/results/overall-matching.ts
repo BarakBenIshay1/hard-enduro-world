@@ -2,6 +2,7 @@ import type { PrismaClient } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import type {
   EntityMatch,
+  MatchableResultIdentity,
   MatchedOverallResultProposal,
   NormalizedOverallResultProposal,
 } from "./overall-types";
@@ -163,8 +164,8 @@ function validateProposal(
   return warnings;
 }
 
-async function resolveEvent(
-  proposal: NormalizedOverallResultProposal,
+export async function resolveEvent(
+  proposal: MatchableResultIdentity,
   client: PrismaExecutor,
 ): Promise<EntityMatch> {
   if (!proposal.eventSlug && !proposal.eventName) {
@@ -191,8 +192,8 @@ async function resolveEvent(
   );
 }
 
-async function resolveRider(
-  proposal: NormalizedOverallResultProposal,
+export async function resolveRider(
+  proposal: MatchableResultIdentity,
   client: PrismaExecutor,
 ): Promise<EntityMatch> {
   if (!proposal.riderSlug && !proposal.riderName) {
@@ -221,8 +222,8 @@ async function resolveRider(
   );
 }
 
-async function resolveManufacturer(
-  proposal: NormalizedOverallResultProposal,
+export async function resolveManufacturer(
+  proposal: MatchableResultIdentity,
   client: PrismaExecutor,
 ): Promise<EntityMatch> {
   if (!proposal.manufacturer) {
@@ -242,8 +243,8 @@ async function resolveManufacturer(
   );
 }
 
-async function resolveMotorcycle(
-  proposal: NormalizedOverallResultProposal,
+export async function resolveMotorcycle(
+  proposal: MatchableResultIdentity,
   manufacturerId: string | null,
   client: PrismaExecutor,
 ): Promise<EntityMatch> {
@@ -272,8 +273,8 @@ async function resolveMotorcycle(
   );
 }
 
-async function resolveTeam(
-  proposal: NormalizedOverallResultProposal,
+export async function resolveTeam(
+  proposal: MatchableResultIdentity,
   client: PrismaExecutor,
 ): Promise<EntityMatch> {
   if (!proposal.team) {
