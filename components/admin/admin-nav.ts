@@ -88,6 +88,12 @@ export const adminNavGroups: AdminNavGroup[] = [
         icon: Trophy,
       },
       {
+        label: "Stage Results",
+        href: "/admin/stage-results",
+        description: "Stage classifications",
+        icon: ListChecks,
+      },
+      {
         label: "Standings",
         href: "/admin/standings",
         description: "Points tables",

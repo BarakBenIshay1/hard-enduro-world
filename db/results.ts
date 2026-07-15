@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { publicResultWhere, publicStageResultWhere } from "@/lib/results/public-filters";
 
 export async function getResultsPageData() {
   const [seasons, events, overallResults, stageResults] = await prisma.$transaction([
@@ -20,6 +21,7 @@ export async function getResultsPageData() {
       },
     }),
     prisma.result.findMany({
+      where: publicResultWhere,
       orderBy: [{ event: { startDate: "desc" } }, { overallPosition: "asc" }],
       include: {
         event: {
@@ -60,6 +62,7 @@ export async function getResultsPageData() {
       },
     }),
     prisma.stageResult.findMany({
+      where: publicStageResultWhere,
       orderBy: [{ stage: { event: { startDate: "desc" } } }, { overallPosition: "asc" }],
       include: {
         stage: {

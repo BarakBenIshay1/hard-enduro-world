@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { publicResultWhere, publicStageResultWhere } from "@/lib/results/public-filters";
 
 export async function getHistoryIndexData() {
   const seasons = await prisma.season.findMany({
@@ -10,6 +11,7 @@ export async function getHistoryIndexData() {
       events: {
         include: {
           results: {
+            where: publicResultWhere,
             orderBy: [{ overallPosition: "asc" }],
             take: 1,
             include: {
@@ -64,6 +66,7 @@ export async function getSeasonHistory(year: number) {
         include: {
           country: true,
           results: {
+            where: publicResultWhere,
             orderBy: [{ overallPosition: "asc" }],
             include: {
               rider: {
@@ -81,7 +84,9 @@ export async function getSeasonHistory(year: number) {
           },
           stages: {
             include: {
-              stageResults: true,
+              stageResults: {
+                where: publicStageResultWhere,
+              },
             },
           },
         },

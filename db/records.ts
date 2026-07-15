@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { publicResultWhere } from "@/lib/results/public-filters";
 
 export type RecordCardData = {
   title: string;
@@ -43,6 +44,7 @@ export async function getRecordsPageData() {
       },
     }),
     prisma.result.findMany({
+      where: publicResultWhere,
       include: {
         rider: {
           include: {

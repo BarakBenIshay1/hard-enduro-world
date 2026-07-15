@@ -2,6 +2,7 @@ import { previewStandingsCalculation } from "@/jobs/calculations/standings-engin
 import { pointsSystems } from "@/jobs/calculations/points-system";
 import type { CalculationResultInput } from "@/jobs/calculations/validation";
 import { prisma } from "@/lib/prisma";
+import { publicResultWhere } from "@/lib/results/public-filters";
 
 export async function getCalculationsAdminData() {
   const [latestCalculationRun, pendingRecalculations, pendingResultImports, seasons] =
@@ -50,6 +51,7 @@ export async function getCalculationsAdminData() {
           events: {
             include: {
               results: {
+                where: publicResultWhere,
                 include: {
                   rider: true,
                 },

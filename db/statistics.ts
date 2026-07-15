@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { publicResultWhere } from "@/lib/results/public-filters";
 
 export type StatisticFact = {
   id: string;
@@ -45,10 +46,11 @@ export async function getStatisticsPageData() {
     prisma.season.findMany({ orderBy: { year: "desc" } }),
     prisma.rider.count(),
     prisma.event.count(),
-    prisma.result.count(),
+    prisma.result.count({ where: publicResultWhere }),
     prisma.manufacturer.count(),
     prisma.motorcycle.count(),
     prisma.result.findMany({
+      where: publicResultWhere,
       orderBy: [{ event: { startDate: "desc" } }, { overallPosition: "asc" }],
       include: {
         event: {

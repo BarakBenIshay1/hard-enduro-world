@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { publicResultWhere } from "@/lib/results/public-filters";
 
 export async function getManufacturersList() {
   return prisma.manufacturer.findMany({
@@ -15,6 +16,7 @@ export async function getManufacturersList() {
         },
       },
       results: {
+        where: publicResultWhere,
         include: {
           event: {
             include: {
@@ -57,6 +59,7 @@ export async function getManufacturerDetail(slug: string) {
         },
       },
       results: {
+        where: publicResultWhere,
         include: {
           rider: {
             include: {

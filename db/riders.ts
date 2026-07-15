@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { publicResultWhere, publicStageResultWhere } from "@/lib/results/public-filters";
 
 export async function getRidersList() {
   return prisma.rider.findMany({
@@ -43,6 +44,7 @@ export async function getRidersList() {
         },
       },
       results: {
+        where: publicResultWhere,
         select: {
           status: true,
         },
@@ -87,6 +89,7 @@ export async function getRiderDetail(slug: string) {
         },
       },
       results: {
+        where: publicResultWhere,
         orderBy: [{ event: { startDate: "desc" } }],
         include: {
           event: {
@@ -104,6 +107,7 @@ export async function getRiderDetail(slug: string) {
         },
       },
       stageResults: {
+        where: publicStageResultWhere,
         orderBy: [{ stage: { stageOrder: "asc" } }],
         take: 8,
         include: {

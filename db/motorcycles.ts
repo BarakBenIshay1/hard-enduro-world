@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { publicResultWhere, publicStageResultWhere } from "@/lib/results/public-filters";
 
 export async function getMotorcyclesList() {
   return prisma.motorcycle.findMany({
@@ -16,6 +17,7 @@ export async function getMotorcyclesList() {
       },
       currentRiders: true,
       results: {
+        where: publicResultWhere,
         include: {
           event: {
             include: {
@@ -56,6 +58,7 @@ export async function getMotorcycleDetail(slug: string) {
         },
       },
       results: {
+        where: publicResultWhere,
         include: {
           rider: {
             include: {
@@ -81,6 +84,7 @@ export async function getMotorcycleDetail(slug: string) {
         },
       },
       stageResults: {
+        where: publicStageResultWhere,
         include: {
           rider: {
             include: {

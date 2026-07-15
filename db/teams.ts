@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { publicResultWhere } from "@/lib/results/public-filters";
 
 export async function getTeamsList() {
   return prisma.team.findMany({
@@ -75,6 +76,7 @@ export async function getTeamDetail(slug: string) {
                 },
               },
               results: {
+                where: publicResultWhere,
                 include: {
                   rider: true,
                   event: {

@@ -396,6 +396,8 @@ model StageResult {
   status               ResultStatus @default(FINISHED)
   notes                String?
   officialRawRow       Json?
+  archivedAt           DateTime?
+  archivedBy           String?
   createdAt            DateTime     @default(now())
   updatedAt            DateTime     @updatedAt
 
@@ -408,6 +410,7 @@ model StageResult {
   @@index([stageId])
   @@index([riderId])
   @@index([motorcycleId])
+  @@index([archivedAt])
 }
 
 model Result {
@@ -433,6 +436,8 @@ model Result {
   status               ResultStatus @default(FINISHED)
   notes                String?
   officialRawRow       Json?
+  archivedAt           DateTime?
+  archivedBy           String?
   createdAt            DateTime     @default(now())
   updatedAt            DateTime     @updatedAt
 
@@ -445,6 +450,7 @@ model Result {
   @@index([eventId])
   @@index([riderId])
   @@index([motorcycleId])
+  @@index([archivedAt])
 }
 
 model Standing {

@@ -8,6 +8,7 @@ import {
   type StatisticsResultInput,
 } from "@/jobs/calculations/statistics-engine";
 import { prisma } from "@/lib/prisma";
+import { publicResultWhere } from "@/lib/results/public-filters";
 
 export async function getRecalculationAdminData() {
   const [
@@ -57,6 +58,7 @@ export async function getRecalculationAdminData() {
     }),
     prisma.championshipRecord.count(),
     prisma.result.findMany({
+      where: publicResultWhere,
       orderBy: [{ event: { startDate: "desc" } }, { overallPosition: "asc" }],
       include: {
         event: true,

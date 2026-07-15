@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { publicResultWhere, publicStageResultWhere } from "@/lib/results/public-filters";
 
 export async function getHomeSummary() {
   const [eventCount, riderCount, motorcycleCount, stageResultCount, latestEvents] =
@@ -7,7 +8,7 @@ export async function getHomeSummary() {
       prisma.event.count(),
       prisma.rider.count(),
       prisma.motorcycle.count(),
-      prisma.stageResult.count(),
+      prisma.stageResult.count({ where: publicStageResultWhere }),
       prisma.event.findMany({
         orderBy: [{ startDate: "asc" }],
         take: 3,
@@ -19,6 +20,7 @@ export async function getHomeSummary() {
             take: 1,
             include: {
               stageResults: {
+                where: publicStageResultWhere,
                 orderBy: [{ overallPosition: "asc" }],
                 take: 1,
                 include: {
@@ -53,6 +55,7 @@ export async function getEventsList() {
         },
       },
       results: {
+        where: publicResultWhere,
         orderBy: [{ overallPosition: "asc" }],
         take: 1,
         include: {
@@ -61,7 +64,7 @@ export async function getEventsList() {
       },
       _count: {
         select: {
-          results: true,
+          results: { where: publicResultWhere },
         },
       },
     },
@@ -85,6 +88,7 @@ export async function getEventDetail(slug: string) {
         orderBy: { stageOrder: "asc" },
         include: {
           stageResults: {
+            where: publicStageResultWhere,
             orderBy: [{ overallPosition: "asc" }, { classPosition: "asc" }],
             include: {
               rider: {
@@ -109,6 +113,7 @@ export async function getEventDetail(slug: string) {
         },
       },
       results: {
+        where: publicResultWhere,
         orderBy: [{ overallPosition: "asc" }, { classPosition: "asc" }],
         include: {
           rider: {
@@ -158,6 +163,7 @@ export async function getEventDetail(slug: string) {
       country: true,
       season: true,
       results: {
+        where: publicResultWhere,
         orderBy: [{ overallPosition: "asc" }],
         take: 1,
         include: {
