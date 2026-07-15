@@ -108,7 +108,7 @@ export function SiteHeader({
       <AnimatePresence>
         {isMobileOpen ? (
           <motion.div
-            className="fixed inset-0 z-50 bg-surface text-foreground lg:hidden"
+            className="fixed inset-0 z-50 bg-[#06080d] text-white shadow-[inset_0_1px_0_hsl(0_0%_100%/0.08)] lg:hidden"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}

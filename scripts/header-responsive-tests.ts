@@ -35,8 +35,8 @@ function testDesktopNavigationBreakpoint() {
 function testMobileMenuBreakpoint() {
   assert.match(
     headerSource,
-    /fixed inset-0 z-50 bg-surface text-foreground lg:hidden/,
-    "mobile overlay should use the same standard breakpoint as the hamburger",
+    /fixed inset-0 z-50 bg-\[#06080d\] text-white[\s\S]*?lg:hidden/,
+    "mobile overlay should use an opaque dark surface and the same standard breakpoint as the hamburger",
   );
 }
 
