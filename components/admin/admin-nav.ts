@@ -95,6 +95,12 @@ export const adminNavGroups: AdminNavGroup[] = [
         icon: ListChecks,
       },
       {
+        label: "Scoring Components",
+        href: "/admin/result-point-components",
+        description: "Point provenance",
+        icon: Calculator,
+      },
+      {
         label: "Standings",
         href: "/admin/standings",
         description: "Points tables",

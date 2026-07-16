@@ -67,13 +67,14 @@ model Event {
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
 
-  season           Season              @relation(fields: [seasonId], references: [id])
-  country          Country?            @relation(fields: [countryId], references: [id])
-  stages           RaceStage[]
-  timelineItems    EventTimelineItem[]
-  results          Result[]
-  weatherSnapshots WeatherSnapshot[]
-  mediaItems       MediaItem[]
+  season                Season                 @relation(fields: [seasonId], references: [id])
+  country               Country?               @relation(fields: [countryId], references: [id])
+  stages                RaceStage[]
+  timelineItems         EventTimelineItem[]
+  results               Result[]
+  resultPointComponents ResultPointComponent[]
+  weatherSnapshots      WeatherSnapshot[]
+  mediaItems            MediaItem[]
 
   @@index([seasonId])
   @@index([countryId])
@@ -96,8 +97,9 @@ model RaceStage {
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
-  event        Event         @relation(fields: [eventId], references: [id])
-  stageResults StageResult[]
+  event           Event                  @relation(fields: [eventId], references: [id])
+  stageResults    StageResult[]
+  pointComponents ResultPointComponent[]
 
   @@unique([eventId, slug])
   @@unique([eventId, stageOrder])
@@ -402,10 +404,11 @@ model StageResult {
   createdAt            DateTime     @default(now())
   updatedAt            DateTime     @updatedAt
 
-  stage        RaceStage     @relation(fields: [stageId], references: [id])
-  rider        Rider         @relation(fields: [riderId], references: [id])
-  motorcycle   Motorcycle?   @relation(fields: [motorcycleId], references: [id])
-  manufacturer Manufacturer? @relation(fields: [manufacturerId], references: [id])
+  stage           RaceStage              @relation(fields: [stageId], references: [id])
+  rider           Rider                  @relation(fields: [riderId], references: [id])
+  motorcycle      Motorcycle?            @relation(fields: [motorcycleId], references: [id])
+  manufacturer    Manufacturer?          @relation(fields: [manufacturerId], references: [id])
+  pointComponents ResultPointComponent[]
 
   @@unique([stageId, riderId, className])
   @@index([stageId])
@@ -442,10 +445,11 @@ model Result {
   createdAt            DateTime     @default(now())
   updatedAt            DateTime     @updatedAt
 
-  event        Event         @relation(fields: [eventId], references: [id])
-  rider        Rider         @relation(fields: [riderId], references: [id])
-  motorcycle   Motorcycle?   @relation(fields: [motorcycleId], references: [id])
-  manufacturer Manufacturer? @relation(fields: [manufacturerId], references: [id])
+  event           Event                  @relation(fields: [eventId], references: [id])
+  rider           Rider                  @relation(fields: [riderId], references: [id])
+  motorcycle      Motorcycle?            @relation(fields: [motorcycleId], references: [id])
+  manufacturer    Manufacturer?          @relation(fields: [manufacturerId], references: [id])
+  pointComponents ResultPointComponent[]
 
   @@unique([eventId, riderId, className])
   @@index([eventId])
@@ -500,14 +504,60 @@ model ChampionshipRegulation {
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
 
-  season         Season          @relation(fields: [seasonId], references: [id])
-  sourceSnapshot SourceSnapshot? @relation(fields: [sourceSnapshotId], references: [id])
+  season                Season                 @relation(fields: [seasonId], references: [id])
+  sourceSnapshot        SourceSnapshot?        @relation(fields: [sourceSnapshotId], references: [id])
+  resultPointComponents ResultPointComponent[]
 
   @@index([seasonId])
   @@index([seasonId, classificationScope, className])
   @@index([status])
   @@index([regulationYear])
   @@index([sourceSnapshotId])
+}
+
+model ResultPointComponent {
+  id                    String               @id @default(cuid())
+  resultId              String
+  stageResultId         String?
+  raceStageId           String?
+  eventId               String
+  componentType         ScoringComponentType
+  classificationScope   String               @default("OVERALL")
+  className             String?
+  position              Int?
+  points                Int
+  regulationId          String
+  regulationVersion     Int
+  regulationChecksum    String
+  regulationTableKey    String
+  sourceSnapshotId      String?
+  connectorReviewItemId String?
+  officialRawPayload    Json?
+  archivedAt            DateTime?
+  archivedBy            String?
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+
+  result              Result                 @relation(fields: [resultId], references: [id])
+  stageResult         StageResult?           @relation(fields: [stageResultId], references: [id])
+  raceStage           RaceStage?             @relation(fields: [raceStageId], references: [id])
+  event               Event                  @relation(fields: [eventId], references: [id])
+  regulation          ChampionshipRegulation @relation(fields: [regulationId], references: [id])
+  sourceSnapshot      SourceSnapshot?        @relation(fields: [sourceSnapshotId], references: [id])
+  connectorReviewItem ConnectorReviewItem?   @relation("ResultPointComponentReviewItem", fields: [connectorReviewItemId], references: [id])
+  currentReviewItems  ConnectorReviewItem[]  @relation("CurrentResultPointComponentReviewItems")
+  appliedReviewItems  ConnectorReviewItem[]  @relation("AppliedResultPointComponentReviewItems")
+
+  @@index([resultId])
+  @@index([stageResultId])
+  @@index([raceStageId])
+  @@index([eventId])
+  @@index([regulationId])
+  @@index([sourceSnapshotId])
+  @@index([connectorReviewItemId])
+  @@index([classificationScope, className])
+  @@index([componentType])
+  @@index([archivedAt])
 }
 
 model ChampionshipRecord {
@@ -644,9 +694,10 @@ model SourceSnapshot {
   statusCode   Int?
   errorMessage String?
 
-  dataSource  DataSource               @relation(fields: [dataSourceId], references: [id])
-  importRuns  ImportRun[]
-  regulations ChampionshipRegulation[]
+  dataSource            DataSource               @relation(fields: [dataSourceId], references: [id])
+  importRuns            ImportRun[]
+  regulations           ChampionshipRegulation[]
+  resultPointComponents ResultPointComponent[]
 
   @@index([dataSourceId])
   @@index([contentHash])
@@ -741,50 +792,55 @@ model ConnectorSnapshot {
 }
 
 model ConnectorReviewItem {
-  id                           String                           @id @default(cuid())
-  snapshotId                   String
-  connectorKey                 String
-  season                       Int
-  sourceEventId                String?
-  currentEventId               String?
-  currentResultId              String?
-  currentStageResultId         String?
-  currentStandingId            String?
-  eventName                    String
-  suggestedAction              ConnectorReviewAction
-  reviewStatus                 ConnectorReviewStatus            @default(PENDING)
-  confidence                   Json
-  matchingStrategy             String?
-  ambiguityReason              String?
-  currentValues                Json?
-  proposedValues               Json?
-  changedFields                String[]                         @default([])
-  recommendation               String?
-  deduplicationKey             String
-  decidedByUserId              String?
-  decidedByUserEmail           String?
-  decidedAt                    DateTime?
-  decisionNote                 String?
-  supersededByReviewItemId     String?
-  version                      Int                              @default(1)
-  applicationStatus            ConnectorReviewApplicationStatus @default(NOT_APPLIED)
-  appliedAt                    DateTime?
-  appliedByUserId              String?
-  appliedByUserEmail           String?
-  applicationNote              String?
-  applicationError             String?
-  appliedEventId               String?
-  appliedResultId              String?
-  appliedStageResultId         String?
-  appliedStandingId            String?
-  applicationAttemptCount      Int                              @default(0)
-  expectedCurrentStateChecksum String?
-  resultingEventStateChecksum  String?
-  applicationVersion           Int                              @default(1)
-  createdAt                    DateTime                         @default(now())
-  updatedAt                    DateTime                         @updatedAt
+  id                            String                           @id @default(cuid())
+  snapshotId                    String
+  connectorKey                  String
+  season                        Int
+  sourceEventId                 String?
+  currentEventId                String?
+  currentResultId               String?
+  currentStageResultId          String?
+  currentStandingId             String?
+  currentResultPointComponentId String?
+  eventName                     String
+  suggestedAction               ConnectorReviewAction
+  reviewStatus                  ConnectorReviewStatus            @default(PENDING)
+  confidence                    Json
+  matchingStrategy              String?
+  ambiguityReason               String?
+  currentValues                 Json?
+  proposedValues                Json?
+  changedFields                 String[]                         @default([])
+  recommendation                String?
+  deduplicationKey              String
+  decidedByUserId               String?
+  decidedByUserEmail            String?
+  decidedAt                     DateTime?
+  decisionNote                  String?
+  supersededByReviewItemId      String?
+  version                       Int                              @default(1)
+  applicationStatus             ConnectorReviewApplicationStatus @default(NOT_APPLIED)
+  appliedAt                     DateTime?
+  appliedByUserId               String?
+  appliedByUserEmail            String?
+  applicationNote               String?
+  applicationError              String?
+  appliedEventId                String?
+  appliedResultId               String?
+  appliedStageResultId          String?
+  appliedStandingId             String?
+  appliedResultPointComponentId String?
+  applicationAttemptCount       Int                              @default(0)
+  expectedCurrentStateChecksum  String?
+  resultingEventStateChecksum   String?
+  applicationVersion            Int                              @default(1)
+  createdAt                     DateTime                         @default(now())
+  updatedAt                     DateTime                         @updatedAt
 
-  snapshot ConnectorSnapshot @relation(fields: [snapshotId], references: [id])
+  snapshot                    ConnectorSnapshot      @relation(fields: [snapshotId], references: [id])
+  resultPointComponents       ResultPointComponent[] @relation("ResultPointComponentReviewItem")
+  currentResultPointComponent ResultPointComponent?  @relation("CurrentResultPointComponentReviewItems", fields: [currentResultPointComponentId], references: [id])
+  appliedResultPointComponent ResultPointComponent?  @relation("AppliedResultPointComponentReviewItems", fields: [appliedResultPointComponentId], references: [id])
 
   @@index([snapshotId])
   @@index([connectorKey, season])
@@ -798,6 +854,8 @@ model ConnectorReviewItem {
   @@index([appliedStageResultId])
   @@index([currentStandingId])
   @@index([appliedStandingId])
+  @@index([currentResultPointComponentId])
+  @@index([appliedResultPointComponentId])
 }
 
 model UserProfile {
@@ -917,9 +975,19 @@ enum EventTimelineType {
 
 enum StageType {
   PROLOGUE
+  SPRINT
+  MAIN_EVENT
   DAY
   FINAL
   QUALIFYING
+  OTHER
+}
+
+enum ScoringComponentType {
+  PROLOGUE
+  SPRINT
+  MAIN_EVENT
+  FINAL
   OTHER
 }
 
