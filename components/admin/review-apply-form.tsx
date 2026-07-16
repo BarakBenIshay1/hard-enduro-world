@@ -42,12 +42,16 @@ export function ReviewApplyForm({
     suggestedAction === "STAGE_RESULT_CONFLICT" ||
     suggestedAction === "STAGE_RESULT_UNRESOLVED" ||
     suggestedAction === "STAGE_RESULT_INVALID" ||
-    suggestedAction === "STAGE_RESULT_MISSING_SOURCE";
+    suggestedAction === "STAGE_RESULT_MISSING_SOURCE" ||
+    suggestedAction === "UNCHANGED_STANDING" ||
+    suggestedAction === "STANDING_INVALID";
   const target = suggestedAction.includes("STAGE_RESULT")
     ? "StageResult"
-    : suggestedAction.includes("RESULT")
-      ? "Result"
-      : "Event";
+    : suggestedAction.includes("STANDING")
+      ? "Standing"
+      : suggestedAction.includes("RESULT")
+        ? "Result"
+        : "Event";
 
   return (
     <form

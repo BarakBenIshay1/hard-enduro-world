@@ -92,6 +92,7 @@ const allowedChangedFields = new Set([
 
 const resultReviewActions = new Set(["NEW_RESULT", "UPDATE_RESULT"]);
 const stageResultReviewActions = new Set(["NEW_STAGE_RESULT", "UPDATE_STAGE_RESULT"]);
+const standingReviewActions = new Set(["NEW_STANDING", "UPDATE_STANDING"]);
 
 const allowedResultProposalFields = new Set([
   "entityType",
@@ -185,6 +186,36 @@ const allowedStageResultChangedFields = new Set([
   "gapToPreviousText",
 ]);
 
+const allowedStandingProposalFields = new Set([
+  "entityType",
+  "seasonId",
+  "riderId",
+  "riderName",
+  "className",
+  "position",
+  "points",
+  "wins",
+  "podiums",
+  "starts",
+  "dnfs",
+  "pointsSystemId",
+  "calculationVersion",
+  "inputResultIds",
+  "applyEligible",
+]);
+
+const allowedStandingChangedFields = new Set([
+  "standing",
+  "seasonId",
+  "riderId",
+  "position",
+  "points",
+  "wins",
+  "podiums",
+  "starts",
+  "dnfs",
+]);
+
 const countryCodeAliases: Record<string, string> = {
   FRA: "FR",
   PRT: "PT",
@@ -234,6 +265,9 @@ export function validateConnectorReviewApplicationPolicy(
   }
   if (stageResultReviewActions.has(input.suggestedAction)) {
     return validateStageResultApplicationPolicy(input);
+  }
+  if (standingReviewActions.has(input.suggestedAction)) {
+    return validateStandingApplicationPolicy(input);
   }
   for (const field of Object.keys(input.proposedValues)) {
     if (!allowedProposalFields.has(field)) {
@@ -307,6 +341,13 @@ async function applyConnectorReviewItemTransaction(
       }
       if (stageResultReviewActions.has(review.suggestedAction)) {
         return applyStageResultReviewItem({
+          context,
+          input,
+          tx,
+        });
+      }
+      if (standingReviewActions.has(review.suggestedAction)) {
+        return applyStandingReviewItem({
           context,
           input,
           tx,
@@ -768,6 +809,228 @@ function validateStageResultApplicationPolicy(
   } catch (error) {
     return { ok: false, reason: sanitizeError(error) };
   }
+}
+
+function validateStandingApplicationPolicy(
+  input: ConnectorReviewApplicationPolicyInput,
+): ConnectorReviewApplicationPolicyResult {
+  if (!input.proposedValues) {
+    return { ok: false, reason: "Proposal payload is missing." };
+  }
+  for (const field of Object.keys(input.proposedValues)) {
+    if (!allowedStandingProposalFields.has(field)) {
+      return { ok: false, reason: `Unsupported Standing proposal field: ${field}` };
+    }
+  }
+  for (const field of input.changedFields) {
+    if (!allowedStandingChangedFields.has(field)) {
+      return { ok: false, reason: `Unsupported Standing changed field: ${field}` };
+    }
+  }
+  if (input.proposedValues.entityType !== "Standing") {
+    return { ok: false, reason: "Proposal is not a Standing proposal." };
+  }
+  if (input.proposedValues.pointsSystemId !== "source-result-points") {
+    return { ok: false, reason: "Unsupported Standing points source." };
+  }
+  if (input.proposedValues.applyEligible !== true) {
+    return { ok: false, reason: "Standing proposal is blocked by validation warnings." };
+  }
+  return { ok: true };
+}
+
+async function applyStandingReviewItem({
+  context,
+  input,
+  tx,
+}: {
+  context: ApplicationContext;
+  input: ConnectorReviewApplyInput;
+  tx: PrismaTransaction;
+}): Promise<ConnectorReviewApplyResult> {
+  validateStandingApplicationContext(context);
+  const previousStandingState =
+    context.review.suggestedAction === "UPDATE_STANDING"
+      ? await loadCurrentStandingForUpdate(context, tx)
+      : null;
+  const expectedChecksum = createStableChecksum(previousStandingState ?? null);
+
+  const standing =
+    context.review.suggestedAction === "NEW_STANDING"
+      ? await createStandingFromReview(context, tx)
+      : await updateStandingFromReview(context, previousStandingState, tx);
+
+  const resultingState = toAuditedStandingState(standing);
+  const resultingChecksum = createStableChecksum(resultingState);
+  const appliedAt = new Date();
+
+  await tx.connectorReviewItem.update({
+    where: { id: context.review.id },
+    data: {
+      applicationStatus: "APPLIED",
+      appliedAt,
+      appliedByUserId: input.actor.id,
+      appliedByUserEmail: input.actor.email,
+      applicationNote: input.note?.trim() || null,
+      applicationError: null,
+      appliedStandingId: standing.id,
+      expectedCurrentStateChecksum: expectedChecksum,
+      resultingEventStateChecksum: resultingChecksum,
+      applicationVersion: { increment: 1 },
+    },
+  });
+
+  await tx.dataVersion.create({
+    data: {
+      entityType: "Standing",
+      entityId: standing.id,
+      action: context.review.suggestedAction === "NEW_STANDING" ? "CREATE" : "UPDATE",
+      previous: (previousStandingState ?? null) as Prisma.InputJsonValue,
+      next: resultingState as Prisma.InputJsonValue,
+      createdBy: input.actor.id,
+    },
+  });
+
+  await tx.dataVersion.create({
+    data: {
+      entityType: "ConnectorReviewItem",
+      entityId: context.review.id,
+      action: "MANUAL_EDIT",
+      previous: {
+        applicationStatus: input.expectedApplicationStatus,
+        applicationVersion: input.expectedApplicationVersion,
+      },
+      next: {
+        applicationStatus: "APPLIED",
+        appliedStandingId: standing.id,
+        appliedByUserId: input.actor.id,
+        appliedByUserEmail: input.actor.email,
+        appliedAt: appliedAt.toISOString(),
+        changedFields: context.changedFields,
+        suggestedAction: context.review.suggestedAction,
+      },
+      createdBy: input.actor.id,
+    },
+  });
+
+  return {
+    ok: true,
+    reviewItemId: context.review.id,
+    eventId: standing.id,
+    status: "APPLIED",
+    message: "Approved review item was applied to one Standing record.",
+  };
+}
+
+function validateStandingApplicationContext(context: ApplicationContext) {
+  if (!context.review.snapshot) throw new Error("Calculation snapshot is missing.");
+  if (!context.proposed) throw new Error("Proposal payload is missing.");
+  const policy = validateStandingApplicationPolicy({
+    reviewStatus: context.review.reviewStatus,
+    applicationStatus: context.review.applicationStatus,
+    suggestedAction: context.review.suggestedAction,
+    changedFields: context.changedFields,
+    proposedValues: context.proposed,
+  });
+  if (!policy.ok) throw new Error(policy.reason);
+  if (
+    context.review.suggestedAction === "UPDATE_STANDING" &&
+    !context.review.currentStandingId
+  ) {
+    throw new Error("UPDATE_STANDING requires a matched current Standing id.");
+  }
+}
+
+async function createStandingFromReview(
+  context: ApplicationContext,
+  client: PrismaExecutor,
+) {
+  const seasonId = requiredString(context.proposed, "seasonId");
+  const riderId = requiredString(context.proposed, "riderId");
+  const className = getString(context.proposed, "className");
+  const [season, rider, duplicate] = await Promise.all([
+    client.season.findUnique({ where: { id: seasonId } }),
+    client.rider.findUnique({ where: { id: riderId } }),
+    client.standing.findFirst({ where: { seasonId, riderId, className } }),
+  ]);
+  if (!season) throw new Error("Matched Season no longer exists.");
+  if (!rider) throw new Error("Matched Rider no longer exists.");
+  if (duplicate) throw new Error("A Standing already exists for this rider and season.");
+
+  return client.standing.create({
+    data: buildStandingCreateData(context),
+  });
+}
+
+async function updateStandingFromReview(
+  context: ApplicationContext,
+  previousStandingState: Record<string, unknown> | null,
+  client: PrismaExecutor,
+) {
+  if (!previousStandingState) throw new Error("Current Standing state is missing.");
+  const expected = context.current;
+  if (!expected) throw new Error("Approved expected current values are missing.");
+  assertNoStaleChangedFields({
+    entityLabel: "Standing",
+    changedFields: context.changedFields,
+    aggregateField: "standing",
+    previousState: previousStandingState,
+    expectedState: expected,
+  });
+
+  return client.standing.update({
+    where: { id: context.review.currentStandingId! },
+    data: buildStandingUpdateData(context),
+  });
+}
+
+async function loadCurrentStandingForUpdate(
+  context: ApplicationContext,
+  client: PrismaExecutor,
+) {
+  const standing = await client.standing.findUnique({
+    where: { id: context.review.currentStandingId ?? "" },
+  });
+  if (!standing) throw new Error("Matched Standing no longer exists.");
+  return toAuditedStandingState(standing);
+}
+
+function buildStandingCreateData(
+  context: ApplicationContext,
+): Prisma.StandingUncheckedCreateInput {
+  return {
+    seasonId: requiredString(context.proposed, "seasonId"),
+    riderId: requiredString(context.proposed, "riderId"),
+    className: getString(context.proposed, "className"),
+    position: requiredNumber(context.proposed, "position"),
+    points: requiredNumber(context.proposed, "points"),
+    wins: requiredNumber(context.proposed, "wins"),
+    podiums: requiredNumber(context.proposed, "podiums"),
+    starts: requiredNumber(context.proposed, "starts"),
+    dnfs: requiredNumber(context.proposed, "dnfs"),
+  };
+}
+
+function buildStandingUpdateData(
+  context: ApplicationContext,
+): Prisma.StandingUpdateInput {
+  const data: Prisma.StandingUpdateInput = {};
+  const uniqueFields = new Set(
+    context.changedFields.filter((field) => field !== "standing"),
+  );
+  for (const field of uniqueFields) {
+    if (field === "position")
+      data.position = requiredNumber(context.proposed, "position");
+    if (field === "points") data.points = requiredNumber(context.proposed, "points");
+    if (field === "wins") data.wins = requiredNumber(context.proposed, "wins");
+    if (field === "podiums") data.podiums = requiredNumber(context.proposed, "podiums");
+    if (field === "starts") data.starts = requiredNumber(context.proposed, "starts");
+    if (field === "dnfs") data.dnfs = requiredNumber(context.proposed, "dnfs");
+  }
+  if (Object.keys(data).length === 0) {
+    throw new Error("No supported Standing fields were approved for application.");
+  }
+  return data;
 }
 
 async function applyStageResultReviewItem({
@@ -1388,6 +1651,32 @@ function toAuditedStageResultState(result: {
     totalTimeText: result.totalTimeText,
     gapToLeaderText: result.gapToLeaderText,
     gapToPreviousText: result.gapToPreviousText,
+  };
+}
+
+function toAuditedStandingState(standing: {
+  id: string;
+  seasonId: string;
+  riderId: string;
+  className: string | null;
+  position: number | null;
+  points: number;
+  wins: number;
+  podiums: number;
+  starts: number;
+  dnfs: number;
+}) {
+  return {
+    id: standing.id,
+    seasonId: standing.seasonId,
+    riderId: standing.riderId,
+    className: standing.className,
+    position: standing.position,
+    points: standing.points,
+    wins: standing.wins,
+    podiums: standing.podiums,
+    starts: standing.starts,
+    dnfs: standing.dnfs,
   };
 }
 

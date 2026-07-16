@@ -71,6 +71,7 @@ export async function getCalculationsAdminData() {
         eventId: event.id,
         riderId: result.riderId,
         riderName: `${result.rider.firstName} ${result.rider.lastName}`,
+        className: result.className,
         position: result.overallPosition,
         points: result.points,
         status: result.status,
@@ -80,13 +81,14 @@ export async function getCalculationsAdminData() {
     season?.standings.map((standing) => ({
       seasonId: season.id,
       riderId: standing.riderId,
+      className: standing.className,
       currentPosition: standing.position,
       currentPoints: standing.points,
     })) ?? [];
   const preview = previewStandingsCalculation({
     results: resultInputs,
     currentStandings,
-    pointsSystemId: "fim-style",
+    pointsSystemId: "source-result-points",
   });
   const affectedSeasons = seasons.filter((item) =>
     item.events.some((event) => event.results.length > 0),

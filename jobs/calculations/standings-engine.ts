@@ -12,6 +12,7 @@ import {
 export type CurrentStandingInput = {
   seasonId: string;
   riderId: string;
+  className: string | null;
   currentPosition: number | null;
   currentPoints: number;
 };
@@ -32,7 +33,7 @@ export type StandingsCalculationPreview = {
 export function previewStandingsCalculation({
   results,
   currentStandings,
-  pointsSystemId = "fim-style",
+  pointsSystemId = "source-result-points",
 }: {
   results: CalculationResultInput[];
   currentStandings: CurrentStandingInput[];
@@ -42,13 +43,16 @@ export function previewStandingsCalculation({
   const validationIssues = validateCalculationInputs(results);
   const currentByRider = new Map(
     currentStandings.map((standing) => [
-      `${standing.seasonId}:${standing.riderId}`,
+      `${standing.seasonId}:${standing.riderId}:${standing.className ?? "__NULL__"}`,
       standing,
     ]),
   );
-  const calculated = calculateSeasonRankingPreview(results, pointsSystem);
+  const calculated = calculateSeasonRankingPreview(results);
+  validationIssues.push(...findUnresolvedTies(calculated));
   const standings = calculated.map((row) => {
-    const current = currentByRider.get(`${row.seasonId}:${row.riderId}`);
+    const current = currentByRider.get(
+      `${row.seasonId}:${row.riderId}:${row.className ?? "__NULL__"}`,
+    );
 
     return {
       ...row,
@@ -63,8 +67,36 @@ export function previewStandingsCalculation({
   });
 
   return {
-    pointsSystemId,
+    pointsSystemId: pointsSystem.id,
     validationIssues,
     standings,
   };
+}
+
+function findUnresolvedTies(
+  standings: Array<{
+    seasonId: string;
+    className: string | null;
+    proposedPoints: number;
+    riderName: string;
+  }>,
+): CalculationValidationIssue[] {
+  const byScopeAndPoints = new Map<string, string[]>();
+  for (const standing of standings) {
+    const key = `${standing.seasonId}:${standing.className ?? "__NULL__"}:${standing.proposedPoints}`;
+    const riders = byScopeAndPoints.get(key) ?? [];
+    riders.push(standing.riderName);
+    byScopeAndPoints.set(key, riders);
+  }
+
+  return Array.from(byScopeAndPoints.entries())
+    .filter(([, riders]) => riders.length > 1)
+    .map(([key, riders]) => {
+      const [, className, points] = key.split(":");
+      return {
+        severity: "error" as const,
+        code: "unresolved-tie" as const,
+        message: `Official tie-break rules are not configured for ${riders.join(", ")} with ${points} points in class ${className === "__NULL__" ? "Overall" : className}.`,
+      };
+    });
 }

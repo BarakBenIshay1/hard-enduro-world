@@ -4,6 +4,7 @@ export type CalculationResultInput = {
   eventId: string;
   riderId: string | null;
   riderName: string;
+  className: string | null;
   position: number | null;
   points: number | null;
   status: "FINISHED" | "DNF" | "DNS" | "DSQ" | "UNKNOWN";
@@ -16,7 +17,8 @@ export type CalculationValidationIssue = {
     | "duplicate-event-result"
     | "missing-points"
     | "invalid-position"
-    | "missing-rider";
+    | "missing-rider"
+    | "unresolved-tie";
   message: string;
 };
 
@@ -36,11 +38,11 @@ export function validateCalculationInputs(
       });
     }
 
-    if (result.status === "FINISHED" && result.points === null) {
+    if (result.points === null) {
       issues.push({
-        severity: "warning",
+        severity: "error",
         code: "missing-points",
-        message: `${result.riderName} has a finished result without points.`,
+        message: `${result.riderName} is missing source points for standings calculation.`,
       });
     }
 
@@ -56,7 +58,7 @@ export function validateCalculationInputs(
     }
 
     if (result.riderId) {
-      const riderEventKey = `${result.eventId}:${result.riderId}`;
+      const riderEventKey = `${result.eventId}:${result.riderId}:${result.className ?? "__NULL__"}`;
 
       if (riderEventKeys.has(riderEventKey)) {
         issues.push({
@@ -70,7 +72,7 @@ export function validateCalculationInputs(
     }
 
     if (result.position !== null) {
-      const positionEventKey = `${result.eventId}:${result.position}`;
+      const positionEventKey = `${result.eventId}:${result.className ?? "__NULL__"}:${result.position}`;
 
       if (positionEventKeys.has(positionEventKey)) {
         issues.push({

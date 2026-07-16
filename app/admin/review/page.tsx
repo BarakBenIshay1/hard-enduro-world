@@ -66,6 +66,10 @@ const reviewActions: ConnectorReviewAction[] = [
   "STAGE_RESULT_UNRESOLVED",
   "STAGE_RESULT_INVALID",
   "STAGE_RESULT_MISSING_SOURCE",
+  "NEW_STANDING",
+  "UPDATE_STANDING",
+  "UNCHANGED_STANDING",
+  "STANDING_INVALID",
 ];
 
 export default async function AdminReviewPage({ searchParams }: PageProps) {

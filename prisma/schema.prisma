@@ -713,6 +713,7 @@ model ConnectorReviewItem {
   currentEventId               String?
   currentResultId              String?
   currentStageResultId         String?
+  currentStandingId            String?
   eventName                    String
   suggestedAction              ConnectorReviewAction
   reviewStatus                 ConnectorReviewStatus            @default(PENDING)
@@ -739,6 +740,7 @@ model ConnectorReviewItem {
   appliedEventId               String?
   appliedResultId              String?
   appliedStageResultId         String?
+  appliedStandingId            String?
   applicationAttemptCount      Int                              @default(0)
   expectedCurrentStateChecksum String?
   resultingEventStateChecksum  String?
@@ -758,6 +760,8 @@ model ConnectorReviewItem {
   @@index([appliedResultId])
   @@index([currentStageResultId])
   @@index([appliedStageResultId])
+  @@index([currentStandingId])
+  @@index([appliedStandingId])
 }
 
 model UserProfile {
@@ -968,6 +972,10 @@ enum ConnectorReviewAction {
   STAGE_RESULT_UNRESOLVED
   STAGE_RESULT_INVALID
   STAGE_RESULT_MISSING_SOURCE
+  NEW_STANDING
+  UPDATE_STANDING
+  UNCHANGED_STANDING
+  STANDING_INVALID
 }
 
 enum ConnectorReviewStatus {
