@@ -8,6 +8,10 @@ import {
 } from "@/jobs/calculations/standings-engine";
 import type { PointsSystemId } from "@/jobs/calculations/points-system";
 import type { CalculationResultInput } from "@/jobs/calculations/validation";
+import {
+  parseTieBreakRules,
+  validateOfficialRegulation,
+} from "@/lib/regulations/championship-regulations";
 
 export const standingsConnectorKey = "standings-calculation";
 export const standingsSourceKey = "calculated-from-approved-results";
@@ -37,7 +41,7 @@ export async function createStandingCalculationReviewRun({
     where: { id: seasonId },
     include: {
       events: {
-        orderBy: [{ startDate: "asc" }, { roundNumber: "asc" }],
+        orderBy: [{ roundNumber: "asc" }, { startDate: "asc" }, { id: "asc" }],
         include: {
           results: {
             include: { rider: true },
@@ -47,6 +51,10 @@ export async function createStandingCalculationReviewRun({
       },
       standings: {
         include: { rider: true },
+      },
+      championshipRegulations: {
+        where: { status: "ACTIVE", archivedAt: null },
+        include: { sourceSnapshot: true },
       },
     },
   });
@@ -75,6 +83,8 @@ export async function createStandingCalculationReviewRun({
       id: result.id,
       seasonId: season.id,
       eventId: event.id,
+      eventRoundNumber: event.roundNumber,
+      eventStartDate: event.startDate.toISOString(),
       riderId: result.riderId,
       riderName: `${result.rider.firstName} ${result.rider.lastName}`,
       className: result.className,
@@ -82,6 +92,28 @@ export async function createStandingCalculationReviewRun({
       points: result.points,
       status: result.status,
     }),
+  );
+  const activeRegulations = season.championshipRegulations.map((regulation) => {
+    const validationIssues = validateOfficialRegulation(regulation);
+    return {
+      id: regulation.id,
+      version: regulation.version,
+      checksum: regulation.contentChecksum,
+      sourceUrl: regulation.sourceUrl,
+      sourceSnapshotId: regulation.sourceSnapshotId,
+      classificationScope: regulation.classificationScope,
+      className: regulation.className,
+      tieBreakRules: parseTieBreakRules(regulation.tieBreakRules),
+      validationIssues,
+    };
+  });
+  const tieBreakRulesByScope = Object.fromEntries(
+    activeRegulations
+      .filter((regulation) => regulation.validationIssues.length === 0)
+      .map((regulation) => [
+        `${season.id}:${regulation.className ?? "__NULL__"}`,
+        regulation.tieBreakRules,
+      ]),
   );
   const immutableInputResults = activeEventResults.map(({ event, result }) => ({
     id: result.id,
@@ -110,7 +142,17 @@ export async function createStandingCalculationReviewRun({
     results: resultInputs,
     currentStandings,
     pointsSystemId,
+    tieBreakRulesByScope,
   });
+  preview.validationIssues.push(
+    ...activeRegulations.flatMap((regulation) =>
+      regulation.validationIssues.map((issue) => ({
+        severity: issue.severity,
+        code: "invalid-regulation" as const,
+        message: `Regulation ${regulation.id} cannot be used: ${issue.message}`,
+      })),
+    ),
+  );
   const resolvedPointsSystemId = preview.pointsSystemId;
   const currentByRider = new Map(
     season.standings.map((standing) => [
@@ -144,9 +186,27 @@ export async function createStandingCalculationReviewRun({
     pointsSystemId: resolvedPointsSystemId,
     pointsRule: {
       source: "Result.points",
-      officialRegulationReference: null,
+      officialRegulationReference: activeRegulations.map((regulation) => ({
+        id: regulation.id,
+        version: regulation.version,
+        checksum: regulation.checksum,
+        sourceUrl: regulation.sourceUrl,
+        sourceSnapshotId: regulation.sourceSnapshotId,
+        classificationScope: regulation.classificationScope,
+        className: regulation.className,
+      })),
       positionToPointsTable: null,
       publishableWhenMissingSourcePoints: false,
+    },
+    tieBreakRegulations: activeRegulations,
+    eventOrdering: {
+      priority: ["roundNumber", "startDate", "id"],
+      events: season.events.map((event) => ({
+        id: event.id,
+        slug: event.slug,
+        roundNumber: event.roundNumber,
+        startDate: event.startDate.toISOString(),
+      })),
     },
     inputResultIds: resultInputs.map((result) => result.id).sort(),
     inputResults: immutableInputResults.sort((a, b) => a.id.localeCompare(b.id)),

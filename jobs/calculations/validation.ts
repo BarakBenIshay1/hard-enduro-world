@@ -2,6 +2,8 @@ export type CalculationResultInput = {
   id: string;
   seasonId: string;
   eventId: string;
+  eventRoundNumber?: number | null;
+  eventStartDate?: string | null;
   riderId: string | null;
   riderName: string;
   className: string | null;
@@ -18,7 +20,8 @@ export type CalculationValidationIssue = {
     | "missing-points"
     | "invalid-position"
     | "missing-rider"
-    | "unresolved-tie";
+    | "unresolved-tie"
+    | "invalid-regulation";
   message: string;
 };
 

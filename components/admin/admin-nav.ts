@@ -8,6 +8,7 @@ import {
   Rocket,
   Factory,
   FileSearch,
+  FileText,
   Gauge,
   GitPullRequest,
   LayoutDashboard,
@@ -115,6 +116,12 @@ export const adminNavGroups: AdminNavGroup[] = [
         href: "/admin/sources",
         description: "Official links",
         icon: Database,
+      },
+      {
+        label: "Regulations",
+        href: "/admin/regulations",
+        description: "Championship rules",
+        icon: FileText,
       },
       {
         label: "Source Map",

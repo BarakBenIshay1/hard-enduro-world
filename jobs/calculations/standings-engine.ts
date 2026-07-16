@@ -1,6 +1,7 @@
 import { getPointsSystem, type PointsSystemId } from "@/jobs/calculations/points-system";
 import {
   calculateSeasonRankingPreview,
+  type TieBreakRulesByScope,
   type SeasonStandingPreview,
 } from "@/jobs/calculations/season-ranking";
 import {
@@ -34,10 +35,12 @@ export function previewStandingsCalculation({
   results,
   currentStandings,
   pointsSystemId = "source-result-points",
+  tieBreakRulesByScope,
 }: {
   results: CalculationResultInput[];
   currentStandings: CurrentStandingInput[];
   pointsSystemId?: PointsSystemId;
+  tieBreakRulesByScope?: TieBreakRulesByScope;
 }): StandingsCalculationPreview {
   const pointsSystem = getPointsSystem(pointsSystemId);
   const validationIssues = validateCalculationInputs(results);
@@ -47,7 +50,7 @@ export function previewStandingsCalculation({
       standing,
     ]),
   );
-  const calculated = calculateSeasonRankingPreview(results);
+  const calculated = calculateSeasonRankingPreview(results, tieBreakRulesByScope ?? {});
   validationIssues.push(...findUnresolvedTies(calculated));
   const standings = calculated.map((row) => {
     const current = currentByRider.get(
@@ -79,13 +82,14 @@ function findUnresolvedTies(
     className: string | null;
     proposedPoints: number;
     riderName: string;
+    tieBreakResolved: boolean;
   }>,
 ): CalculationValidationIssue[] {
   const byScopeAndPoints = new Map<string, string[]>();
   for (const standing of standings) {
     const key = `${standing.seasonId}:${standing.className ?? "__NULL__"}:${standing.proposedPoints}`;
     const riders = byScopeAndPoints.get(key) ?? [];
-    riders.push(standing.riderName);
+    if (!standing.tieBreakResolved) riders.push(standing.riderName);
     byScopeAndPoints.set(key, riders);
   }
 

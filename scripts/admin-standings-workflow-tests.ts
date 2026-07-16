@@ -14,6 +14,11 @@ testCalculationDeterminism();
 testSourcePointsOnlyAndStatusHandling();
 testClassIsolation();
 testUnresolvedTieBlocksApply();
+testTieBreakWins();
+testTieBreakSecondPlaces();
+testTieBreakBestRecentFinish();
+testTieBreakClassIsolation();
+testTieBreakCompleteTieFailsClosed();
 testMissingSourcePointsBlocksApply();
 testStandingApplyPolicy();
 testReviewSchemaLinkage();
@@ -152,6 +157,155 @@ function testUnresolvedTieBlocksApply() {
   );
 }
 
+function testTieBreakWins() {
+  const preview = previewStandingsCalculation({
+    results: [
+      input({ id: "a-second", riderId: "a", riderName: "A", points: 20, position: 2 }),
+      input({
+        id: "b-win-1",
+        riderId: "b",
+        riderName: "B",
+        points: 20,
+        position: 1,
+      }),
+      input({
+        id: "b-win",
+        eventId: "event-2",
+        riderId: "b",
+        riderName: "B",
+        points: 20,
+        position: 1,
+      }),
+      input({
+        id: "a-second-2",
+        eventId: "event-2",
+        riderId: "a",
+        riderName: "A",
+        points: 20,
+        position: 2,
+      }),
+    ],
+    currentStandings: [],
+    tieBreakRulesByScope: {
+      "season-2026:__NULL__": [tieRule("wins", 1)],
+    },
+  });
+  assert.equal(preview.validationIssues.length, 0);
+  assert.equal(preview.standings[0].riderId, "b");
+}
+
+function testTieBreakSecondPlaces() {
+  const preview = previewStandingsCalculation({
+    results: [
+      input({ id: "a-second", riderId: "a", riderName: "A", points: 20, position: 2 }),
+      input({ id: "b-third", riderId: "b", riderName: "B", points: 20, position: 3 }),
+    ],
+    currentStandings: [],
+    tieBreakRulesByScope: {
+      "season-2026:__NULL__": [tieRule("wins", 1), tieRule("second-places", 2)],
+    },
+  });
+  assert.equal(preview.validationIssues.length, 0);
+  assert.equal(preview.standings[0].riderId, "a");
+}
+
+function testTieBreakBestRecentFinish() {
+  const preview = previewStandingsCalculation({
+    results: [
+      input({
+        id: "a-r1",
+        eventId: "event-1",
+        eventRoundNumber: 1,
+        riderId: "a",
+        riderName: "A",
+        points: 20,
+        position: 1,
+      }),
+      input({
+        id: "b-r1",
+        eventId: "event-1",
+        eventRoundNumber: 1,
+        riderId: "b",
+        riderName: "B",
+        points: 20,
+        position: 2,
+      }),
+      input({
+        id: "a-r2",
+        eventId: "event-2",
+        eventRoundNumber: 2,
+        riderId: "a",
+        riderName: "A",
+        points: 20,
+        position: 3,
+      }),
+      input({
+        id: "b-r2",
+        eventId: "event-2",
+        eventRoundNumber: 2,
+        riderId: "b",
+        riderName: "B",
+        points: 20,
+        position: 1,
+      }),
+    ],
+    currentStandings: [],
+    tieBreakRulesByScope: {
+      "season-2026:__NULL__": [tieRule("best-recent-finish", 1)],
+    },
+  });
+  assert.equal(preview.validationIssues.length, 0);
+  assert.equal(preview.standings[0].riderId, "b");
+}
+
+function testTieBreakClassIsolation() {
+  const preview = previewStandingsCalculation({
+    results: [
+      input({ id: "pro-a", riderId: "a", riderName: "A", className: "Pro", points: 20 }),
+      input({ id: "pro-b", riderId: "b", riderName: "B", className: "Pro", points: 20 }),
+      input({
+        id: "expert-a",
+        riderId: "a",
+        riderName: "A",
+        className: "Expert",
+        points: 20,
+      }),
+      input({
+        id: "expert-b",
+        riderId: "b",
+        riderName: "B",
+        className: "Expert",
+        points: 20,
+      }),
+    ],
+    currentStandings: [],
+    tieBreakRulesByScope: {
+      "season-2026:Pro": [tieRule("wins", 1)],
+    },
+  });
+  assert.equal(
+    preview.validationIssues.some((issue) => issue.code === "unresolved-tie"),
+    true,
+  );
+}
+
+function testTieBreakCompleteTieFailsClosed() {
+  const preview = previewStandingsCalculation({
+    results: [
+      input({ id: "a", riderId: "a", riderName: "A", points: 20, position: 1 }),
+      input({ id: "b", riderId: "b", riderName: "B", points: 20, position: 1 }),
+    ],
+    currentStandings: [],
+    tieBreakRulesByScope: {
+      "season-2026:__NULL__": [tieRule("wins", 1)],
+    },
+  });
+  assert.equal(
+    preview.validationIssues.some((issue) => issue.code === "unresolved-tie"),
+    true,
+  );
+}
+
 function testMissingSourcePointsBlocksApply() {
   const preview = previewStandingsCalculation({
     results: [input({ id: "missing-points", points: null })],
@@ -249,6 +403,8 @@ function input(overrides: Partial<CalculationResultInput> = {}): CalculationResu
     id: "result",
     seasonId: "season-2026",
     eventId: "event-1",
+    eventRoundNumber: null,
+    eventStartDate: "2026-01-01T00:00:00.000Z",
     riderId: "rider-a",
     riderName: "Rider A",
     className: null,
@@ -256,5 +412,14 @@ function input(overrides: Partial<CalculationResultInput> = {}): CalculationResu
     points: 20,
     status: "FINISHED",
     ...overrides,
+  };
+}
+
+function tieRule(type: "wins" | "second-places" | "best-recent-finish", order: number) {
+  return {
+    type,
+    order,
+    description: type,
+    section: "Article 1",
   };
 }

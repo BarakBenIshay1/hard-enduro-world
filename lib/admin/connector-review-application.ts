@@ -7,6 +7,12 @@ import {
 } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import type { AuthUser } from "@/lib/auth";
+import {
+  parsePointsMapping,
+  pointsForPosition,
+  validateOfficialRegulation,
+} from "@/lib/regulations/championship-regulations";
+import { regulationPointsConnectorKey } from "@/lib/admin/regulation-points";
 
 type PrismaTransaction = Omit<
   typeof prisma,
@@ -104,6 +110,7 @@ const allowedResultProposalFields = new Set([
   "motorcycleId",
   "className",
   "overallPosition",
+  "points",
   "status",
   "totalTimeText",
   "gapToLeaderText",
@@ -120,6 +127,13 @@ const allowedResultProposalFields = new Set([
   "entityMatches",
   "validationWarnings",
   "applyEligible",
+  "regulationId",
+  "regulationVersion",
+  "regulationChecksum",
+  "regulationSourceSnapshotId",
+  "regulationMappingEntry",
+  "regulationSource",
+  "regulationSection",
 ]);
 
 const allowedResultChangedFields = new Set([
@@ -130,6 +144,7 @@ const allowedResultChangedFields = new Set([
   "manufacturerId",
   "className",
   "overallPosition",
+  "points",
   "status",
   "totalTimeText",
   "gapToLeaderText",
@@ -502,11 +517,35 @@ function validateResultApplicationPolicy(
   if (input.proposedValues.applyEligible !== true) {
     return { ok: false, reason: "Proposal is blocked by validation warnings." };
   }
+  if (
+    input.changedFields.includes("points") &&
+    !hasRegulationPointsLineage(input.proposedValues)
+  ) {
+    return {
+      ok: false,
+      reason: "Result points updates require verified regulation lineage.",
+    };
+  }
   try {
     mapResultStatus(getString(input.proposedValues, "status"));
     return { ok: true };
   } catch (error) {
     return { ok: false, reason: sanitizeError(error) };
+  }
+}
+
+function hasRegulationPointsLineage(proposedValues: Record<string, unknown>) {
+  try {
+    return Boolean(
+      getString(proposedValues, "regulationId") &&
+      typeof proposedValues.regulationVersion === "number" &&
+      getString(proposedValues, "regulationChecksum") &&
+      getString(proposedValues, "regulationSourceSnapshotId") &&
+      toNullableRecord(proposedValues.regulationMappingEntry) &&
+      toNullableRecord(proposedValues.regulationSource),
+    );
+  } catch {
+    return false;
   }
 }
 
@@ -525,6 +564,9 @@ async function applyResultReviewItem({
       ? await loadCurrentResultForUpdate(context, tx)
       : null;
   const expectedChecksum = createStableChecksum(previousResultState ?? null);
+  if (context.changedFields.includes("points")) {
+    await validateRegulationPointsApplyContext(context, previousResultState, tx);
+  }
 
   const result =
     context.review.suggestedAction === "NEW_RESULT"
@@ -714,6 +756,7 @@ function buildResultUpdateData(context: ApplicationContext): Prisma.ResultUpdate
     if (field === "overallPosition") {
       data.overallPosition = getNumber(context.proposed, "overallPosition");
     }
+    if (field === "points") data.points = getNumber(context.proposed, "points");
     if (field === "status")
       data.status = mapResultStatus(getString(context.proposed, "status"));
     if (field === "totalTimeText")
@@ -749,6 +792,90 @@ async function validateOptionalResultRelations(
     throw new Error("Matched Manufacturer no longer exists.");
   if (motorcycleId && !motorcycle)
     throw new Error("Matched Motorcycle no longer exists.");
+}
+
+async function validateRegulationPointsApplyContext(
+  context: ApplicationContext,
+  previousResultState: Record<string, unknown> | null,
+  client: PrismaExecutor,
+) {
+  if (context.review.connectorKey !== regulationPointsConnectorKey) {
+    throw new Error(
+      "Result points updates must come from the official regulation points connector.",
+    );
+  }
+  if (!previousResultState) {
+    throw new Error("Current Result state is required for regulation points apply.");
+  }
+
+  const regulationId = requiredString(context.proposed, "regulationId");
+  const regulationVersion = requiredNumber(context.proposed, "regulationVersion");
+  const regulationChecksum = requiredString(context.proposed, "regulationChecksum");
+  const regulationSourceSnapshotId = requiredString(
+    context.proposed,
+    "regulationSourceSnapshotId",
+  );
+  const mappingEntry = toRecord(context.proposed.regulationMappingEntry);
+
+  const regulation = await client.championshipRegulation.findUnique({
+    where: { id: regulationId },
+  });
+  if (!regulation) throw new Error("Regulation no longer exists.");
+  if (regulation.status !== "ACTIVE" || regulation.archivedAt) {
+    throw new Error("Regulation is no longer active.");
+  }
+  if (regulation.version !== regulationVersion) {
+    throw new Error("Regulation version changed. Regenerate review before applying.");
+  }
+  if (regulation.contentChecksum !== regulationChecksum) {
+    throw new Error("Regulation checksum changed. Regenerate review before applying.");
+  }
+  if (regulation.sourceSnapshotId !== regulationSourceSnapshotId) {
+    throw new Error(
+      "Regulation source snapshot changed. Regenerate review before applying.",
+    );
+  }
+  const validationIssues = validateOfficialRegulation(regulation);
+  if (validationIssues.some((issue) => issue.severity === "error")) {
+    throw new Error("Regulation is no longer valid for points application.");
+  }
+
+  const event = await client.event.findUnique({
+    where: { id: requiredString(context.proposed, "eventId") },
+    select: { seasonId: true },
+  });
+  if (!event) throw new Error("Matched Event no longer exists.");
+  if (event.seasonId !== regulation.seasonId) {
+    throw new Error("Regulation season does not match the Result event season.");
+  }
+
+  const currentClassName = getString(previousResultState, "className");
+  if (currentClassName !== regulation.className) {
+    throw new Error("Regulation class scope does not match the Result class.");
+  }
+
+  const currentStatus = getString(previousResultState, "status");
+  if (currentStatus !== "FINISHED") {
+    throw new Error("Only FINISHED Results can receive regulation points.");
+  }
+
+  const currentPosition = getNumber(previousResultState, "overallPosition");
+  const expectedPoints = pointsForPosition(
+    currentPosition,
+    parsePointsMapping(regulation.pointsMapping),
+  );
+  if (expectedPoints === null) {
+    throw new Error("No official points mapping exists for the current Result position.");
+  }
+  if (getNumber(context.proposed, "points") !== expectedPoints) {
+    throw new Error("Proposed points no longer match the active regulation mapping.");
+  }
+  if (
+    getNumber(mappingEntry, "position") !== currentPosition ||
+    getNumber(mappingEntry, "points") !== expectedPoints
+  ) {
+    throw new Error("Regulation mapping entry does not match the active regulation.");
+  }
 }
 
 async function createResultSourceLink({
@@ -1604,6 +1731,7 @@ function toAuditedResultState(result: {
   manufacturerId: string | null;
   className: string | null;
   overallPosition: number | null;
+  points?: number | null;
   status: ResultStatus;
   totalTimeText: string | null;
   gapToLeaderText: string | null;
@@ -1617,6 +1745,7 @@ function toAuditedResultState(result: {
     manufacturerId: result.manufacturerId,
     className: result.className,
     overallPosition: result.overallPosition,
+    points: result.points ?? null,
     status: result.status,
     totalTimeText: result.totalTimeText,
     gapToLeaderText: result.gapToLeaderText,
