@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
+  parseComponentPointsTables,
   parsePointsMapping,
   pointsForPosition,
   regulationChecksum,
@@ -10,9 +11,14 @@ import { validateConnectorReviewApplicationPolicy } from "@/lib/admin/connector-
 
 testMissingSourceFailsClosed();
 testPointsMappingValidation();
+testComponentPointsTableValidation();
 testTieBreakValidation();
 testResultPointsApplyPolicy();
+testResultPointComponentApplyPolicy();
+testResultPointComponentPolicyRejectsMissingLineage();
+testResultPointComponentPolicyAllowsShapeBeforeTransactionalLineageCheck();
 testResultPointsApplyPolicyRejectsMissingLineage();
+testResultPointComponentMissingSourceRestoredLifecycle();
 testRegulationLifecycleArchitecture();
 testStableRegulationChecksum();
 
@@ -72,6 +78,106 @@ function testMissingSourceFailsClosed() {
   });
   assert.equal(
     unsupportedUrlIssues.some((issue) => issue.code === "unsupported-official-source"),
+    true,
+  );
+}
+
+function testComponentPointsTableValidation() {
+  const validTables = parseComponentPointsTables({
+    tables: [
+      {
+        key: "prologue",
+        componentType: "PROLOGUE",
+        positions: [
+          { position: 2, points: 1 },
+          { position: 1, points: 3 },
+        ],
+      },
+      {
+        key: "main_event",
+        componentType: "MAIN_EVENT",
+        inputMode: "RESULT",
+        positions: [{ position: 1, points: 20 }],
+      },
+    ],
+  });
+  assert.deepEqual(validTables, [
+    {
+      key: "prologue",
+      componentType: "PROLOGUE",
+      inputMode: "STAGE_RESULT",
+      positions: [
+        { position: 1, points: 3 },
+        { position: 2, points: 1 },
+      ],
+    },
+    {
+      key: "main_event",
+      componentType: "MAIN_EVENT",
+      inputMode: "RESULT",
+      positions: [{ position: 1, points: 20 }],
+    },
+  ]);
+
+  const duplicateTableIssues = validateOfficialRegulation({
+    title: "Official Test Regulation",
+    sourceUrl: "https://www.fim-moto.com/en/documents/regulations.pdf",
+    regulationYear: 2026,
+    section: "Article 060.9",
+    verificationDate: new Date("2026-01-01T00:00:00.000Z"),
+    sourceSnapshotId: "snapshot-1",
+    contentChecksum: "checksum-1",
+    pointsMapping: {
+      tables: [
+        {
+          key: "sprint",
+          componentType: "SPRINT",
+          positions: [
+            { position: 1, points: 10 },
+            { position: 1, points: 8 },
+          ],
+        },
+        {
+          key: "sprint",
+          componentType: "FINAL",
+          positions: [{ position: 1, points: 20 }],
+        },
+      ],
+    },
+    tieBreakRules: [tieBreak("wins", 1)],
+  });
+  assert.equal(
+    duplicateTableIssues.some(
+      (issue) => issue.code === "duplicate-component-table-position",
+    ),
+    true,
+  );
+  assert.equal(
+    duplicateTableIssues.some((issue) => issue.code === "duplicate-component-table-key"),
+    true,
+  );
+
+  const invalidTypeIssues = validateOfficialRegulation({
+    title: "Official Test Regulation",
+    sourceUrl: "https://www.fim-moto.com/en/documents/regulations.pdf",
+    regulationYear: 2026,
+    section: "Article 060.9",
+    verificationDate: new Date("2026-01-01T00:00:00.000Z"),
+    sourceSnapshotId: "snapshot-1",
+    contentChecksum: "checksum-1",
+    pointsMapping: {
+      tables: [
+        {
+          key: "bonus",
+          componentType: "BONUS",
+          positions: [{ position: 1, points: 1 }],
+        },
+      ],
+    },
+    tieBreakRules: [tieBreak("wins", 1)],
+  });
+  assert.equal(
+    invalidTypeIssues.some((issue) => issue.code === "invalid-component-table"),
     true,
   );
 }
@@ -169,6 +275,129 @@ function testResultPointsApplyPolicy() {
   assert.deepEqual(result, { ok: true });
 }
 
+function testResultPointComponentApplyPolicy() {
+  const result = validateConnectorReviewApplicationPolicy({
+    reviewStatus: "APPROVED",
+    applicationStatus: "NOT_APPLIED",
+    suggestedAction: "NEW_RESULT_POINT_COMPONENT",
+    changedFields: [
+      "resultPointComponent",
+      "points",
+      "position",
+      "regulation",
+      "sourceLineage",
+    ],
+    proposedValues: {
+      entityType: "ResultPointComponent",
+      resultId: "result-1",
+      eventId: "event-1",
+      riderId: "rider-1",
+      stageResultId: "stage-result-1",
+      raceStageId: "race-stage-1",
+      componentType: "PROLOGUE",
+      classificationScope: "WORLD_CHAMPIONSHIP",
+      className: null,
+      inputAuthorityType: "source-managed",
+      position: 1,
+      points: 3,
+      inputStatus: "FINISHED",
+      regulationId: "regulation-1",
+      regulationVersion: 1,
+      regulationChecksum: "checksum-1",
+      regulationTableKey: "prologue",
+      regulationMappingEntry: {
+        position: 1,
+        points: 3,
+        tableKey: "prologue",
+      },
+      regulationSource: {
+        title: "Official Test Regulation",
+        url: "https://www.fim-moto.com/en/documents/regulations.pdf",
+        section: "Article 060.9",
+        sourceSnapshotId: "snapshot-1",
+        contentChecksum: "checksum-1",
+      },
+      regulationSourceSnapshotId: "snapshot-1",
+      inputResultSourceSnapshotId: "input-snapshot-1",
+      matchingMethod: "stage-type-exact",
+      validationWarnings: [],
+      proposedEntityState: {},
+      applyEligible: true,
+      calculationTimestamp: "2026-01-01T00:00:00.000Z",
+      connectorVersion: "official-regulation-component-points-v1",
+      exactInputState: {},
+    },
+  });
+  assert.deepEqual(result, { ok: true });
+}
+
+function testResultPointComponentPolicyRejectsMissingLineage() {
+  const result = validateConnectorReviewApplicationPolicy({
+    reviewStatus: "APPROVED",
+    applicationStatus: "NOT_APPLIED",
+    suggestedAction: "NEW_RESULT_POINT_COMPONENT",
+    changedFields: ["points"],
+    proposedValues: {
+      entityType: "ResultPointComponent",
+      resultId: "result-1",
+      eventId: "event-1",
+      riderId: "rider-1",
+      componentType: "PROLOGUE",
+      classificationScope: "WORLD_CHAMPIONSHIP",
+      position: 1,
+      points: 3,
+      applyEligible: true,
+    },
+  });
+  assert.equal(result.ok, false);
+  if (!result.ok) {
+    assert.equal(
+      result.reason,
+      "Component proposals require verified regulation lineage.",
+    );
+  }
+}
+
+function testResultPointComponentPolicyAllowsShapeBeforeTransactionalLineageCheck() {
+  const result = validateConnectorReviewApplicationPolicy({
+    reviewStatus: "APPROVED",
+    applicationStatus: "NOT_APPLIED",
+    suggestedAction: "NEW_RESULT_POINT_COMPONENT",
+    changedFields: ["points"],
+    proposedValues: {
+      entityType: "ResultPointComponent",
+      resultId: "result-1",
+      eventId: "event-1",
+      riderId: "rider-1",
+      componentType: "PROLOGUE",
+      classificationScope: "WORLD_CHAMPIONSHIP",
+      inputAuthorityType: "source-managed",
+      position: 1,
+      points: 3,
+      regulationId: "regulation-1",
+      regulationVersion: 1,
+      regulationChecksum: "checksum-1",
+      regulationTableKey: "prologue",
+      regulationMappingEntry: {
+        position: 1,
+        points: 3,
+        tableKey: "prologue",
+      },
+      regulationSource: {
+        title: "Official Test Regulation",
+        url: "https://www.fim-moto.com/en/documents/regulations.pdf",
+        section: "Article 060.9",
+        sourceSnapshotId: "snapshot-1",
+        contentChecksum: "checksum-1",
+      },
+      regulationSourceSnapshotId: "snapshot-1",
+      validationWarnings: [],
+      applyEligible: true,
+    },
+  });
+  assert.deepEqual(result, { ok: true });
+}
+
 function testResultPointsApplyPolicyRejectsMissingLineage() {
   const result = validateConnectorReviewApplicationPolicy({
     reviewStatus: "APPROVED",
@@ -197,6 +426,16 @@ function testResultPointsApplyPolicyRejectsMissingLineage() {
       "Result points updates require verified regulation lineage.",
     );
   }
+}
+
+function testResultPointComponentMissingSourceRestoredLifecycle() {
+  const service = readFileSync("lib/admin/regulation-component-points.ts", "utf8");
+  assert.doesNotMatch(
+    service,
+    /return candidates\.filter\(\s*\(candidate\) => candidate\.action !== "RESULT_POINT_COMPONENT_CONFLICT"/,
+  );
+  assert.match(service, /suggestedAction: "RESULT_POINT_COMPONENT_MISSING_SOURCE"/);
+  assert.match(service, /data: \{ reviewStatus: "SUPERSEDED" \}/);
 }
 
 function testStableRegulationChecksum() {

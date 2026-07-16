@@ -8,10 +8,12 @@ import {
 import { prisma } from "@/lib/prisma";
 import type { AuthUser } from "@/lib/auth";
 import {
+  parseComponentPointsTables,
   parsePointsMapping,
   pointsForPosition,
   validateOfficialRegulation,
 } from "@/lib/regulations/championship-regulations";
+import { regulationComponentPointsConnectorKey } from "@/lib/admin/regulation-component-points";
 import { regulationPointsConnectorKey } from "@/lib/admin/regulation-points";
 
 type PrismaTransaction = Omit<
@@ -97,6 +99,10 @@ const allowedChangedFields = new Set([
 ]);
 
 const resultReviewActions = new Set(["NEW_RESULT", "UPDATE_RESULT"]);
+const resultPointComponentReviewActions = new Set([
+  "NEW_RESULT_POINT_COMPONENT",
+  "UPDATE_RESULT_POINT_COMPONENT",
+]);
 const stageResultReviewActions = new Set(["NEW_STAGE_RESULT", "UPDATE_STAGE_RESULT"]);
 const standingReviewActions = new Set(["NEW_STANDING", "UPDATE_STANDING"]);
 
@@ -149,6 +155,58 @@ const allowedResultChangedFields = new Set([
   "totalTimeText",
   "gapToLeaderText",
   "gapToPreviousText",
+]);
+
+const allowedResultPointComponentProposalFields = new Set([
+  "entityType",
+  "resultPointComponentId",
+  "resultId",
+  "eventId",
+  "riderId",
+  "stageResultId",
+  "raceStageId",
+  "componentType",
+  "classificationScope",
+  "className",
+  "inputAuthorityType",
+  "position",
+  "points",
+  "inputStatus",
+  "currentComponentPoints",
+  "proposedComponentPoints",
+  "regulationId",
+  "regulationVersion",
+  "regulationChecksum",
+  "regulationTableKey",
+  "regulationMappingEntry",
+  "regulationSource",
+  "regulationSourceSnapshotId",
+  "inputResultSourceSnapshotId",
+  "inputDataVersionId",
+  "inputAudit",
+  "sourceRowIdentifier",
+  "matchingMethod",
+  "stageAliasOrFallback",
+  "validationWarnings",
+  "currentEntityState",
+  "proposedEntityState",
+  "applyEligible",
+  "calculationTimestamp",
+  "connectorVersion",
+  "componentWithoutStageResultRationale",
+  "exactInputState",
+  "unchanged",
+]);
+
+const allowedResultPointComponentChangedFields = new Set([
+  "resultPointComponent",
+  "position",
+  "points",
+  "regulation",
+  "sourceLineage",
+  "regulationVersion",
+  "regulationChecksum",
+  "sourceSnapshotId",
 ]);
 
 const allowedStageResultProposalFields = new Set([
@@ -278,6 +336,9 @@ export function validateConnectorReviewApplicationPolicy(
   if (resultReviewActions.has(input.suggestedAction)) {
     return validateResultApplicationPolicy(input);
   }
+  if (resultPointComponentReviewActions.has(input.suggestedAction)) {
+    return validateResultPointComponentApplicationPolicy(input);
+  }
   if (stageResultReviewActions.has(input.suggestedAction)) {
     return validateStageResultApplicationPolicy(input);
   }
@@ -349,6 +410,13 @@ async function applyConnectorReviewItemTransaction(
       const context = buildApplicationContext(review);
       if (resultReviewActions.has(review.suggestedAction)) {
         return applyResultReviewItem({
+          context,
+          input,
+          tx,
+        });
+      }
+      if (resultPointComponentReviewActions.has(review.suggestedAction)) {
+        return applyResultPointComponentReviewItem({
           context,
           input,
           tx,
@@ -547,6 +615,563 @@ function hasRegulationPointsLineage(proposedValues: Record<string, unknown>) {
   } catch {
     return false;
   }
+}
+
+function validateResultPointComponentApplicationPolicy(
+  input: ConnectorReviewApplicationPolicyInput,
+): ConnectorReviewApplicationPolicyResult {
+  if (!input.proposedValues) {
+    return { ok: false, reason: "Proposal payload is missing." };
+  }
+  for (const field of Object.keys(input.proposedValues)) {
+    if (!allowedResultPointComponentProposalFields.has(field)) {
+      return {
+        ok: false,
+        reason: `Unsupported ResultPointComponent proposal field: ${field}`,
+      };
+    }
+  }
+  for (const field of input.changedFields) {
+    if (!allowedResultPointComponentChangedFields.has(field)) {
+      return {
+        ok: false,
+        reason: `Unsupported ResultPointComponent changed field: ${field}`,
+      };
+    }
+  }
+  if (input.proposedValues.entityType !== "ResultPointComponent") {
+    return { ok: false, reason: "Proposal is not a ResultPointComponent proposal." };
+  }
+  if (input.proposedValues.applyEligible !== true) {
+    return { ok: false, reason: "Component proposal is blocked by validation warnings." };
+  }
+  if (!hasComponentRegulationLineage(input.proposedValues)) {
+    return {
+      ok: false,
+      reason: "Component proposals require verified regulation lineage.",
+    };
+  }
+  return { ok: true };
+}
+
+function hasComponentRegulationLineage(proposedValues: Record<string, unknown>) {
+  try {
+    return Boolean(
+      getString(proposedValues, "regulationId") &&
+      typeof proposedValues.regulationVersion === "number" &&
+      getString(proposedValues, "regulationChecksum") &&
+      getString(proposedValues, "regulationSourceSnapshotId") &&
+      getString(proposedValues, "regulationTableKey") &&
+      toNullableRecord(proposedValues.regulationMappingEntry) &&
+      toNullableRecord(proposedValues.regulationSource),
+    );
+  } catch {
+    return false;
+  }
+}
+
+async function applyResultPointComponentReviewItem({
+  context,
+  input,
+  tx,
+}: {
+  context: ApplicationContext;
+  input: ConnectorReviewApplyInput;
+  tx: PrismaTransaction;
+}): Promise<ConnectorReviewApplyResult> {
+  validateResultPointComponentApplicationContext(context);
+  const previousState =
+    context.review.suggestedAction === "UPDATE_RESULT_POINT_COMPONENT"
+      ? await loadCurrentResultPointComponentForUpdate(context, tx)
+      : null;
+  const expectedChecksum = createStableChecksum(previousState ?? null);
+
+  await validateResultPointComponentApplyContext(context, previousState, tx);
+
+  const component =
+    context.review.suggestedAction === "NEW_RESULT_POINT_COMPONENT"
+      ? await createResultPointComponentFromReview(context, tx)
+      : await updateResultPointComponentFromReview(context, previousState, tx);
+
+  const resultingState = toAuditedResultPointComponentState(component);
+  const resultingChecksum = createStableChecksum(resultingState);
+  const appliedAt = new Date();
+  const sourceUrl = getComponentSourceUrl(context);
+
+  await createResultPointComponentSourceLink({
+    context,
+    componentId: component.id,
+    sourceUrl,
+    tx,
+  });
+
+  await tx.connectorReviewItem.update({
+    where: { id: context.review.id },
+    data: {
+      applicationStatus: "APPLIED",
+      appliedAt,
+      appliedByUserId: input.actor.id,
+      appliedByUserEmail: input.actor.email,
+      applicationNote: input.note?.trim() || null,
+      applicationError: null,
+      appliedResultPointComponentId: component.id,
+      expectedCurrentStateChecksum: expectedChecksum,
+      resultingEventStateChecksum: resultingChecksum,
+      applicationVersion: { increment: 1 },
+    },
+  });
+
+  await tx.dataVersion.create({
+    data: {
+      entityType: "ResultPointComponent",
+      entityId: component.id,
+      action:
+        context.review.suggestedAction === "NEW_RESULT_POINT_COMPONENT"
+          ? "CREATE"
+          : "UPDATE",
+      previous: (previousState ?? null) as Prisma.InputJsonValue,
+      next: resultingState as Prisma.InputJsonValue,
+      sourceUrl,
+      createdBy: input.actor.id,
+    },
+  });
+
+  await tx.dataVersion.create({
+    data: {
+      entityType: "ConnectorReviewItem",
+      entityId: context.review.id,
+      action: "MANUAL_EDIT",
+      previous: {
+        applicationStatus: input.expectedApplicationStatus,
+        applicationVersion: input.expectedApplicationVersion,
+      },
+      next: {
+        applicationStatus: "APPLIED",
+        appliedResultPointComponentId: component.id,
+        appliedByUserId: input.actor.id,
+        appliedByUserEmail: input.actor.email,
+        appliedAt: appliedAt.toISOString(),
+        changedFields: context.changedFields,
+        suggestedAction: context.review.suggestedAction,
+      },
+      sourceUrl,
+      createdBy: input.actor.id,
+    },
+  });
+
+  return {
+    ok: true,
+    reviewItemId: context.review.id,
+    eventId: component.id,
+    status: "APPLIED",
+    message: "Approved review item was applied to one scoring component.",
+  };
+}
+
+function validateResultPointComponentApplicationContext(context: ApplicationContext) {
+  if (!context.review.snapshot)
+    throw new Error("Component proposal snapshot is missing.");
+  if (!context.proposed) throw new Error("Proposal payload is missing.");
+  const policy = validateResultPointComponentApplicationPolicy({
+    reviewStatus: context.review.reviewStatus,
+    applicationStatus: context.review.applicationStatus,
+    suggestedAction: context.review.suggestedAction,
+    changedFields: context.changedFields,
+    proposedValues: context.proposed,
+  });
+  if (!policy.ok) throw new Error(policy.reason);
+  if (
+    context.review.suggestedAction === "UPDATE_RESULT_POINT_COMPONENT" &&
+    !context.review.currentResultPointComponentId
+  ) {
+    throw new Error(
+      "UPDATE_RESULT_POINT_COMPONENT requires a matched current component id.",
+    );
+  }
+}
+
+async function loadCurrentResultPointComponentForUpdate(
+  context: ApplicationContext,
+  client: PrismaExecutor,
+) {
+  const component = await client.resultPointComponent.findUnique({
+    where: { id: context.review.currentResultPointComponentId ?? "" },
+  });
+  if (!component) throw new Error("Matched scoring component no longer exists.");
+  if (component.archivedAt)
+    throw new Error("Archived scoring components cannot be updated.");
+  return toAuditedResultPointComponentState(component);
+}
+
+async function createResultPointComponentFromReview(
+  context: ApplicationContext,
+  client: PrismaExecutor,
+) {
+  const duplicate = await client.resultPointComponent.findFirst({
+    where: buildResultPointComponentUniqueWhere(context),
+  });
+  if (duplicate) {
+    throw new Error("An active scoring component already exists for this scope.");
+  }
+  return client.resultPointComponent.create({
+    data: buildResultPointComponentCreateData(context),
+  });
+}
+
+async function updateResultPointComponentFromReview(
+  context: ApplicationContext,
+  previousState: Record<string, unknown> | null,
+  client: PrismaExecutor,
+) {
+  if (!previousState) throw new Error("Current scoring component state is missing.");
+  const expected = context.current;
+  if (!expected) throw new Error("Approved expected current values are missing.");
+  assertNoStaleChangedFields({
+    entityLabel: "ResultPointComponent",
+    changedFields: context.changedFields,
+    aggregateField: "resultPointComponent",
+    previousState,
+    expectedState: expected,
+  });
+  return client.resultPointComponent.update({
+    where: { id: context.review.currentResultPointComponentId! },
+    data: buildResultPointComponentUpdateData(context),
+  });
+}
+
+function buildResultPointComponentCreateData(
+  context: ApplicationContext,
+): Prisma.ResultPointComponentUncheckedCreateInput {
+  return {
+    resultId: requiredString(context.proposed, "resultId"),
+    eventId: requiredString(context.proposed, "eventId"),
+    stageResultId: getString(context.proposed, "stageResultId"),
+    raceStageId: getString(context.proposed, "raceStageId"),
+    componentType: requiredComponentType(context.proposed),
+    classificationScope: requiredString(context.proposed, "classificationScope"),
+    className: getString(context.proposed, "className"),
+    position: getNumber(context.proposed, "position"),
+    points: requiredNumber(context.proposed, "points"),
+    regulationId: requiredString(context.proposed, "regulationId"),
+    regulationVersion: requiredNumber(context.proposed, "regulationVersion"),
+    regulationChecksum: requiredString(context.proposed, "regulationChecksum"),
+    regulationTableKey: requiredString(context.proposed, "regulationTableKey"),
+    sourceSnapshotId: requiredString(context.proposed, "regulationSourceSnapshotId"),
+    connectorReviewItemId: context.review.id,
+    officialRawPayload: {
+      inputAuthorityType: context.proposed.inputAuthorityType,
+      inputResultSourceSnapshotId: context.proposed.inputResultSourceSnapshotId,
+      inputDataVersionId: context.proposed.inputDataVersionId,
+      sourceRowIdentifier: context.proposed.sourceRowIdentifier,
+      regulationMappingEntry: context.proposed.regulationMappingEntry,
+      exactInputState: context.proposed.exactInputState,
+    } as Prisma.InputJsonValue,
+  };
+}
+
+function buildResultPointComponentUpdateData(
+  context: ApplicationContext,
+): Prisma.ResultPointComponentUpdateInput {
+  const data: Prisma.ResultPointComponentUpdateInput = {};
+  const fields = new Set(
+    context.changedFields.filter((field) => field !== "resultPointComponent"),
+  );
+  for (const field of fields) {
+    if (field === "position") data.position = getNumber(context.proposed, "position");
+    if (field === "points") data.points = requiredNumber(context.proposed, "points");
+    if (field === "regulation" || field === "regulationVersion") {
+      data.regulationVersion = requiredNumber(context.proposed, "regulationVersion");
+    }
+    if (field === "regulation" || field === "regulationChecksum") {
+      data.regulationChecksum = requiredString(context.proposed, "regulationChecksum");
+    }
+    if (field === "sourceLineage" || field === "sourceSnapshotId") {
+      data.sourceSnapshot = {
+        connect: { id: requiredString(context.proposed, "regulationSourceSnapshotId") },
+      };
+    }
+  }
+  data.connectorReviewItem = { connect: { id: context.review.id } };
+  data.officialRawPayload = {
+    inputAuthorityType: context.proposed.inputAuthorityType,
+    inputResultSourceSnapshotId: context.proposed.inputResultSourceSnapshotId,
+    inputDataVersionId: context.proposed.inputDataVersionId,
+    sourceRowIdentifier: context.proposed.sourceRowIdentifier,
+    regulationMappingEntry: context.proposed.regulationMappingEntry,
+    exactInputState: context.proposed.exactInputState,
+  } as Prisma.InputJsonValue;
+  if (Object.keys(data).length === 0) {
+    throw new Error("No supported scoring component fields were approved.");
+  }
+  return data;
+}
+
+async function validateResultPointComponentApplyContext(
+  context: ApplicationContext,
+  previousState: Record<string, unknown> | null,
+  client: PrismaExecutor,
+) {
+  if (context.review.connectorKey !== regulationComponentPointsConnectorKey) {
+    throw new Error(
+      "Scoring component proposals must come from the official component points connector.",
+    );
+  }
+  const result = await client.result.findUnique({
+    where: { id: requiredString(context.proposed, "resultId") },
+    include: { event: true },
+  });
+  if (!result || result.archivedAt) throw new Error("Matched Result is unavailable.");
+  if (result.eventId !== requiredString(context.proposed, "eventId")) {
+    throw new Error("Matched Result does not belong to the proposed Event.");
+  }
+  if (result.riderId !== requiredString(context.proposed, "riderId")) {
+    throw new Error("Matched Result rider changed.");
+  }
+  if (result.className !== getString(context.proposed, "className")) {
+    throw new Error("Matched Result class changed.");
+  }
+  if (result.status !== "FINISHED") {
+    throw new Error("Only FINISHED Results can support component points.");
+  }
+  validateComponentInputAuthority(context);
+
+  const stageResultId = getString(context.proposed, "stageResultId");
+  const raceStageId = getString(context.proposed, "raceStageId");
+  const expectedInputState = toNullableRecord(context.proposed.exactInputState);
+  if (stageResultId || raceStageId) {
+    if (!stageResultId || !raceStageId) {
+      throw new Error("Stage components require both StageResult and RaceStage links.");
+    }
+    const stageResult = await client.stageResult.findUnique({
+      where: { id: stageResultId },
+      include: { stage: true },
+    });
+    if (!stageResult || stageResult.archivedAt) {
+      throw new Error("Matched StageResult is unavailable.");
+    }
+    if (stageResult.stageId !== raceStageId) {
+      throw new Error("StageResult does not belong to the matched RaceStage.");
+    }
+    if (stageResult.stage.eventId !== result.eventId) {
+      throw new Error("RaceStage does not belong to the Result event.");
+    }
+    if (stageResult.riderId !== result.riderId) {
+      throw new Error("StageResult rider does not match Result rider.");
+    }
+    if (stageResult.status !== "FINISHED") {
+      throw new Error("Only FINISHED StageResults can support component points.");
+    }
+    if (stageResult.stage.stageType !== requiredComponentType(context.proposed)) {
+      throw new Error("RaceStage type no longer matches component type.");
+    }
+    if (expectedInputState) {
+      const expectedStageResult = toNullableRecord(expectedInputState.stageResult);
+      if (expectedStageResult) {
+        assertNoStaleChangedFields({
+          entityLabel: "StageResult",
+          changedFields: ["overallPosition", "status", "stageId", "riderId"],
+          aggregateField: "stageResult",
+          previousState: toAuditedStageResultState(stageResult),
+          expectedState: expectedStageResult,
+        });
+      }
+      const expectedRaceStage = toNullableRecord(expectedInputState.raceStage);
+      if (expectedRaceStage) {
+        assertNoStaleChangedFields({
+          entityLabel: "RaceStage",
+          changedFields: ["eventId", "stageType", "stageOrder"],
+          aggregateField: "raceStage",
+          previousState: toAuditedRaceStageState(stageResult.stage),
+          expectedState: expectedRaceStage,
+        });
+      }
+    }
+  } else if (!getString(context.proposed, "componentWithoutStageResultRationale")) {
+    throw new Error("Event-level component proposals require explicit rationale.");
+  }
+
+  const regulationId = requiredString(context.proposed, "regulationId");
+  const regulationVersion = requiredNumber(context.proposed, "regulationVersion");
+  const regulationChecksum = requiredString(context.proposed, "regulationChecksum");
+  const regulationSourceSnapshotId = requiredString(
+    context.proposed,
+    "regulationSourceSnapshotId",
+  );
+  const tableKey = requiredString(context.proposed, "regulationTableKey");
+  const mappingEntry = toRecord(context.proposed.regulationMappingEntry);
+  const regulation = await client.championshipRegulation.findUnique({
+    where: { id: regulationId },
+  });
+  if (!regulation) throw new Error("Regulation no longer exists.");
+  if (regulation.status !== "ACTIVE" || regulation.archivedAt) {
+    throw new Error("Regulation is no longer active.");
+  }
+  const now = Date.now();
+  if (regulation.effectiveFrom && regulation.effectiveFrom.getTime() > now) {
+    throw new Error("Regulation is not effective yet.");
+  }
+  if (regulation.effectiveTo && regulation.effectiveTo.getTime() < now) {
+    throw new Error("Regulation is no longer effective.");
+  }
+  if (regulation.version !== regulationVersion) {
+    throw new Error("Regulation version changed. Regenerate review before applying.");
+  }
+  if (regulation.contentChecksum !== regulationChecksum) {
+    throw new Error("Regulation checksum changed. Regenerate review before applying.");
+  }
+  if (regulation.sourceSnapshotId !== regulationSourceSnapshotId) {
+    throw new Error("Regulation source snapshot changed.");
+  }
+  if (regulation.seasonId !== result.event.seasonId) {
+    throw new Error("Regulation season does not match Result event season.");
+  }
+  if (
+    regulation.classificationScope !==
+    requiredString(context.proposed, "classificationScope")
+  ) {
+    throw new Error("Regulation scope does not match proposal scope.");
+  }
+  if (regulation.className !== getString(context.proposed, "className")) {
+    throw new Error("Regulation class does not match proposal class.");
+  }
+  const validationIssues = validateOfficialRegulation(regulation);
+  if (validationIssues.some((issue) => issue.severity === "error")) {
+    throw new Error("Regulation is no longer valid for component points.");
+  }
+  const table = parseComponentPointsTables(regulation.pointsMapping).find(
+    (item) => item.key === tableKey,
+  );
+  if (!table) throw new Error("Regulation component table no longer exists.");
+  if (table.componentType !== requiredComponentType(context.proposed)) {
+    throw new Error("Regulation table component type changed.");
+  }
+  const position = requiredNumber(context.proposed, "position");
+  const expectedPoints = pointsForPosition(position, table.positions);
+  if (expectedPoints === null) {
+    throw new Error("No official component points mapping exists for this position.");
+  }
+  if (requiredNumber(context.proposed, "points") !== expectedPoints) {
+    throw new Error("Proposed component points no longer match the active regulation.");
+  }
+  if (
+    requiredNumber(mappingEntry, "position") !== position ||
+    requiredNumber(mappingEntry, "points") !== expectedPoints ||
+    getString(mappingEntry, "tableKey") !== tableKey
+  ) {
+    throw new Error("Regulation mapping entry does not match the active table.");
+  }
+
+  if (expectedInputState) {
+    const expectedResult = toNullableRecord(expectedInputState.result);
+    if (expectedResult) {
+      assertNoStaleChangedFields({
+        entityLabel: "Result",
+        changedFields: ["overallPosition", "status"],
+        aggregateField: "result",
+        previousState: toAuditedResultState(result),
+        expectedState: expectedResult,
+      });
+    }
+  }
+  if (previousState && context.current) {
+    assertNoStaleChangedFields({
+      entityLabel: "ResultPointComponent",
+      changedFields: context.changedFields,
+      aggregateField: "resultPointComponent",
+      previousState,
+      expectedState: context.current,
+    });
+  }
+}
+
+function validateComponentInputAuthority(context: ApplicationContext) {
+  const authority = requiredString(context.proposed, "inputAuthorityType");
+  if (authority === "source-managed") {
+    if (!getString(context.proposed, "inputResultSourceSnapshotId")) {
+      throw new Error("Source-managed component input requires input source lineage.");
+    }
+    return;
+  }
+  if (authority === "manual") {
+    if (!getString(context.proposed, "inputDataVersionId")) {
+      throw new Error("Manual component input requires DataVersion lineage.");
+    }
+    return;
+  }
+  throw new Error("Unsupported component input authority.");
+}
+
+function buildResultPointComponentUniqueWhere(
+  context: ApplicationContext,
+): Prisma.ResultPointComponentWhereInput {
+  return {
+    resultId: requiredString(context.proposed, "resultId"),
+    componentType: requiredComponentType(context.proposed),
+    classificationScope: requiredString(context.proposed, "classificationScope"),
+    className: getString(context.proposed, "className"),
+    regulationId: requiredString(context.proposed, "regulationId"),
+    regulationTableKey: requiredString(context.proposed, "regulationTableKey"),
+    stageResultId: getString(context.proposed, "stageResultId"),
+    raceStageId: getString(context.proposed, "raceStageId"),
+    archivedAt: null,
+  };
+}
+
+async function createResultPointComponentSourceLink({
+  context,
+  componentId,
+  sourceUrl,
+  tx,
+}: {
+  context: ApplicationContext;
+  componentId: string;
+  sourceUrl: string | null;
+  tx: PrismaTransaction;
+}) {
+  const sourceSnapshotId = requiredString(context.proposed, "regulationSourceSnapshotId");
+  const snapshot = await tx.sourceSnapshot.findUnique({
+    where: { id: sourceSnapshotId },
+  });
+  if (!snapshot) throw new Error("Regulation source snapshot no longer exists.");
+  const existing = await tx.sourceLink.findFirst({
+    where: {
+      entityType: "ResultPointComponent",
+      entityId: componentId,
+      dataSourceId: snapshot.dataSourceId,
+      url: sourceUrl ?? snapshot.url,
+    },
+  });
+  if (existing) return;
+  await tx.sourceLink.create({
+    data: {
+      dataSourceId: snapshot.dataSourceId,
+      url: sourceUrl ?? snapshot.url,
+      entityType: "ResultPointComponent",
+      entityId: componentId,
+      note: `Applied from review item ${context.review.id}; regulationSnapshot=${sourceSnapshotId}; inputSnapshot=${getString(context.proposed, "inputResultSourceSnapshotId") ?? "manual"}`,
+    },
+  });
+}
+
+function getComponentSourceUrl(context: ApplicationContext) {
+  const regulationSource = toNullableRecord(context.proposed.regulationSource);
+  return regulationSource ? getString(regulationSource, "url") : null;
+}
+
+function requiredComponentType(
+  proposed: Record<string, unknown>,
+): Prisma.ResultPointComponentUncheckedCreateInput["componentType"] {
+  const value = requiredString(proposed, "componentType");
+  if (
+    value === "PROLOGUE" ||
+    value === "SPRINT" ||
+    value === "MAIN_EVENT" ||
+    value === "FINAL" ||
+    value === "OTHER"
+  ) {
+    return value;
+  }
+  throw new Error(`Unsupported component type: ${value}`);
 }
 
 async function applyResultReviewItem({
@@ -1783,6 +2408,20 @@ function toAuditedStageResultState(result: {
   };
 }
 
+function toAuditedRaceStageState(stage: {
+  id: string;
+  eventId: string;
+  stageType: string;
+  stageOrder: number;
+}) {
+  return {
+    id: stage.id,
+    eventId: stage.eventId,
+    stageType: stage.stageType,
+    stageOrder: stage.stageOrder,
+  };
+}
+
 function toAuditedStandingState(standing: {
   id: string;
   seasonId: string;
@@ -1806,6 +2445,46 @@ function toAuditedStandingState(standing: {
     podiums: standing.podiums,
     starts: standing.starts,
     dnfs: standing.dnfs,
+  };
+}
+
+function toAuditedResultPointComponentState(component: {
+  id: string;
+  resultId: string;
+  stageResultId: string | null;
+  raceStageId: string | null;
+  eventId: string;
+  componentType: string;
+  classificationScope: string;
+  className: string | null;
+  position: number | null;
+  points: number;
+  regulationId: string;
+  regulationVersion: number;
+  regulationChecksum: string;
+  regulationTableKey: string;
+  sourceSnapshotId: string | null;
+  connectorReviewItemId: string | null;
+  archivedAt: Date | null;
+}) {
+  return {
+    id: component.id,
+    resultId: component.resultId,
+    stageResultId: component.stageResultId,
+    raceStageId: component.raceStageId,
+    eventId: component.eventId,
+    componentType: component.componentType,
+    classificationScope: component.classificationScope,
+    className: component.className,
+    position: component.position,
+    points: component.points,
+    regulationId: component.regulationId,
+    regulationVersion: component.regulationVersion,
+    regulationChecksum: component.regulationChecksum,
+    regulationTableKey: component.regulationTableKey,
+    sourceSnapshotId: component.sourceSnapshotId,
+    connectorReviewItemId: component.connectorReviewItemId,
+    archivedAt: component.archivedAt?.toISOString() ?? null,
   };
 }
 

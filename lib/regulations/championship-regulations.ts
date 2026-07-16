@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import type { Prisma } from "@prisma/client";
+import type { Prisma, ScoringComponentType } from "@prisma/client";
 import { productionSourceRegistry } from "@/lib/source-intelligence/registry";
 
 export type OfficialRegulationStatus = "ACTIVE" | "DRAFT" | "ARCHIVED";
@@ -19,6 +19,9 @@ export type RegulationValidationIssue = {
     | "missing-points-mapping"
     | "invalid-points-mapping"
     | "duplicate-position-mapping"
+    | "duplicate-component-table-key"
+    | "duplicate-component-table-position"
+    | "invalid-component-table"
     | "missing-tie-break-rules"
     | "invalid-tie-break-rule";
   message: string;
@@ -27,6 +30,15 @@ export type RegulationValidationIssue = {
 export type PointsMappingEntry = {
   position: number;
   points: number;
+};
+
+export type ComponentPointsTableInputMode = "STAGE_RESULT" | "RESULT";
+
+export type ComponentPointsTable = {
+  key: string;
+  componentType: ScoringComponentType;
+  inputMode: ComponentPointsTableInputMode;
+  positions: PointsMappingEntry[];
 };
 
 export type TieBreakRule = {
@@ -136,6 +148,14 @@ export function parsePointsMapping(value: Prisma.JsonValue): PointsMappingEntry[
   return parsed.mapping;
 }
 
+export function parseComponentPointsTables(
+  value: Prisma.JsonValue,
+): ComponentPointsTable[] {
+  const parsed = validateComponentPointsTables(value);
+  if (parsed.issues.some((issue) => issue.severity === "error")) return [];
+  return parsed.tables;
+}
+
 export function parseTieBreakRules(value: Prisma.JsonValue | null): TieBreakRule[] {
   if (!Array.isArray(value)) return [];
   const rules: TieBreakRule[] = [];
@@ -168,6 +188,13 @@ export function regulationChecksum(value: unknown) {
 
 function validatePointsMapping(value: Prisma.JsonValue) {
   const issues: RegulationValidationIssue[] = [];
+  if (isComponentTableMapping(value)) {
+    const parsed = validateComponentPointsTables(value);
+    return {
+      mapping: parsed.tables.flatMap((table) => table.positions),
+      issues: parsed.issues,
+    };
+  }
   if (!Array.isArray(value) || value.length === 0) {
     return {
       mapping: [],
@@ -224,6 +251,150 @@ function validatePointsMapping(value: Prisma.JsonValue) {
     mapping: mapping.sort((a, b) => a.position - b.position),
     issues,
   };
+}
+
+function validateComponentPointsTables(value: Prisma.JsonValue) {
+  const issues: RegulationValidationIssue[] = [];
+  const rawTables = getRawComponentTables(value);
+  if (!rawTables) {
+    return { tables: [], issues };
+  }
+  if (rawTables.length === 0) {
+    return {
+      tables: [],
+      issues: [
+        {
+          severity: "error" as const,
+          code: "missing-points-mapping" as const,
+          message: "At least one official component points table is required.",
+        },
+      ],
+    };
+  }
+
+  const seenKeys = new Set<string>();
+  const tables: ComponentPointsTable[] = [];
+  for (const item of rawTables) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+      issues.push({
+        severity: "error",
+        code: "invalid-component-table",
+        message: "Each component points table must be an object.",
+      });
+      continue;
+    }
+    const raw = item as Record<string, unknown>;
+    const key = typeof raw.key === "string" ? raw.key.trim() : "";
+    const componentType =
+      typeof raw.componentType === "string" ? raw.componentType.trim() : "";
+    const inputMode = parseComponentInputMode(raw.inputMode ?? raw.input);
+    if (!key || !isSupportedComponentType(componentType) || !inputMode) {
+      issues.push({
+        severity: "error",
+        code: "invalid-component-table",
+        message:
+          "Component points tables require a key, supported componentType, and supported input mode.",
+      });
+      continue;
+    }
+    if (seenKeys.has(key)) {
+      issues.push({
+        severity: "error",
+        code: "duplicate-component-table-key",
+        message: `Component points table key ${key} is duplicated.`,
+      });
+      continue;
+    }
+    seenKeys.add(key);
+
+    if (!Array.isArray(raw.positions) || raw.positions.length === 0) {
+      issues.push({
+        severity: "error",
+        code: "invalid-component-table",
+        message: `Component points table ${key} requires at least one position mapping.`,
+      });
+      continue;
+    }
+
+    const seenPositions = new Set<number>();
+    const positions: PointsMappingEntry[] = [];
+    for (const positionItem of raw.positions) {
+      if (
+        !positionItem ||
+        typeof positionItem !== "object" ||
+        Array.isArray(positionItem)
+      ) {
+        issues.push({
+          severity: "error",
+          code: "invalid-points-mapping",
+          message: `Component table ${key} contains an invalid position mapping.`,
+        });
+        continue;
+      }
+      const positionRaw = positionItem as Record<string, unknown>;
+      const position = Number(positionRaw.position);
+      const points = Number(positionRaw.points);
+      if (
+        !Number.isInteger(position) ||
+        position < 1 ||
+        !Number.isInteger(points) ||
+        points < 0
+      ) {
+        issues.push({
+          severity: "error",
+          code: "invalid-points-mapping",
+          message: "Component positions must be positive and points non-negative.",
+        });
+        continue;
+      }
+      if (seenPositions.has(position)) {
+        issues.push({
+          severity: "error",
+          code: "duplicate-component-table-position",
+          message: `Position ${position} is duplicated in component table ${key}.`,
+        });
+        continue;
+      }
+      seenPositions.add(position);
+      positions.push({ position, points });
+    }
+
+    tables.push({
+      key,
+      componentType,
+      inputMode,
+      positions: positions.sort((a, b) => a.position - b.position),
+    });
+  }
+
+  return { tables, issues };
+}
+
+function getRawComponentTables(value: Prisma.JsonValue) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const raw = value as Record<string, unknown>;
+  return Array.isArray(raw.tables) ? raw.tables : null;
+}
+
+function isComponentTableMapping(value: Prisma.JsonValue) {
+  return Boolean(getRawComponentTables(value));
+}
+
+function parseComponentInputMode(value: unknown): ComponentPointsTableInputMode | null {
+  if (value === undefined || value === null || value === "") return "STAGE_RESULT";
+  if (value === "STAGE_RESULT" || value === "stage-result") return "STAGE_RESULT";
+  if (value === "RESULT" || value === "event-result") return "RESULT";
+  return null;
+}
+
+function isSupportedComponentType(value: string): value is ScoringComponentType {
+  return (
+    value === "PROLOGUE" ||
+    value === "SPRINT" ||
+    value === "MAIN_EVENT" ||
+    value === "FINAL" ||
+    value === "OTHER"
+  );
 }
 
 function validateTieBreakRules(value: Prisma.JsonValue | null) {

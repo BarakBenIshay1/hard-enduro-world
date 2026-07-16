@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { createRegulationPointsReviewRun } from "@/lib/admin/regulation-points";
+import { createRegulationComponentPointsReviewRun } from "@/lib/admin/regulation-component-points";
 import {
   activateRegulation,
   archiveRegulation,
@@ -103,7 +103,7 @@ export async function createRegulationPointsReview(formData: FormData) {
   }
 
   try {
-    const result = await createRegulationPointsReviewRun({ regulationId });
+    const result = await createRegulationComponentPointsReviewRun({ regulationId });
     revalidatePath("/admin/regulations");
     revalidatePath("/admin/review");
     redirect(

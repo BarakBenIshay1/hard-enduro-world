@@ -8,6 +8,7 @@ testStageTypes();
 testResultPointComponentSchema();
 testMigrationSafety();
 testAdminReadSupport();
+testComponentReviewPipelineArchitecture();
 testExistingStandingsContract();
 
 console.log("Scoring component foundation tests passed.");
@@ -77,6 +78,21 @@ function testMigrationSafety() {
   assert.doesNotMatch(migration, /\bDROP\s+TABLE\b/i);
   assert.doesNotMatch(migration, /\bDELETE\s+FROM\b/i);
   assert.doesNotMatch(migration, /\bUPDATE\s+"?(Result|StageResult|Standing)"?\b/i);
+
+  const reviewActionMigration = readFileSync(
+    "prisma/migrations/20260716014500_result_point_component_review_actions/migration.sql",
+    "utf8",
+  );
+  for (const action of [
+    "NEW_RESULT_POINT_COMPONENT",
+    "UPDATE_RESULT_POINT_COMPONENT",
+    "RESULT_POINT_COMPONENT_CONFLICT",
+    "RESULT_POINT_COMPONENT_UNRESOLVED",
+    "RESULT_POINT_COMPONENT_INVALID",
+    "RESULT_POINT_COMPONENT_MISSING_SOURCE",
+  ]) {
+    assert.match(reviewActionMigration, new RegExp(action));
+  }
 }
 
 function testAdminReadSupport() {
@@ -99,6 +115,43 @@ function testAdminReadSupport() {
     /from "@\/app\/admin\/result-point-components\/actions"/,
   );
   assert.doesNotMatch(listPage + detailPage, /<form\s+action=/);
+}
+
+function testComponentReviewPipelineArchitecture() {
+  const schema = readFileSync("prisma/schema.prisma", "utf8");
+  const service = readFileSync("lib/admin/regulation-component-points.ts", "utf8");
+  const applyService = readFileSync("lib/admin/connector-review-application.ts", "utf8");
+  const regulationActions = readFileSync("app/admin/regulations/actions.ts", "utf8");
+
+  for (const action of [
+    "NEW_RESULT_POINT_COMPONENT",
+    "UPDATE_RESULT_POINT_COMPONENT",
+    "RESULT_POINT_COMPONENT_CONFLICT",
+    "RESULT_POINT_COMPONENT_UNRESOLVED",
+    "RESULT_POINT_COMPONENT_INVALID",
+    "RESULT_POINT_COMPONENT_MISSING_SOURCE",
+  ]) {
+    assert.match(schema, new RegExp(action));
+  }
+
+  assert.match(service, /parseComponentPointsTables/);
+  assert.match(service, /regulationComponentPointsConnectorKey/);
+  assert.match(service, /inputAuthorityType/);
+  assert.match(service, /inputResultSourceSnapshotId/);
+  assert.match(service, /inputDataVersionId/);
+  assert.match(service, /RESULT_POINT_COMPONENT_MISSING_SOURCE/);
+  assert.match(service, /resultPointComponent\.findMany/);
+  assert.doesNotMatch(service, /resultPointComponent\.create/);
+  assert.doesNotMatch(service, /\bstanding\.(create|update|updateMany)\(/);
+  assert.doesNotMatch(service, /\bresult\.update\(/);
+
+  assert.match(applyService, /applyResultPointComponentReviewItem/);
+  assert.match(applyService, /createResultPointComponentSourceLink/);
+  assert.match(applyService, /entityType: "ResultPointComponent"/);
+  assert.match(applyService, /appliedResultPointComponentId/);
+  assert.match(applyService, /validateResultPointComponentApplyContext/);
+
+  assert.match(regulationActions, /createRegulationComponentPointsReviewRun/);
 }
 
 function testExistingStandingsContract() {
