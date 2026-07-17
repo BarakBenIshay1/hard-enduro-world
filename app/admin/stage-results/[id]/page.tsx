@@ -262,6 +262,10 @@ export default async function AdminStageResultDetailPage({
           <ClassificationPanel
             resolution={classification}
             history={classificationHistory}
+            entityType={ClassifiableEntityType.STAGE_RESULT}
+            entityId={result.id}
+            returnPath={`/admin/stage-results/${result.id}`}
+            canPropose={canManage}
           />
 
           <Card className="min-w-0 p-4">

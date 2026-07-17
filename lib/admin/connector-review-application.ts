@@ -17,6 +17,11 @@ import {
 import { componentPointsRollupConnectorKey } from "@/lib/admin/component-points-rollup";
 import { regulationComponentPointsConnectorKey } from "@/lib/admin/regulation-component-points";
 import { regulationPointsConnectorKey } from "@/lib/admin/regulation-points";
+import {
+  applyRecordClassificationReviewItem,
+  recordClassificationReviewActions,
+  validateRecordClassificationApplicationPolicy,
+} from "@/lib/data-quality/record-classification-workflow";
 
 type PrismaTransaction = Omit<
   typeof prisma,
@@ -371,6 +376,9 @@ export function validateConnectorReviewApplicationPolicy(
   if (standingReviewActions.has(input.suggestedAction)) {
     return validateStandingApplicationPolicy(input);
   }
+  if (recordClassificationReviewActions.has(input.suggestedAction)) {
+    return validateRecordClassificationApplicationPolicy(input);
+  }
   for (const field of Object.keys(input.proposedValues)) {
     if (!allowedProposalFields.has(field)) {
       return { ok: false, reason: `Unsupported proposal field: ${field}` };
@@ -461,6 +469,33 @@ async function applyConnectorReviewItemTransaction(
           input,
           tx,
         });
+      }
+      if (recordClassificationReviewActions.has(review.suggestedAction)) {
+        const policy = validateRecordClassificationApplicationPolicy({
+          reviewStatus: review.reviewStatus,
+          applicationStatus: review.applicationStatus,
+          suggestedAction: review.suggestedAction,
+          changedFields: review.changedFields,
+          proposedValues: context.proposed,
+        });
+        if (!policy.ok) throw new Error(policy.reason);
+
+        const result = await applyRecordClassificationReviewItem({
+          review,
+          actor: input.actor,
+          note: input.note,
+          expectedApplicationStatus: input.expectedApplicationStatus,
+          expectedApplicationVersion: input.expectedApplicationVersion,
+          tx,
+        });
+
+        return {
+          ok: true,
+          reviewItemId: review.id,
+          eventId: result.classification.id,
+          status: "APPLIED",
+          message: "Approved review item was applied to one RecordClassification.",
+        };
       }
 
       validateApplicationContext(context);

@@ -52,11 +52,13 @@ export default async function AdminReviewDetailPage({ params, searchParams }: Pa
   const sourceUrl = getOfficialSourceUrl(item);
   const entityLabel = item.suggestedAction.includes("STAGE_RESULT")
     ? "StageResult"
-    : item.suggestedAction.includes("STANDING")
-      ? "Standing"
-      : item.suggestedAction.includes("RESULT")
-        ? "Result"
-        : "Event";
+    : item.suggestedAction.includes("RECORD_CLASSIFICATION")
+      ? "RecordClassification"
+      : item.suggestedAction.includes("STANDING")
+        ? "Standing"
+        : item.suggestedAction.includes("RESULT")
+          ? "Result"
+          : "Event";
   const isStandingCalculationSet =
     item.suggestedAction.includes("STANDING") &&
     hasStringField(item.proposedValues, "calculationSetId");

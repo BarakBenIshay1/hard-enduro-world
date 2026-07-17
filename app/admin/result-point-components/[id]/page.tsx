@@ -8,6 +8,7 @@ import { ClassificationPanel } from "@/components/admin/classification-panel";
 import { VersionTimeline } from "@/components/admin/version-timeline";
 import { Card } from "@/components/ui/card";
 import { getAdminResultPointComponentDetail } from "@/db/admin-result-point-components";
+import { canAccessAdmin, getAdminAccessContext } from "@/lib/admin/access";
 import {
   getRecordClassificationHistoryWithEvidence,
   resolveRecordClassification,
@@ -33,13 +34,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function AdminResultPointComponentDetailPage({ params }: PageProps) {
   const { id } = await params;
-  const [component, classification, classificationHistory] = await Promise.all([
+  const [component, classification, classificationHistory, access] = await Promise.all([
     getAdminResultPointComponentDetail(id),
     resolveRecordClassification(ClassifiableEntityType.RESULT_POINT_COMPONENT, id),
     getRecordClassificationHistoryWithEvidence(
       ClassifiableEntityType.RESULT_POINT_COMPONENT,
       id,
     ),
+    getAdminAccessContext(),
   ]);
   if (!component) notFound();
 
@@ -196,6 +198,10 @@ export default async function AdminResultPointComponentDetailPage({ params }: Pa
           <ClassificationPanel
             resolution={classification}
             history={classificationHistory}
+            entityType={ClassifiableEntityType.RESULT_POINT_COMPONENT}
+            entityId={component.id}
+            returnPath={`/admin/result-point-components/${component.id}`}
+            canPropose={canAccessAdmin(access, "sources:manage")}
           />
         </aside>
       </div>

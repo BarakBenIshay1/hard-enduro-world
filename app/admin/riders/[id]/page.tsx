@@ -238,6 +238,10 @@ export default async function AdminRiderDetailPage({ params, searchParams }: Pag
           <ClassificationPanel
             resolution={classification}
             history={classificationHistory}
+            entityType={ClassifiableEntityType.RIDER}
+            entityId={rider.id}
+            returnPath={`/admin/riders/${rider.id}`}
+            canPropose={canManage}
           />
 
           <Card className="min-w-0 p-4">

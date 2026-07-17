@@ -1,6 +1,12 @@
 import Link from "next/link";
-import type { RecordClassification } from "@prisma/client";
+import {
+  ClassifiableEntityType,
+  DataOriginStatus,
+  type RecordClassification,
+} from "@prisma/client";
+import { proposeRecordClassificationChange } from "@/app/admin/classifications/actions";
 import { ClassificationBadge } from "@/components/admin/classification-badge";
+import { EventSubmitButton } from "@/components/admin/events/event-submit-button";
 import type { ClassificationResolution } from "@/lib/data-quality/record-classification";
 import { formatDate } from "@/lib/format";
 
@@ -30,9 +36,17 @@ type EvidenceClassification = RecordClassification & {
 export function ClassificationPanel({
   resolution,
   history,
+  entityType,
+  entityId,
+  returnPath,
+  canPropose = false,
 }: {
   resolution: ClassificationResolution;
   history: EvidenceClassification[];
+  entityType?: ClassifiableEntityType;
+  entityId?: string;
+  returnPath?: string;
+  canPropose?: boolean;
 }) {
   const active = history.find((item) => item.supersededAt === null) ?? null;
   const historical = history.filter((item) => item.supersededAt !== null);
@@ -94,9 +108,88 @@ export function ClassificationPanel({
           </div>
         </div>
       ) : null}
+
+      {canPropose && entityType && entityId && returnPath ? (
+        <div className="rounded-md border border-accent/25 bg-surface-muted p-4">
+          <h3 className="text-lg font-black">Propose classification change</h3>
+          <p className="mt-2 text-sm leading-6 text-foreground/[0.62]">
+            Creates an internal review item only. Classification rows are written only
+            after approval and explicit apply.
+          </p>
+          <form action={proposeRecordClassificationChange} className="mt-4 grid gap-3">
+            <input type="hidden" name="entityType" value={entityType} />
+            <input type="hidden" name="entityId" value={entityId} />
+            <input type="hidden" name="returnPath" value={returnPath} />
+
+            <label className="grid gap-1 text-sm font-semibold">
+              Origin status
+              <select
+                name="originStatus"
+                required
+                defaultValue={resolution.originStatus ?? DataOriginStatus.UNKNOWN}
+                className="rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground outline-none focus:border-accent"
+              >
+                {proposableStatuses.map((status) => (
+                  <option key={status} value={status}>
+                    {status.replace(/_/g, " ")}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="grid gap-1 text-sm font-semibold">
+              Reason
+              <textarea
+                name="reason"
+                required
+                rows={3}
+                className="rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground outline-none focus:border-accent"
+                placeholder="Explain why this classification is being proposed."
+              />
+            </label>
+
+            <label className="grid gap-1 text-sm font-semibold">
+              Evidence JSON or note
+              <textarea
+                name="evidence"
+                rows={3}
+                className="rounded-md border border-border bg-card px-3 py-2 font-mono text-xs text-foreground outline-none focus:border-accent"
+                placeholder='{"verifiedBy":"admin review"}'
+              />
+            </label>
+
+            <TextInput label="SourceLink ID" name="sourceLinkId" />
+            <TextInput label="SourceSnapshot ID" name="sourceSnapshotId" />
+            <TextInput label="ConnectorReviewItem ID" name="connectorReviewItemId" />
+
+            <div className="rounded-md border border-border bg-black/20 p-3 text-xs leading-5 text-foreground/[0.62]">
+              Verified official classifications require SourceSnapshot evidence.
+              Source-managed classifications require source or applied-review evidence.
+            </div>
+
+            <EventSubmitButton
+              label="Create Review Proposal"
+              pendingLabel="Creating..."
+              icon="save"
+            />
+          </form>
+        </div>
+      ) : null}
     </div>
   );
 }
+
+const proposableStatuses = [
+  DataOriginStatus.VERIFIED_OFFICIAL,
+  DataOriginStatus.SOURCE_MANAGED_UNVERIFIED,
+  DataOriginStatus.AUDITED_MANUAL,
+  DataOriginStatus.MANUAL_PLACEHOLDER,
+  DataOriginStatus.DEMO,
+  DataOriginStatus.SEED,
+  DataOriginStatus.VALIDATION,
+  DataOriginStatus.UNKNOWN,
+  DataOriginStatus.CONFLICTING,
+] as const;
 
 function EvidenceBlock({
   classification,
@@ -183,5 +276,17 @@ function Meta({ label, value }: { label: string; value: string | number }) {
       </span>
       <span className="break-words font-semibold">{value}</span>
     </div>
+  );
+}
+
+function TextInput({ label, name }: { label: string; name: string }) {
+  return (
+    <label className="grid gap-1 text-sm font-semibold">
+      {label}
+      <input
+        name={name}
+        className="rounded-md border border-border bg-card px-3 py-2 font-mono text-xs text-foreground outline-none focus:border-accent"
+      />
+    </label>
   );
 }

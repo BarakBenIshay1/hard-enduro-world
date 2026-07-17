@@ -253,6 +253,10 @@ export default async function AdminResultDetailPage({ params, searchParams }: Pa
           <ClassificationPanel
             resolution={classification}
             history={classificationHistory}
+            entityType={ClassifiableEntityType.RESULT}
+            entityId={result.id}
+            returnPath={`/admin/results/${result.id}`}
+            canPropose={canManage}
           />
 
           <Card className="min-w-0 p-4">

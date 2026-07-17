@@ -279,6 +279,10 @@ export default async function AdminEventDetailPage({ params, searchParams }: Pag
           <ClassificationPanel
             resolution={classification}
             history={classificationHistory}
+            entityType={ClassifiableEntityType.EVENT}
+            entityId={event.id}
+            returnPath={`/admin/events/${event.id}`}
+            canPropose={canManage}
           />
 
           <Card className="min-w-0 p-4">

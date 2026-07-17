@@ -49,14 +49,19 @@ export function ReviewApplyForm({
     suggestedAction === "STAGE_RESULT_INVALID" ||
     suggestedAction === "STAGE_RESULT_MISSING_SOURCE" ||
     suggestedAction === "UNCHANGED_STANDING" ||
-    suggestedAction === "STANDING_INVALID";
+    suggestedAction === "STANDING_INVALID" ||
+    suggestedAction === "RECORD_CLASSIFICATION_INVALID" ||
+    suggestedAction === "RECORD_CLASSIFICATION_CONFLICT" ||
+    suggestedAction === "RECORD_CLASSIFICATION_MISSING_EVIDENCE";
   const target = suggestedAction.includes("STAGE_RESULT")
     ? "StageResult"
-    : suggestedAction.includes("STANDING")
-      ? "Standing"
-      : suggestedAction.includes("RESULT")
-        ? "Result"
-        : "Event";
+    : suggestedAction.includes("RECORD_CLASSIFICATION")
+      ? "RecordClassification"
+      : suggestedAction.includes("STANDING")
+        ? "Standing"
+        : suggestedAction.includes("RESULT")
+          ? "Result"
+          : "Event";
   const applyAction = isStandingCalculationSet
     ? applyApprovedStandingCalculationSet
     : applyApprovedConnectorReviewItem;

@@ -157,7 +157,8 @@ function testClassificationReportingIsReadOnly() {
   }
   assert.match(panelSource, /No evidence attached/);
   assert.match(panelSource, /Classification history/);
-  assert.doesNotMatch(panelSource, /<form|action=|upsert/i);
+  assert.match(panelSource, /proposeRecordClassificationChange/);
+  assert.doesNotMatch(panelSource, /recordClassification\.(create|update|delete|upsert)/);
 
   for (const file of reportingPages) {
     const source = readFileSync(file, "utf8");
