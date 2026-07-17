@@ -16,7 +16,10 @@ import {
 import { EventAlert } from "@/components/admin/events/event-alert";
 import { EventSubmitButton } from "@/components/admin/events/event-submit-button";
 import { Card } from "@/components/ui/card";
-import { createRegulationPointsReview } from "@/app/admin/regulations/actions";
+import {
+  createComponentRollupReview,
+  createRegulationPointsReview,
+} from "@/app/admin/regulations/actions";
 import { getAdminRegulations } from "@/db/admin-regulations";
 import { getAdminAccessContext, canAccessAdmin } from "@/lib/admin/access";
 import { formatDate } from "@/lib/format";
@@ -132,7 +135,27 @@ export default async function AdminRegulationsPage({ searchParams }: PageProps) 
                             Confirm review generation
                           </label>
                           <EventSubmitButton
-                            label="Create Points Review"
+                            label="Create Component Review"
+                            pendingLabel="Creating..."
+                            icon="save"
+                          />
+                        </form>
+                      ) : null}
+                      {regulation.status === "ACTIVE" &&
+                      regulation.validationIssues.length === 0 &&
+                      canAccessAdmin(access, "calculations:review") ? (
+                        <form action={createComponentRollupReview} className="grid gap-2">
+                          <input
+                            type="hidden"
+                            name="regulationId"
+                            value={regulation.id}
+                          />
+                          <label className="sr-only">
+                            <input type="checkbox" name="confirmReview" defaultChecked />
+                            Confirm rollup review generation
+                          </label>
+                          <EventSubmitButton
+                            label="Create Rollup Review"
                             pendingLabel="Creating..."
                             icon="save"
                           />
@@ -160,6 +183,9 @@ function RegulationMessage({ code }: { code?: string }) {
   if (!code) return null;
   if (code === "points-review-created") {
     return <EventAlert tone="success">Points review proposals created.</EventAlert>;
+  }
+  if (code === "rollup-review-created") {
+    return <EventAlert tone="success">Rollup review proposals created.</EventAlert>;
   }
   return <EventAlert tone="error">Regulation action could not be completed.</EventAlert>;
 }

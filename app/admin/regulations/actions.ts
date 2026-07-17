@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createRegulationComponentPointsReviewRun } from "@/lib/admin/regulation-component-points";
+import { createComponentPointsRollupReviewRun } from "@/lib/admin/component-points-rollup";
 import {
   activateRegulation,
   archiveRegulation,
@@ -113,6 +114,33 @@ export async function createRegulationPointsReview(formData: FormData) {
     );
   } catch (error) {
     console.error("Regulation points review creation failed", error);
+    redirect("/admin/regulations?error=review-failed");
+  }
+}
+
+export async function createComponentRollupReview(formData: FormData) {
+  const session = await getAuthSession();
+  if (!session.user || !hasPermission(session, "calculations:review")) {
+    redirect("/admin/regulations?error=unauthorized");
+  }
+
+  const regulationId = stringField(formData, "regulationId");
+  const confirmed = stringField(formData, "confirmReview") === "on";
+  if (!regulationId || !confirmed) {
+    redirect("/admin/regulations?error=confirmation-required");
+  }
+
+  try {
+    const result = await createComponentPointsRollupReviewRun({ regulationId });
+    revalidatePath("/admin/regulations");
+    revalidatePath("/admin/review");
+    redirect(
+      `/admin/regulations?saved=rollup-review-created&snapshot=${encodeURIComponent(
+        result.snapshotId,
+      )}`,
+    );
+  } catch (error) {
+    console.error("Component rollup review creation failed", error);
     redirect("/admin/regulations?error=review-failed");
   }
 }

@@ -41,6 +41,16 @@ export type ComponentPointsTable = {
   positions: PointsMappingEntry[];
 };
 
+export type ComponentEventFormat = {
+  key: string;
+  eventIds: string[];
+  eventSlugs: string[];
+  requiredTables: string[];
+  optionalTables: string[];
+  oneOf: string[][];
+  maximumPoints: number | null;
+};
+
 export type TieBreakRule = {
   type: "wins" | "second-places" | "best-recent-finish";
   order: number;
@@ -135,6 +145,14 @@ export function validateOfficialRegulation(
 
   const mappingIssues = validatePointsMapping(regulation.pointsMapping);
   issues.push(...mappingIssues.issues);
+  if (isComponentTableMapping(regulation.pointsMapping)) {
+    issues.push(
+      ...validateComponentEventFormats(
+        regulation.pointsMapping,
+        getRawComponentTables(regulation.pointsMapping) ?? [],
+      ).issues,
+    );
+  }
 
   const tieBreakIssues = validateTieBreakRules(regulation.tieBreakRules);
   issues.push(...tieBreakIssues);
@@ -154,6 +172,14 @@ export function parseComponentPointsTables(
   const parsed = validateComponentPointsTables(value);
   if (parsed.issues.some((issue) => issue.severity === "error")) return [];
   return parsed.tables;
+}
+
+export function parseComponentEventFormats(
+  value: Prisma.JsonValue,
+): ComponentEventFormat[] {
+  const parsed = validateComponentEventFormats(value, getRawComponentTables(value) ?? []);
+  if (parsed.issues.some((issue) => issue.severity === "error")) return [];
+  return parsed.formats;
 }
 
 export function parseTieBreakRules(value: Prisma.JsonValue | null): TieBreakRule[] {
@@ -374,6 +400,147 @@ function getRawComponentTables(value: Prisma.JsonValue) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const raw = value as Record<string, unknown>;
   return Array.isArray(raw.tables) ? raw.tables : null;
+}
+
+function validateComponentEventFormats(value: Prisma.JsonValue, rawTables: unknown[]) {
+  const issues: RegulationValidationIssue[] = [];
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return { formats: [], issues };
+  }
+  const raw = value as Record<string, unknown>;
+  const rawFormats = Array.isArray(raw.eventFormats) ? raw.eventFormats : [];
+  if (rawFormats.length === 0) {
+    return {
+      formats: [],
+      issues: [
+        {
+          severity: "error" as const,
+          code: "invalid-component-table" as const,
+          message:
+            "Component points regulations require at least one persisted event format.",
+        },
+      ],
+    };
+  }
+
+  const tableKeys = new Set(
+    rawTables
+      .filter(
+        (item): item is Record<string, unknown> =>
+          Boolean(item) && typeof item === "object" && !Array.isArray(item),
+      )
+      .map((item) => (typeof item.key === "string" ? item.key.trim() : ""))
+      .filter(Boolean),
+  );
+  const seenFormatKeys = new Set<string>();
+  const formats: ComponentEventFormat[] = [];
+
+  for (const formatItem of rawFormats) {
+    if (!formatItem || typeof formatItem !== "object" || Array.isArray(formatItem)) {
+      issues.push({
+        severity: "error",
+        code: "invalid-component-table",
+        message: "Each event format must be an object.",
+      });
+      continue;
+    }
+    const item = formatItem as Record<string, unknown>;
+    const key = typeof item.key === "string" ? item.key.trim() : "";
+    if (!key || seenFormatKeys.has(key)) {
+      issues.push({
+        severity: "error",
+        code: "invalid-component-table",
+        message: "Event formats require unique non-empty keys.",
+      });
+      continue;
+    }
+    seenFormatKeys.add(key);
+
+    const requiredTables = readUniqueStringArray(item.requiredTables);
+    const optionalTables = readUniqueStringArray(item.optionalTables);
+    const oneOf = readOneOfGroups(item.oneOf);
+    const maximumPoints =
+      item.maximumPoints === undefined || item.maximumPoints === null
+        ? null
+        : Number(item.maximumPoints);
+    if (
+      maximumPoints !== null &&
+      (!Number.isInteger(maximumPoints) || maximumPoints < 0)
+    ) {
+      issues.push({
+        severity: "error",
+        code: "invalid-component-table",
+        message: `Event format ${key} has an invalid maximumPoints value.`,
+      });
+    }
+
+    const allRefs = [
+      ...requiredTables,
+      ...optionalTables,
+      ...oneOf.flatMap((group) => group),
+    ];
+    const refs = new Set<string>();
+    for (const ref of allRefs) {
+      if (!tableKeys.has(ref)) {
+        issues.push({
+          severity: "error",
+          code: "invalid-component-table",
+          message: `Event format ${key} references unknown component table ${ref}.`,
+        });
+      }
+      if (refs.has(ref)) {
+        issues.push({
+          severity: "error",
+          code: "invalid-component-table",
+          message: `Event format ${key} references component table ${ref} more than once.`,
+        });
+      }
+      refs.add(ref);
+    }
+    if (requiredTables.length === 0 && oneOf.length === 0) {
+      issues.push({
+        severity: "error",
+        code: "invalid-component-table",
+        message: `Event format ${key} requires at least one required table or one-of group.`,
+      });
+    }
+    if (oneOf.some((group) => group.length === 0)) {
+      issues.push({
+        severity: "error",
+        code: "invalid-component-table",
+        message: `Event format ${key} contains an empty one-of group.`,
+      });
+    }
+
+    formats.push({
+      key,
+      eventIds: readUniqueStringArray(item.eventIds),
+      eventSlugs: readUniqueStringArray(item.eventSlugs),
+      requiredTables,
+      optionalTables,
+      oneOf,
+      maximumPoints: maximumPoints === null ? null : maximumPoints,
+    });
+  }
+
+  return { formats, issues };
+}
+
+function readUniqueStringArray(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return Array.from(
+    new Set(
+      value
+        .filter((item): item is string => typeof item === "string")
+        .map((item) => item.trim())
+        .filter(Boolean),
+    ),
+  );
+}
+
+function readOneOfGroups(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return value.map(readUniqueStringArray);
 }
 
 function isComponentTableMapping(value: Prisma.JsonValue) {

@@ -9,10 +9,12 @@ import { prisma } from "@/lib/prisma";
 import type { AuthUser } from "@/lib/auth";
 import {
   parseComponentPointsTables,
+  parseComponentEventFormats,
   parsePointsMapping,
   pointsForPosition,
   validateOfficialRegulation,
 } from "@/lib/regulations/championship-regulations";
+import { componentPointsRollupConnectorKey } from "@/lib/admin/component-points-rollup";
 import { regulationComponentPointsConnectorKey } from "@/lib/admin/regulation-component-points";
 import { regulationPointsConnectorKey } from "@/lib/admin/regulation-points";
 
@@ -110,10 +112,12 @@ const allowedResultProposalFields = new Set([
   "entityType",
   "sourceRowId",
   "sourceId",
+  "resultId",
   "eventId",
   "riderId",
   "manufacturerId",
   "motorcycleId",
+  "classificationScope",
   "className",
   "overallPosition",
   "points",
@@ -133,6 +137,28 @@ const allowedResultProposalFields = new Set([
   "entityMatches",
   "validationWarnings",
   "applyEligible",
+  "payloadType",
+  "seasonId",
+  "currentPoints",
+  "manualCurrentValue",
+  "eventFormatKey",
+  "eventFormatMatchingMethod",
+  "requiredComponentTables",
+  "optionalComponentTables",
+  "oneOfComponentTables",
+  "maximumEventPoints",
+  "componentIds",
+  "components",
+  "componentStates",
+  "componentChecksums",
+  "componentReviewItemIds",
+  "componentSourceLinkIds",
+  "componentDataVersionIds",
+  "calculationVersion",
+  "calculationTimestamp",
+  "currentEntityState",
+  "proposedEntityState",
+  "exactInputState",
   "regulationId",
   "regulationVersion",
   "regulationChecksum",
@@ -1190,7 +1216,11 @@ async function applyResultReviewItem({
       : null;
   const expectedChecksum = createStableChecksum(previousResultState ?? null);
   if (context.changedFields.includes("points")) {
-    await validateRegulationPointsApplyContext(context, previousResultState, tx);
+    if (context.review.connectorKey === componentPointsRollupConnectorKey) {
+      await validateComponentRollupApplyContext(context, previousResultState, tx);
+    } else {
+      await validateRegulationPointsApplyContext(context, previousResultState, tx);
+    }
   }
 
   const result =
@@ -1503,6 +1533,368 @@ async function validateRegulationPointsApplyContext(
   }
 }
 
+async function validateComponentRollupApplyContext(
+  context: ApplicationContext,
+  previousResultState: Record<string, unknown> | null,
+  client: PrismaExecutor,
+) {
+  if (context.review.connectorKey !== componentPointsRollupConnectorKey) {
+    throw new Error(
+      "Component rollup updates must come from the official component rollup connector.",
+    );
+  }
+  if (context.proposed.payloadType !== "component-points-rollup") {
+    throw new Error("Result points proposal is not a component rollup payload.");
+  }
+  if (!previousResultState) {
+    throw new Error("Current Result state is required for component rollup apply.");
+  }
+  if (context.changedFields.length !== 1 || context.changedFields[0] !== "points") {
+    throw new Error("Component rollup may update only Result.points.");
+  }
+
+  const resultId = requiredString(context.proposed, "resultId");
+  const result = await client.result.findUnique({
+    where: { id: resultId },
+    include: { event: true },
+  });
+  if (!result || result.archivedAt) throw new Error("Matched Result is unavailable.");
+  if (result.eventId !== requiredString(context.proposed, "eventId")) {
+    throw new Error("Rollup Result event changed.");
+  }
+  if (result.event.seasonId !== requiredString(context.proposed, "seasonId")) {
+    throw new Error("Rollup Result season changed.");
+  }
+  if (result.riderId !== requiredString(context.proposed, "riderId")) {
+    throw new Error("Rollup Result rider changed.");
+  }
+  if (result.className !== getString(context.proposed, "className")) {
+    throw new Error("Rollup Result class changed.");
+  }
+  if (result.status !== "FINISHED") {
+    throw new Error("Only FINISHED Results can receive component rollup points.");
+  }
+  assertNoStaleChangedFields({
+    entityLabel: "Result",
+    changedFields: ["points", "overallPosition", "status"],
+    aggregateField: "result",
+    previousState: toAuditedResultState(result),
+    expectedState: toRecord(context.proposed.currentEntityState),
+  });
+
+  const regulationId = requiredString(context.proposed, "regulationId");
+  const regulationVersion = requiredNumber(context.proposed, "regulationVersion");
+  const regulationContentChecksum = requiredString(
+    context.proposed,
+    "regulationChecksum",
+  );
+  const regulationSourceSnapshotId = requiredString(
+    context.proposed,
+    "regulationSourceSnapshotId",
+  );
+  const regulation = await client.championshipRegulation.findUnique({
+    where: { id: regulationId },
+  });
+  if (!regulation) throw new Error("Regulation no longer exists.");
+  if (regulation.status !== "ACTIVE" || regulation.archivedAt) {
+    throw new Error("Regulation is no longer active.");
+  }
+  const now = Date.now();
+  if (regulation.effectiveFrom && regulation.effectiveFrom.getTime() > now) {
+    throw new Error("Regulation is not effective yet.");
+  }
+  if (regulation.effectiveTo && regulation.effectiveTo.getTime() < now) {
+    throw new Error("Regulation is no longer effective.");
+  }
+  if (regulation.version !== regulationVersion) {
+    throw new Error("Regulation version changed. Regenerate rollup review.");
+  }
+  if (regulation.contentChecksum !== regulationContentChecksum) {
+    throw new Error("Regulation checksum changed. Regenerate rollup review.");
+  }
+  if (regulation.sourceSnapshotId !== regulationSourceSnapshotId) {
+    throw new Error("Regulation source snapshot changed. Regenerate rollup review.");
+  }
+  if (regulation.seasonId !== result.event.seasonId) {
+    throw new Error("Regulation season does not match the Result event season.");
+  }
+  if (
+    regulation.classificationScope !==
+    requiredString(context.proposed, "classificationScope")
+  ) {
+    throw new Error("Regulation scope does not match rollup proposal.");
+  }
+  if (regulation.className !== result.className) {
+    throw new Error("Regulation class scope does not match the Result class.");
+  }
+  const validationIssues = validateOfficialRegulation(regulation);
+  if (validationIssues.some((issue) => issue.severity === "error")) {
+    throw new Error("Regulation is no longer valid for component rollup.");
+  }
+
+  const formatKey = requiredString(context.proposed, "eventFormatKey");
+  const formats = parseComponentEventFormats(regulation.pointsMapping);
+  const format = formats.find((item) => item.key === formatKey);
+  if (!format) throw new Error("Rollup event format no longer exists.");
+  assertSameStringArray(
+    "required component tables",
+    format.requiredTables,
+    readStringArray(context.proposed.requiredComponentTables),
+  );
+  assertSameStringArray(
+    "optional component tables",
+    format.optionalTables,
+    readStringArray(context.proposed.optionalComponentTables),
+  );
+  assertSameOneOfGroups(
+    format.oneOf,
+    readOneOfGroups(context.proposed.oneOfComponentTables),
+  );
+  const maximumEventPoints = getNumber(context.proposed, "maximumEventPoints");
+  if ((format.maximumPoints ?? null) !== maximumEventPoints) {
+    throw new Error("Rollup event format maximum points changed.");
+  }
+
+  const componentIds = readStringArray(context.proposed.componentIds);
+  if (componentIds.length === 0) throw new Error("Rollup requires component inputs.");
+  if (new Set(componentIds).size !== componentIds.length) {
+    throw new Error("Rollup component list contains duplicates.");
+  }
+  const components = await client.resultPointComponent.findMany({
+    where: { id: { in: componentIds } },
+    include: {
+      connectorReviewItem: true,
+      stageResult: true,
+      raceStage: true,
+    },
+  });
+  if (components.length !== componentIds.length) {
+    throw new Error("One or more rollup components no longer exist.");
+  }
+  const sourceLinks = await client.sourceLink.findMany({
+    where: {
+      entityType: "ResultPointComponent",
+      entityId: { in: componentIds },
+    },
+  });
+  const dataVersions = await client.dataVersion.findMany({
+    where: {
+      entityType: "ResultPointComponent",
+      entityId: { in: componentIds },
+    },
+  });
+  const sourceLinkedComponentIds = new Set(sourceLinks.map((link) => link.entityId));
+  const versionedComponentIds = new Set(dataVersions.map((version) => version.entityId));
+  const proposedComponents = readRecordArray(context.proposed.components);
+  const proposedComponentChecksums = new Map(
+    readRecordArray(context.proposed.componentChecksums).map((item) => [
+      requiredString(item, "id"),
+      requiredString(item, "checksum"),
+    ]),
+  );
+  const tableCounts = new Map<string, number>();
+  let totalPoints = 0;
+  for (const component of components) {
+    validateRollupComponentAuthority({
+      component,
+      result,
+      regulation,
+      sourceLinkedComponentIds,
+      versionedComponentIds,
+    });
+    const proposedChecksum = proposedComponentChecksums.get(component.id);
+    if (!proposedChecksum) {
+      throw new Error("Rollup component checksum is missing.");
+    }
+    if (
+      createStableChecksum(toAuditedResultPointComponentState(component)) !==
+      proposedChecksum
+    ) {
+      throw new Error("Rollup component state changed. Regenerate review.");
+    }
+    if (
+      !proposedComponents.some(
+        (item) =>
+          getString(item, "id") === component.id &&
+          getString(item, "regulationTableKey") === component.regulationTableKey,
+      )
+    ) {
+      throw new Error("Rollup component proposal list no longer matches inputs.");
+    }
+    if (component.points < 0 || !Number.isInteger(component.points)) {
+      throw new Error("Rollup component points are invalid.");
+    }
+    tableCounts.set(
+      component.regulationTableKey,
+      (tableCounts.get(component.regulationTableKey) ?? 0) + 1,
+    );
+    totalPoints += component.points;
+  }
+  validateRollupComponentSet(format, tableCounts, totalPoints);
+  if (requiredNumber(context.proposed, "points") !== totalPoints) {
+    throw new Error("Proposed Result.points no longer matches component rollup.");
+  }
+  const mappingEntry = toRecord(context.proposed.regulationMappingEntry);
+  if (
+    getString(mappingEntry, "eventFormatKey") !== format.key ||
+    requiredNumber(mappingEntry, "totalPoints") !== totalPoints
+  ) {
+    throw new Error("Rollup mapping entry no longer matches the active calculation.");
+  }
+}
+
+function validateRollupComponentAuthority({
+  component,
+  result,
+  regulation,
+  sourceLinkedComponentIds,
+  versionedComponentIds,
+}: {
+  component: {
+    id: string;
+    resultId: string;
+    eventId: string;
+    regulationId: string;
+    regulationVersion: number;
+    regulationChecksum: string;
+    classificationScope: string;
+    className: string | null;
+    componentType: string;
+    archivedAt: Date | null;
+    connectorReviewItem: {
+      suggestedAction: string;
+      reviewStatus: string;
+      applicationStatus: string;
+      appliedResultPointComponentId: string | null;
+    } | null;
+    stageResult: {
+      stageId: string;
+      riderId: string;
+    } | null;
+    raceStage: {
+      id: string;
+      eventId: string;
+      stageType: string;
+    } | null;
+  };
+  result: {
+    id: string;
+    eventId: string;
+    riderId: string;
+    className: string | null;
+  };
+  regulation: {
+    id: string;
+    version: number;
+    contentChecksum: string | null;
+    classificationScope: string;
+    className: string | null;
+  };
+  sourceLinkedComponentIds: Set<string>;
+  versionedComponentIds: Set<string>;
+}) {
+  if (component.archivedAt) throw new Error("Archived component cannot be rolled up.");
+  if (component.resultId !== result.id) {
+    throw new Error("Rollup component belongs to another Result.");
+  }
+  if (component.eventId !== result.eventId) {
+    throw new Error("Rollup component belongs to another Event.");
+  }
+  if (component.regulationId !== regulation?.id) {
+    throw new Error("Rollup component belongs to another Regulation.");
+  }
+  if (component.regulationVersion !== regulation.version) {
+    throw new Error("Rollup component Regulation version changed.");
+  }
+  if (component.regulationChecksum !== regulation.contentChecksum) {
+    throw new Error("Rollup component Regulation checksum changed.");
+  }
+  if (component.classificationScope !== regulation.classificationScope) {
+    throw new Error("Rollup component scope does not match Regulation.");
+  }
+  if (
+    component.className !== regulation.className ||
+    component.className !== result.className
+  ) {
+    throw new Error("Rollup component class does not match Result or Regulation.");
+  }
+  const review = component.connectorReviewItem;
+  if (!review) throw new Error("Rollup component is missing applied review lineage.");
+  if (!resultPointComponentReviewActions.has(review.suggestedAction)) {
+    throw new Error("Rollup component review action is not applyable.");
+  }
+  if (review.reviewStatus !== "APPROVED" || review.applicationStatus !== "APPLIED") {
+    throw new Error("Rollup component review was not approved and applied.");
+  }
+  if (review.appliedResultPointComponentId !== component.id) {
+    throw new Error("Rollup component review does not apply this component.");
+  }
+  if (!sourceLinkedComponentIds.has(component.id)) {
+    throw new Error("Rollup component SourceLink lineage is missing.");
+  }
+  if (!versionedComponentIds.has(component.id)) {
+    throw new Error("Rollup component DataVersion lineage is missing.");
+  }
+  if (component.stageResult || component.raceStage) {
+    if (!component.stageResult || !component.raceStage) {
+      throw new Error("Stage rollup component requires both StageResult and RaceStage.");
+    }
+    if (component.stageResult.stageId !== component.raceStage.id) {
+      throw new Error("Rollup StageResult does not belong to RaceStage.");
+    }
+    if (component.raceStage.eventId !== result.eventId) {
+      throw new Error("Rollup RaceStage belongs to another Event.");
+    }
+    if (component.stageResult.riderId !== result.riderId) {
+      throw new Error("Rollup StageResult rider differs from Result rider.");
+    }
+    if (component.raceStage.stageType !== component.componentType) {
+      throw new Error("Rollup RaceStage type differs from component type.");
+    }
+  }
+}
+
+function validateRollupComponentSet(
+  format: {
+    key: string;
+    requiredTables: string[];
+    optionalTables: string[];
+    oneOf: string[][];
+    maximumPoints: number | null;
+  },
+  tableCounts: Map<string, number>,
+  totalPoints: number,
+) {
+  for (const key of format.requiredTables) {
+    if ((tableCounts.get(key) ?? 0) !== 1) {
+      throw new Error(`Rollup requires exactly one ${key} component.`);
+    }
+  }
+  for (const group of format.oneOf) {
+    const count = group.reduce((sum, key) => sum + (tableCounts.get(key) ?? 0), 0);
+    if (count !== 1) {
+      throw new Error(`Rollup requires exactly one component from ${group.join(", ")}.`);
+    }
+  }
+  const allowed = new Set([
+    ...format.requiredTables,
+    ...format.optionalTables,
+    ...format.oneOf.flatMap((group) => group),
+  ]);
+  for (const [key, count] of tableCounts) {
+    if (!allowed.has(key)) {
+      throw new Error(`Rollup component table ${key} is not allowed.`);
+    }
+    if (count > 1) throw new Error(`Rollup component table ${key} is duplicated.`);
+  }
+  if (!Number.isSafeInteger(totalPoints) || totalPoints > 2_147_483_647) {
+    throw new Error("Rollup total exceeds the supported integer range.");
+  }
+  if (format.maximumPoints !== null && totalPoints > format.maximumPoints) {
+    throw new Error("Rollup total exceeds maximum event points.");
+  }
+}
+
 async function createResultSourceLink({
   context,
   resultId,
@@ -1522,13 +1914,28 @@ async function createResultSourceLink({
     ? await tx.sourceSnapshot.findUnique({ where: { id: sourceSnapshotId } })
     : null;
   if (!snapshot) return;
+  const note =
+    context.review.connectorKey === componentPointsRollupConnectorKey
+      ? `Component points rollup scoring derivation from review item ${context.review.id}`
+      : `Applied from review item ${context.review.id}`;
+  const existing = await tx.sourceLink.findFirst({
+    where: {
+      entityType: "Result",
+      entityId: resultId,
+      dataSourceId: snapshot.dataSourceId,
+      url: sourceUrl ?? snapshot.url,
+      note,
+    },
+    select: { id: true },
+  });
+  if (existing) return;
   await tx.sourceLink.create({
     data: {
       dataSourceId: snapshot.dataSourceId,
       url: sourceUrl ?? snapshot.url,
       entityType: "Result",
       entityId: resultId,
-      note: `Applied from review item ${context.review.id}`,
+      note,
     },
   });
 }
@@ -2466,6 +2873,7 @@ function toAuditedResultPointComponentState(component: {
   sourceSnapshotId: string | null;
   connectorReviewItemId: string | null;
   archivedAt: Date | null;
+  updatedAt: Date;
 }) {
   return {
     id: component.id,
@@ -2485,6 +2893,7 @@ function toAuditedResultPointComponentState(component: {
     sourceSnapshotId: component.sourceSnapshotId,
     connectorReviewItemId: component.connectorReviewItemId,
     archivedAt: component.archivedAt?.toISOString() ?? null,
+    updatedAt: component.updatedAt.toISOString(),
   };
 }
 
@@ -2520,6 +2929,40 @@ function getNumber(value: Record<string, unknown>, key: string) {
 function getString(value: Record<string, unknown>, key: string) {
   const field = value[key];
   return typeof field === "string" && field.trim() ? field.trim() : null;
+}
+
+function readStringArray(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is string => typeof item === "string");
+}
+
+function readRecordArray(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return value.filter(
+    (item): item is Record<string, unknown> =>
+      Boolean(item) && typeof item === "object" && !Array.isArray(item),
+  );
+}
+
+function readOneOfGroups(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return value.map(readStringArray);
+}
+
+function assertSameStringArray(label: string, left: string[], right: string[]) {
+  if (!valuesEqual([...left].sort(), [...right].sort())) {
+    throw new Error(`Rollup ${label} changed.`);
+  }
+}
+
+function assertSameOneOfGroups(left: string[][], right: string[][]) {
+  const normalize = (groups: string[][]) =>
+    groups
+      .map((group) => [...group].sort())
+      .sort((a, b) => a.join(",").localeCompare(b.join(",")));
+  if (!valuesEqual(normalize(left), normalize(right))) {
+    throw new Error("Rollup one-of component groups changed.");
+  }
 }
 
 function requiredDate(value: Record<string, unknown>, key: string) {
