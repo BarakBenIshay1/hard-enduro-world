@@ -1,3 +1,4 @@
+import { ClassifiableEntityType } from "@prisma/client";
 import type { Prisma, ResultStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import {
@@ -5,6 +6,12 @@ import {
   getAdminPagination,
   getAdminTotalPages,
 } from "@/lib/admin/platform";
+import {
+  getClassificationEntityIdFilter,
+  resolveRecordClassifications,
+  summarizeClassificationResolutions,
+  type ClassificationFilter,
+} from "@/lib/data-quality/record-classification";
 
 export type ResultLifecycleFilter = "active" | "archived" | "all";
 export type SourceModeFilter = "all" | "source-managed" | "manual";
@@ -17,6 +24,7 @@ export type AdminResultListFilters = {
   manufacturerId?: string;
   motorcycleId?: string;
   sourceMode?: SourceModeFilter;
+  classification?: ClassificationFilter;
   lifecycle?: ResultLifecycleFilter;
   page?: number;
   sort?: string;
@@ -30,6 +38,7 @@ export type AdminStageResultListFilters = {
   status?: ResultStatus;
   position?: number;
   sourceMode?: SourceModeFilter;
+  classification?: ClassificationFilter;
   lifecycle?: ResultLifecycleFilter;
   page?: number;
   sort?: string;
@@ -94,7 +103,11 @@ export async function getAdminResults(filters: AdminResultListFilters) {
     pageSize: defaultAdminPageSize,
   });
   const sourceFilter = await getSourceFilter("Result", filters.sourceMode ?? "all");
-  const where = buildResultWhere(filters, sourceFilter);
+  const classificationFilter = await getClassificationEntityIdFilter(
+    ClassifiableEntityType.RESULT,
+    filters.classification,
+  );
+  const where = buildResultWhere(filters, sourceFilter, classificationFilter);
   const orderBy = buildResultOrder(filters.sort);
 
   const [results, total, options] = await Promise.all([
@@ -113,12 +126,18 @@ export async function getAdminResults(filters: AdminResultListFilters) {
     "Result",
     results.map((result) => result.id),
   );
+  const classifications = await resolveRecordClassifications(
+    ClassifiableEntityType.RESULT,
+    results.map((result) => result.id),
+  );
 
   return {
     results: results.map((result) => ({
       ...result,
       sourceLinks: sourceLinks.get(result.id) ?? [],
+      classification: classifications.get(result.id),
     })),
+    classificationSummary: summarizeClassificationResolutions(classifications.values()),
     total,
     page: pagination.page,
     pageSize: pagination.pageSize,
@@ -133,7 +152,11 @@ export async function getAdminStageResults(filters: AdminStageResultListFilters)
     pageSize: defaultAdminPageSize,
   });
   const sourceFilter = await getSourceFilter("StageResult", filters.sourceMode ?? "all");
-  const where = buildStageResultWhere(filters, sourceFilter);
+  const classificationFilter = await getClassificationEntityIdFilter(
+    ClassifiableEntityType.STAGE_RESULT,
+    filters.classification,
+  );
+  const where = buildStageResultWhere(filters, sourceFilter, classificationFilter);
   const orderBy = buildStageResultOrder(filters.sort);
 
   const [stageResults, total, options] = await Promise.all([
@@ -152,12 +175,18 @@ export async function getAdminStageResults(filters: AdminStageResultListFilters)
     "StageResult",
     stageResults.map((result) => result.id),
   );
+  const classifications = await resolveRecordClassifications(
+    ClassifiableEntityType.STAGE_RESULT,
+    stageResults.map((result) => result.id),
+  );
 
   return {
     stageResults: stageResults.map((result) => ({
       ...result,
       sourceLinks: sourceLinks.get(result.id) ?? [],
+      classification: classifications.get(result.id),
     })),
+    classificationSummary: summarizeClassificationResolutions(classifications.values()),
     total,
     page: pagination.page,
     pageSize: pagination.pageSize,
@@ -257,6 +286,7 @@ const stageResultInclude = {
 function buildResultWhere(
   filters: AdminResultListFilters,
   sourceFilter: Prisma.ResultWhereInput,
+  classificationFilter: Prisma.StringFilter | undefined,
 ): Prisma.ResultWhereInput {
   return {
     ...(filters.search
@@ -275,6 +305,7 @@ function buildResultWhere(
     ...(filters.status ? { status: filters.status } : {}),
     ...(filters.manufacturerId ? { manufacturerId: filters.manufacturerId } : {}),
     ...(filters.motorcycleId ? { motorcycleId: filters.motorcycleId } : {}),
+    ...(classificationFilter ? { id: classificationFilter } : {}),
     ...buildLifecycleWhere(filters.lifecycle ?? "active"),
     ...sourceFilter,
   };
@@ -283,6 +314,7 @@ function buildResultWhere(
 function buildStageResultWhere(
   filters: AdminStageResultListFilters,
   sourceFilter: Prisma.StageResultWhereInput,
+  classificationFilter: Prisma.StringFilter | undefined,
 ): Prisma.StageResultWhereInput {
   return {
     ...(filters.search
@@ -306,6 +338,7 @@ function buildStageResultWhere(
     ...(filters.riderId ? { riderId: filters.riderId } : {}),
     ...(filters.status ? { status: filters.status } : {}),
     ...(filters.position ? { overallPosition: filters.position } : {}),
+    ...(classificationFilter ? { id: classificationFilter } : {}),
     ...buildLifecycleWhere(filters.lifecycle ?? "active"),
     ...sourceFilter,
   };

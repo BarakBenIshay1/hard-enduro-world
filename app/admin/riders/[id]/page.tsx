@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ClassifiableEntityType } from "@prisma/client";
 import { ExternalLink } from "lucide-react";
 import { AdminStatusBadge } from "@/components/admin/admin-status-badge";
+import { ClassificationPanel } from "@/components/admin/classification-panel";
 import { EventAlert } from "@/components/admin/events/event-alert";
 import { EventEditorForm } from "@/components/admin/events/event-editor-form";
 import { EventSubmitButton } from "@/components/admin/events/event-submit-button";
@@ -22,6 +24,10 @@ import {
 } from "@/db/admin-riders";
 import { getAdminAccessContext } from "@/lib/admin/access";
 import { canManageRiders, canPermanentlyDeleteRiders } from "@/lib/admin/rider-cms";
+import {
+  getRecordClassificationHistoryWithEvidence,
+  resolveRecordClassification,
+} from "@/lib/data-quality/record-classification";
 import { formatDate } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -47,11 +53,14 @@ export default async function AdminRiderDetailPage({ params, searchParams }: Pag
     getAdminAccessContext(),
     getAdminRiderOptions(),
   ]);
-  const [rider, audit, deleteEligibility] = await Promise.all([
-    getAdminRiderDetail(id),
-    getAdminRiderAudit(id),
-    getAdminRiderDeleteEligibility(id),
-  ]);
+  const [rider, audit, deleteEligibility, classification, classificationHistory] =
+    await Promise.all([
+      getAdminRiderDetail(id),
+      getAdminRiderAudit(id),
+      getAdminRiderDeleteEligibility(id),
+      resolveRecordClassification(ClassifiableEntityType.RIDER, id),
+      getRecordClassificationHistoryWithEvidence(ClassifiableEntityType.RIDER, id),
+    ]);
 
   if (!rider) notFound();
 
@@ -225,6 +234,11 @@ export default async function AdminRiderDetailPage({ params, searchParams }: Pag
               <Meta label="Career Seasons" value={rider.careerSeasons.length} />
             </div>
           </Card>
+
+          <ClassificationPanel
+            resolution={classification}
+            history={classificationHistory}
+          />
 
           <Card className="min-w-0 p-4">
             <h2 className="text-xl font-black">Archive</h2>

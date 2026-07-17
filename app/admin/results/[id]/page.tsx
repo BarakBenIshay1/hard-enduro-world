@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ClassifiableEntityType } from "@prisma/client";
 import { ExternalLink } from "lucide-react";
 import { AdminStatusBadge } from "@/components/admin/admin-status-badge";
+import { ClassificationPanel } from "@/components/admin/classification-panel";
 import { EventAlert } from "@/components/admin/events/event-alert";
 import { EventEditorForm } from "@/components/admin/events/event-editor-form";
 import { EventSubmitButton } from "@/components/admin/events/event-submit-button";
@@ -16,6 +18,10 @@ import {
 import { getAdminResultDetail, getAdminResultOptions } from "@/db/admin-results";
 import { getAdminAccessContext } from "@/lib/admin/access";
 import { canManageResults, resultStatuses } from "@/lib/admin/result-cms";
+import {
+  getRecordClassificationHistoryWithEvidence,
+  resolveRecordClassification,
+} from "@/lib/data-quality/record-classification";
 import { formatDate } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -43,7 +49,11 @@ export default async function AdminResultDetailPage({ params, searchParams }: Pa
     getAdminAccessContext(),
     getAdminResultOptions(),
   ]);
-  const result = await getAdminResultDetail(id);
+  const [result, classification, classificationHistory] = await Promise.all([
+    getAdminResultDetail(id),
+    resolveRecordClassification(ClassifiableEntityType.RESULT, id),
+    getRecordClassificationHistoryWithEvidence(ClassifiableEntityType.RESULT, id),
+  ]);
   if (!result) notFound();
 
   const canManage = canManageResults(access.role);
@@ -239,6 +249,11 @@ export default async function AdminResultDetailPage({ params, searchParams }: Pa
               )}
             </div>
           </Card>
+
+          <ClassificationPanel
+            resolution={classification}
+            history={classificationHistory}
+          />
 
           <Card className="min-w-0 p-4">
             <h2 className="text-xl font-black">Archive</h2>

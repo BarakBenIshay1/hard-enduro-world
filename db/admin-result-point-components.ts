@@ -1,3 +1,4 @@
+import { ClassifiableEntityType } from "@prisma/client";
 import type { Prisma, ScoringComponentType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import {
@@ -5,6 +6,12 @@ import {
   getAdminPagination,
   getAdminTotalPages,
 } from "@/lib/admin/platform";
+import {
+  getClassificationEntityIdFilter,
+  resolveRecordClassifications,
+  summarizeClassificationResolutions,
+  type ClassificationFilter,
+} from "@/lib/data-quality/record-classification";
 
 export type ResultPointComponentLifecycleFilter = "active" | "archived" | "all";
 
@@ -14,6 +21,7 @@ export type AdminResultPointComponentListFilters = {
   resultId?: string;
   componentType?: ScoringComponentType;
   regulationId?: string;
+  classification?: ClassificationFilter;
   lifecycle?: ResultPointComponentLifecycleFilter;
   page?: number;
   sort?: string;
@@ -41,7 +49,11 @@ export async function getAdminResultPointComponents(
     page: filters.page,
     pageSize: defaultAdminPageSize,
   });
-  const where = buildComponentWhere(filters);
+  const classificationFilter = await getClassificationEntityIdFilter(
+    ClassifiableEntityType.RESULT_POINT_COMPONENT,
+    filters.classification,
+  );
+  const where = buildComponentWhere(filters, classificationFilter);
   const orderBy = buildComponentOrder(filters.sort);
 
   const [components, total, options] = await Promise.all([
@@ -59,12 +71,18 @@ export async function getAdminResultPointComponents(
   const sourceLinks = await getSourceLinksFor(
     components.map((component) => component.id),
   );
+  const classifications = await resolveRecordClassifications(
+    ClassifiableEntityType.RESULT_POINT_COMPONENT,
+    components.map((component) => component.id),
+  );
 
   return {
     components: components.map((component) => ({
       ...component,
       sourceLinks: sourceLinks.get(component.id) ?? [],
+      classification: classifications.get(component.id),
     })),
+    classificationSummary: summarizeClassificationResolutions(classifications.values()),
     total,
     page: pagination.page,
     pageSize: pagination.pageSize,
@@ -155,6 +173,7 @@ const resultPointComponentDetailInclude = {
 
 function buildComponentWhere(
   filters: AdminResultPointComponentListFilters,
+  classificationFilter: Prisma.StringFilter | undefined,
 ): Prisma.ResultPointComponentWhereInput {
   return {
     ...(filters.search
@@ -189,6 +208,7 @@ function buildComponentWhere(
     ...(filters.resultId ? { resultId: filters.resultId } : {}),
     ...(filters.componentType ? { componentType: filters.componentType } : {}),
     ...(filters.regulationId ? { regulationId: filters.regulationId } : {}),
+    ...(classificationFilter ? { id: classificationFilter } : {}),
     ...buildLifecycleWhere(filters.lifecycle ?? "active"),
   };
 }

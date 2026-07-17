@@ -25,6 +25,18 @@ export type ClassificationResolution = {
   officialWorkflowEligibility: OfficialWorkflowEligibility;
 };
 
+export type ClassificationFilter = DataOriginStatus | "UNCLASSIFIED" | "ALL";
+
+export type ClassificationSummary = {
+  total: number;
+  classified: number;
+  unclassified: number;
+  verified: number;
+  manual: number;
+  sourceManaged: number;
+  quarantined: number;
+};
+
 export type ClassifiableEntityIdentity = {
   entityType: ClassifiableEntityType;
   entityId: string;
@@ -105,6 +117,26 @@ export async function getRecordClassificationHistory(
   });
 }
 
+export async function getRecordClassificationHistoryWithEvidence(
+  entityType: ClassifiableEntityType,
+  entityId: string,
+  client: PrismaExecutor = prisma,
+) {
+  return client.recordClassification.findMany({
+    where: { entityType, entityId },
+    include: {
+      sourceLink: { include: { dataSource: true } },
+      sourceSnapshot: { include: { dataSource: true } },
+      connectorReviewItem: {
+        include: {
+          snapshot: { select: { id: true, sourceKey: true, createdAt: true } },
+        },
+      },
+    },
+    orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+  });
+}
+
 export async function resolveRecordClassification(
   entityType: ClassifiableEntityType,
   entityId: string,
@@ -135,6 +167,114 @@ export async function resolveRecordClassification(
       classification.originStatus,
     ),
   };
+}
+
+export async function resolveRecordClassifications(
+  entityType: ClassifiableEntityType,
+  entityIds: string[],
+  client: PrismaExecutor = prisma,
+) {
+  const uniqueIds = Array.from(new Set(entityIds.filter(Boolean)));
+  if (uniqueIds.length === 0) return new Map<string, ClassificationResolution>();
+
+  const rows = await client.recordClassification.findMany({
+    where: { entityType, entityId: { in: uniqueIds }, supersededAt: null },
+    orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+  });
+  const activeRows = new Map<string, RecordClassification>();
+  for (const row of rows) {
+    if (!activeRows.has(row.entityId)) activeRows.set(row.entityId, row);
+  }
+
+  const resolutions = new Map<string, ClassificationResolution>();
+  for (const entityId of uniqueIds) {
+    const classification = activeRows.get(entityId) ?? null;
+    if (!classification) {
+      resolutions.set(entityId, {
+        state: "UNCLASSIFIED",
+        classification: null,
+        originStatus: null,
+        explicitlyQuarantined: false,
+        officialWorkflowEligibility: "UNENFORCED",
+      });
+      continue;
+    }
+
+    resolutions.set(entityId, {
+      state: "CLASSIFIED",
+      classification,
+      originStatus: classification.originStatus,
+      explicitlyQuarantined: isExplicitlyQuarantined(classification.originStatus),
+      officialWorkflowEligibility: getOfficialWorkflowEligibility(
+        classification.originStatus,
+      ),
+    });
+  }
+
+  return resolutions;
+}
+
+export async function getClassificationEntityIdFilter(
+  entityType: ClassifiableEntityType,
+  filter: ClassificationFilter | undefined,
+  client: PrismaExecutor = prisma,
+): Promise<Prisma.StringFilter | undefined> {
+  if (!filter || filter === "ALL") return undefined;
+
+  const rows = await client.recordClassification.findMany({
+    where: {
+      entityType,
+      supersededAt: null,
+      ...(filter === "UNCLASSIFIED" ? {} : { originStatus: filter }),
+    },
+    distinct: ["entityId"],
+    select: { entityId: true },
+  });
+  const ids = rows.map((row) => row.entityId);
+
+  if (filter === "UNCLASSIFIED") {
+    return ids.length ? { notIn: ids } : undefined;
+  }
+
+  return ids.length ? { in: ids } : { in: ["__no_classified_records__"] };
+}
+
+export function summarizeClassificationResolutions(
+  resolutions: Iterable<ClassificationResolution>,
+): ClassificationSummary {
+  const summary: ClassificationSummary = {
+    total: 0,
+    classified: 0,
+    unclassified: 0,
+    verified: 0,
+    manual: 0,
+    sourceManaged: 0,
+    quarantined: 0,
+  };
+
+  for (const resolution of resolutions) {
+    summary.total += 1;
+    if (resolution.state === "UNCLASSIFIED") {
+      summary.unclassified += 1;
+      continue;
+    }
+
+    summary.classified += 1;
+    if (resolution.originStatus === DataOriginStatus.VERIFIED_OFFICIAL) {
+      summary.verified += 1;
+    }
+    if (resolution.originStatus === DataOriginStatus.AUDITED_MANUAL) {
+      summary.manual += 1;
+    }
+    if (resolution.originStatus === DataOriginStatus.SOURCE_MANAGED_UNVERIFIED) {
+      summary.sourceManaged += 1;
+    }
+    if (resolution.explicitlyQuarantined) {
+      summary.quarantined += 1;
+    }
+  }
+
+  return summary;
 }
 
 export async function classifiableEntityExists(

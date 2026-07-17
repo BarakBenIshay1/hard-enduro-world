@@ -1,8 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Eye } from "lucide-react";
+import { DataOriginStatus } from "@prisma/client";
 import type { ResultStatus } from "@prisma/client";
 import { AdminStatusBadge } from "@/components/admin/admin-status-badge";
+import {
+  ClassificationBadge,
+  ClassificationSummaryStrip,
+} from "@/components/admin/classification-badge";
 import {
   adminCompactTableClass,
   adminTableActionCellClass,
@@ -24,6 +29,7 @@ import {
 } from "@/db/admin-results";
 import { resultStatuses } from "@/lib/admin/result-cms";
 import { parseAdminPage } from "@/lib/admin/platform";
+import type { ClassificationFilter } from "@/lib/data-quality/record-classification";
 import { formatDate } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -39,6 +45,18 @@ type PageProps = {
 
 const lifecycles: ResultLifecycleFilter[] = ["active", "archived", "all"];
 const sourceModes: SourceModeFilter[] = ["all", "source-managed", "manual"];
+const classificationFilters = [
+  "ALL",
+  "UNCLASSIFIED",
+  DataOriginStatus.VERIFIED_OFFICIAL,
+  DataOriginStatus.AUDITED_MANUAL,
+  DataOriginStatus.SOURCE_MANAGED_UNVERIFIED,
+  DataOriginStatus.DEMO,
+  DataOriginStatus.SEED,
+  DataOriginStatus.VALIDATION,
+  DataOriginStatus.UNKNOWN,
+  DataOriginStatus.CONFLICTING,
+] as const satisfies readonly ClassificationFilter[];
 
 export default async function AdminResultsPage({ searchParams }: PageProps) {
   const params = await searchParams;
@@ -64,7 +82,7 @@ export default async function AdminResultsPage({ searchParams }: PageProps) {
       <ResultMessage code={value(params, "error") ?? value(params, "saved")} />
 
       <Card className="p-5">
-        <form className="grid gap-4 lg:grid-cols-[1.2fr_1fr_1fr_0.8fr_1fr_1fr_1fr_1fr_1fr_auto] lg:items-end">
+        <form className="grid gap-4 lg:grid-cols-[1.2fr_1fr_1fr_0.8fr_1fr_1fr_1fr_1fr_1fr_1fr_auto] lg:items-end">
           <Field label="Search">
             <input
               name="search"
@@ -129,6 +147,17 @@ export default async function AdminResultsPage({ searchParams }: PageProps) {
             ))}
           </Select>
           <Select
+            name="classification"
+            label="Classification"
+            value={filters.classification ?? "ALL"}
+          >
+            {classificationFilters.map((filter) => (
+              <option key={filter} value={filter}>
+                {classificationLabel(filter)}
+              </option>
+            ))}
+          </Select>
+          <Select
             name="lifecycle"
             label="Lifecycle"
             value={filters.lifecycle ?? "active"}
@@ -156,6 +185,8 @@ export default async function AdminResultsPage({ searchParams }: PageProps) {
         </form>
       </Card>
 
+      <ClassificationSummaryStrip summary={data.classificationSummary} />
+
       <Card className={adminTableCardClass}>
         <div className="border-b border-border p-5">
           <h2 className="text-xl font-black">Overall classifications</h2>
@@ -173,6 +204,7 @@ export default async function AdminResultsPage({ searchParams }: PageProps) {
                 <th className={adminTableHeaderCellClass}>Time</th>
                 <th className={adminTableHeaderCellClass}>Equipment</th>
                 <th className={adminTableHeaderCellClass}>Source</th>
+                <th className={adminTableHeaderCellClass}>Classification</th>
                 <th className={adminTableHeaderCellClass}>Updated</th>
                 <th className={adminTableActionCellClass}>Actions</th>
               </tr>
@@ -203,6 +235,9 @@ export default async function AdminResultsPage({ searchParams }: PageProps) {
                   </td>
                   <td className={adminTableCellClass}>
                     {result.sourceLinks.length ? "Source-managed" : "Manual"}
+                  </td>
+                  <td className={adminTableCellClass}>
+                    <ClassificationBadge resolution={result.classification} />
                   </td>
                   <td className={adminTableCellClass}>{formatDate(result.updatedAt)}</td>
                   <td className={adminTableActionCellClass}>
@@ -237,6 +272,7 @@ function parseFilters(
   const status = value(params, "status");
   const lifecycle = value(params, "lifecycle");
   const sourceMode = value(params, "sourceMode");
+  const classification = value(params, "classification");
   return {
     search: value(params, "search"),
     eventId: value(params, "eventId"),
@@ -245,6 +281,7 @@ function parseFilters(
     manufacturerId: value(params, "manufacturerId"),
     motorcycleId: value(params, "motorcycleId"),
     sourceMode: isSourceMode(sourceMode) ? sourceMode : "all",
+    classification: parseClassificationFilter(classification),
     lifecycle: isLifecycle(lifecycle) ? lifecycle : "active",
     page: parseAdminPage(value(params, "page")),
     sort: value(params, "sort") ?? "event-desc",
@@ -385,6 +422,12 @@ function isSourceMode(value?: string): value is SourceModeFilter {
   return sourceModes.includes(value as SourceModeFilter);
 }
 
+function parseClassificationFilter(value?: string): ClassificationFilter | undefined {
+  return classificationFilters.includes(value as (typeof classificationFilters)[number])
+    ? (value as ClassificationFilter)
+    : undefined;
+}
+
 function positionLabel(position: number | null) {
   return position ? `P${position}` : "Unranked";
 }
@@ -393,4 +436,14 @@ function sourceLabel(mode: SourceModeFilter) {
   if (mode === "source-managed") return "Source-managed";
   if (mode === "manual") return "Manual";
   return "All";
+}
+
+function classificationLabel(filter: string) {
+  if (filter === "ALL") return "All";
+  if (filter === "UNCLASSIFIED") return "Unclassified";
+  return filter
+    .toLowerCase()
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
 }

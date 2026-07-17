@@ -1,11 +1,17 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ClassifiableEntityType } from "@prisma/client";
 import { ExternalLink } from "lucide-react";
 import { AdminStatusBadge } from "@/components/admin/admin-status-badge";
+import { ClassificationPanel } from "@/components/admin/classification-panel";
 import { VersionTimeline } from "@/components/admin/version-timeline";
 import { Card } from "@/components/ui/card";
 import { getAdminResultPointComponentDetail } from "@/db/admin-result-point-components";
+import {
+  getRecordClassificationHistoryWithEvidence,
+  resolveRecordClassification,
+} from "@/lib/data-quality/record-classification";
 import { formatDate } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -27,7 +33,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function AdminResultPointComponentDetailPage({ params }: PageProps) {
   const { id } = await params;
-  const component = await getAdminResultPointComponentDetail(id);
+  const [component, classification, classificationHistory] = await Promise.all([
+    getAdminResultPointComponentDetail(id),
+    resolveRecordClassification(ClassifiableEntityType.RESULT_POINT_COMPONENT, id),
+    getRecordClassificationHistoryWithEvidence(
+      ClassifiableEntityType.RESULT_POINT_COMPONENT,
+      id,
+    ),
+  ]);
   if (!component) notFound();
 
   const riderName = `${component.result.rider.firstName} ${component.result.rider.lastName}`;
@@ -179,6 +192,11 @@ export default async function AdminResultPointComponentDetailPage({ params }: Pa
               )}
             </div>
           </Card>
+
+          <ClassificationPanel
+            resolution={classification}
+            history={classificationHistory}
+          />
         </aside>
       </div>
 

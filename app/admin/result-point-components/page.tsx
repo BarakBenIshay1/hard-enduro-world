@@ -1,9 +1,14 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { DataOriginStatus } from "@prisma/client";
 import type { ScoringComponentType } from "@prisma/client";
 import Link from "next/link";
 import { Eye } from "lucide-react";
 import { AdminStatusBadge } from "@/components/admin/admin-status-badge";
+import {
+  ClassificationBadge,
+  ClassificationSummaryStrip,
+} from "@/components/admin/classification-badge";
 import {
   adminCompactTableClass,
   adminTableActionCellClass,
@@ -20,6 +25,7 @@ import {
   getAdminResultPointComponents,
   type AdminResultPointComponentListFilters,
 } from "@/db/admin-result-point-components";
+import type { ClassificationFilter } from "@/lib/data-quality/record-classification";
 import { formatDate } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -40,6 +46,18 @@ const componentTypes: ScoringComponentType[] = [
   "FINAL",
   "OTHER",
 ];
+const classificationFilters = [
+  "ALL",
+  "UNCLASSIFIED",
+  DataOriginStatus.VERIFIED_OFFICIAL,
+  DataOriginStatus.AUDITED_MANUAL,
+  DataOriginStatus.SOURCE_MANAGED_UNVERIFIED,
+  DataOriginStatus.DEMO,
+  DataOriginStatus.SEED,
+  DataOriginStatus.VALIDATION,
+  DataOriginStatus.UNKNOWN,
+  DataOriginStatus.CONFLICTING,
+] as const satisfies readonly ClassificationFilter[];
 
 export default async function AdminResultPointComponentsPage({
   searchParams,
@@ -65,7 +83,7 @@ export default async function AdminResultPointComponentsPage({
       </section>
 
       <Card className="p-5">
-        <form className="grid gap-4 lg:grid-cols-[1.2fr_1fr_1fr_1fr_1fr_0.8fr_auto] lg:items-end">
+        <form className="grid gap-4 lg:grid-cols-[1.2fr_1fr_1fr_1fr_1fr_1fr_0.8fr_auto] lg:items-end">
           <FilterField label="Search" name="search" defaultValue={filters.search ?? ""} />
           <FilterSelect label="Event" name="eventId" defaultValue={filters.eventId ?? ""}>
             <option value="">All events</option>
@@ -108,6 +126,17 @@ export default async function AdminResultPointComponentsPage({
             <option value="archived">Archived</option>
             <option value="all">All</option>
           </FilterSelect>
+          <FilterSelect
+            label="Classification"
+            name="classification"
+            defaultValue={filters.classification ?? "ALL"}
+          >
+            {classificationFilters.map((filter) => (
+              <option key={filter} value={filter}>
+                {classificationLabel(filter)}
+              </option>
+            ))}
+          </FilterSelect>
           <FilterSelect label="Sort" name="sort" defaultValue={filters.sort ?? ""}>
             <option value="event-desc">Newest Event</option>
             <option value="event-asc">Oldest Event</option>
@@ -124,6 +153,8 @@ export default async function AdminResultPointComponentsPage({
           </button>
         </form>
       </Card>
+
+      <ClassificationSummaryStrip summary={data.classificationSummary} />
 
       <Card className={adminTableCardClass}>
         <div className="border-b border-border p-5">
@@ -142,6 +173,7 @@ export default async function AdminResultPointComponentsPage({
                 <th className={adminTableHeaderCellClass}>Points</th>
                 <th className={adminTableHeaderCellClass}>Regulation</th>
                 <th className={adminTableHeaderCellClass}>Source</th>
+                <th className={adminTableHeaderCellClass}>Classification</th>
                 <th className={adminTableHeaderCellClass}>Updated</th>
                 <th className={adminTableActionCellClass}>Actions</th>
               </tr>
@@ -186,6 +218,9 @@ export default async function AdminResultPointComponentsPage({
                       />
                     </td>
                     <td className={adminTableCellClass}>
+                      <ClassificationBadge resolution={component.classification} />
+                    </td>
+                    <td className={adminTableCellClass}>
                       {formatDate(component.updatedAt)}
                     </td>
                     <td className={adminTableActionCellClass}>
@@ -224,6 +259,7 @@ function parseFilters(
     eventId: value(params, "eventId"),
     componentType: parseComponentType(value(params, "componentType")),
     regulationId: value(params, "regulationId"),
+    classification: parseClassificationFilter(value(params, "classification")),
     lifecycle: parseLifecycle(value(params, "lifecycle")),
     sort: value(params, "sort"),
     page: Number(value(params, "page") ?? "1"),
@@ -244,6 +280,12 @@ function parseComponentType(value?: string): ScoringComponentType | undefined {
 function parseLifecycle(value?: string) {
   if (value === "archived" || value === "all") return value;
   return "active";
+}
+
+function parseClassificationFilter(value?: string): ClassificationFilter | undefined {
+  return classificationFilters.includes(value as (typeof classificationFilters)[number])
+    ? (value as ClassificationFilter)
+    : undefined;
 }
 
 function Pagination({
@@ -356,4 +398,10 @@ function formatEnum(value: string) {
     .split("_")
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
+}
+
+function classificationLabel(filter: string) {
+  if (filter === "ALL") return "All";
+  if (filter === "UNCLASSIFIED") return "Unclassified";
+  return formatEnum(filter);
 }

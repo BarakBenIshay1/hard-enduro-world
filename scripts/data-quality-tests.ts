@@ -8,11 +8,14 @@ import {
   assertClassifiableEntityExists,
   classifiableEntityExists,
   classifiableEntityTypes,
+  getClassificationEntityIdFilter,
   getOfficialWorkflowEligibility,
   getRecordClassificationHistory,
   isExplicitlyQuarantined,
   normalizeLegacyEntityType,
+  resolveRecordClassifications,
   resolveRecordClassification,
+  summarizeClassificationResolutions,
 } from "@/lib/data-quality/record-classification";
 
 const schema = readFileSync("prisma/schema.prisma", "utf8");
@@ -30,6 +33,8 @@ async function main() {
   testSchemaEnums();
   testMigrationShape();
   await testResolver();
+  await testBatchResolverAndSummary();
+  await testClassificationFilters();
   await testEntityValidation();
   testLegacyNormalization();
   testNoEnforcementImports();
@@ -203,6 +208,62 @@ async function testResolver() {
   );
 }
 
+async function testBatchResolverAndSummary() {
+  const rows = [
+    classification("event-1", DataOriginStatus.VERIFIED_OFFICIAL, null, "verified"),
+    classification("event-2", DataOriginStatus.DEMO, null, "demo"),
+    classification("event-3", DataOriginStatus.SOURCE_MANAGED_UNVERIFIED, null, "source"),
+    classification("event-4", DataOriginStatus.AUDITED_MANUAL, null, "manual"),
+  ];
+  const resolutions = await resolveRecordClassifications(
+    ClassifiableEntityType.EVENT,
+    ["event-1", "event-2", "event-3", "event-4", "event-5"],
+    createFakeClient(rows),
+  );
+  const summary = summarizeClassificationResolutions(resolutions.values());
+
+  assert.equal(resolutions.get("event-5")?.state, "UNCLASSIFIED");
+  assert.deepEqual(summary, {
+    total: 5,
+    classified: 4,
+    unclassified: 1,
+    verified: 1,
+    manual: 1,
+    sourceManaged: 1,
+    quarantined: 1,
+  });
+}
+
+async function testClassificationFilters() {
+  const client = createFakeClient([
+    classification("event-1", DataOriginStatus.VERIFIED_OFFICIAL, null, "verified"),
+    classification("event-2", DataOriginStatus.DEMO, null, "demo"),
+    classification("event-3", DataOriginStatus.DEMO, new Date(), "old-demo"),
+  ]);
+
+  assert.equal(
+    await getClassificationEntityIdFilter(ClassifiableEntityType.EVENT, "ALL", client),
+    undefined,
+  );
+  assert.deepEqual(
+    await getClassificationEntityIdFilter(
+      ClassifiableEntityType.EVENT,
+      DataOriginStatus.DEMO,
+      client,
+    ),
+    { in: ["event-2"] },
+  );
+  const unclassifiedFilter = await getClassificationEntityIdFilter(
+    ClassifiableEntityType.EVENT,
+    "UNCLASSIFIED",
+    client,
+  );
+  assert.deepEqual(
+    { notIn: [...((unclassifiedFilter?.notIn as string[]) ?? [])].sort() },
+    { notIn: ["event-1", "event-2"] },
+  );
+}
+
 async function testEntityValidation() {
   const fakeClient = createEntityFakeClient();
 
@@ -346,12 +407,31 @@ function createFakeClient(rows: ReturnType<typeof classification>[]) {
       async findMany({
         where,
       }: {
-        where: { entityType: ClassifiableEntityType; entityId: string };
+        where: {
+          entityType: ClassifiableEntityType;
+          entityId?: string | { in: string[] };
+          supersededAt?: null;
+          originStatus?: DataOriginStatus;
+        };
       }) {
+        const entityIds =
+          typeof where.entityId === "object" && where.entityId?.in
+            ? where.entityId.in
+            : null;
         return rows
           .filter(
             (row) =>
-              row.entityType === where.entityType && row.entityId === where.entityId,
+              row.entityType === where.entityType &&
+              (typeof where.entityId === "string"
+                ? row.entityId === where.entityId
+                : true),
+          )
+          .filter((row) => (entityIds ? entityIds.includes(row.entityId) : true))
+          .filter((row) =>
+            where.supersededAt === null ? row.supersededAt === null : true,
+          )
+          .filter((row) =>
+            where.originStatus ? row.originStatus === where.originStatus : true,
           )
           .sort(compareHistory);
       },

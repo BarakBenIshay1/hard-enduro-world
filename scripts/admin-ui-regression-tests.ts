@@ -13,6 +13,7 @@ testManufacturerMediaCopyIsNotRiderSpecific();
 testAdminCmsListsUseSharedResponsiveTables();
 testSharedAdminTableStylesAvoidLargeFixedWidths();
 testAdminTablesDoNotUseLegacyFixedWidths();
+testClassificationReportingIsReadOnly();
 
 console.log("Admin UI regression tests passed.");
 
@@ -122,6 +123,56 @@ function testAdminTablesDoNotUseLegacyFixedWidths() {
       `${file} should not use legacy fixed-width admin tables`,
     );
   }
+}
+
+function testClassificationReportingIsReadOnly() {
+  const badgeSource = readFileSync("components/admin/classification-badge.tsx", "utf8");
+  const panelSource = readFileSync("components/admin/classification-panel.tsx", "utf8");
+  const helperSource = readFileSync("lib/data-quality/record-classification.ts", "utf8");
+  const reportingPages = [
+    "app/admin/results/page.tsx",
+    "app/admin/stage-results/page.tsx",
+    "app/admin/result-point-components/page.tsx",
+    "app/admin/events/[id]/page.tsx",
+    "app/admin/riders/[id]/page.tsx",
+    "app/admin/results/[id]/page.tsx",
+    "app/admin/stage-results/[id]/page.tsx",
+    "app/admin/result-point-components/[id]/page.tsx",
+  ];
+
+  for (const state of [
+    "VERIFIED_OFFICIAL",
+    "SOURCE_MANAGED_UNVERIFIED",
+    "AUDITED_MANUAL",
+    "MANUAL_PLACEHOLDER",
+    "DEMO",
+    "SEED",
+    "VALIDATION",
+    "UNKNOWN",
+    "CONFLICTING",
+    "ARCHIVED_HISTORY",
+    "UNCLASSIFIED",
+  ]) {
+    assert.match(badgeSource, new RegExp(state));
+  }
+  assert.match(panelSource, /No evidence attached/);
+  assert.match(panelSource, /Classification history/);
+  assert.doesNotMatch(panelSource, /<form|action=|upsert/i);
+
+  for (const file of reportingPages) {
+    const source = readFileSync(file, "utf8");
+    assert.match(
+      source,
+      /ClassificationBadge|ClassificationPanel|ClassificationSummaryStrip/,
+      `${file} should expose classification state in the admin UI`,
+    );
+  }
+
+  assert.doesNotMatch(
+    helperSource,
+    /recordClassification\.(create|update|delete|upsert)/,
+    "classification reporting helpers must remain read-only",
+  );
 }
 
 function findTsxFiles(directory: string): string[] {

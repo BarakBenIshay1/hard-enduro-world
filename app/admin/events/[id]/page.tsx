@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ClassifiableEntityType } from "@prisma/client";
 import { ExternalLink } from "lucide-react";
 import { AdminStatusBadge } from "@/components/admin/admin-status-badge";
+import { ClassificationPanel } from "@/components/admin/classification-panel";
 import { EventAlert } from "@/components/admin/events/event-alert";
 import { EventEditorForm } from "@/components/admin/events/event-editor-form";
 import { EventSubmitButton } from "@/components/admin/events/event-submit-button";
@@ -22,6 +24,10 @@ import {
   updateAdminEvent,
 } from "@/app/admin/events/actions";
 import { canManageEvents, canPermanentlyDeleteEvents } from "@/lib/admin/event-cms";
+import {
+  getRecordClassificationHistoryWithEvidence,
+  resolveRecordClassification,
+} from "@/lib/data-quality/record-classification";
 
 export const dynamic = "force-dynamic";
 
@@ -51,11 +57,14 @@ export default async function AdminEventDetailPage({ params, searchParams }: Pag
     getAdminAccessContext(),
     getAdminEventOptions(),
   ]);
-  const [event, audit, deleteEligibility] = await Promise.all([
-    getAdminEventDetail(id),
-    getAdminEventAudit(id),
-    getAdminEventDeleteEligibility(id),
-  ]);
+  const [event, audit, deleteEligibility, classification, classificationHistory] =
+    await Promise.all([
+      getAdminEventDetail(id),
+      getAdminEventAudit(id),
+      getAdminEventDeleteEligibility(id),
+      resolveRecordClassification(ClassifiableEntityType.EVENT, id),
+      getRecordClassificationHistoryWithEvidence(ClassifiableEntityType.EVENT, id),
+    ]);
 
   if (!event) notFound();
 
@@ -266,6 +275,11 @@ export default async function AdminEventDetailPage({ params, searchParams }: Pag
               <Meta label="Media" value={event.mediaItems.length} />
             </div>
           </Card>
+
+          <ClassificationPanel
+            resolution={classification}
+            history={classificationHistory}
+          />
 
           <Card className="min-w-0 p-4">
             <h2 className="text-xl font-black">Archive</h2>
