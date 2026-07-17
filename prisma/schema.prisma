@@ -743,6 +743,7 @@ model SourceSnapshot {
   importRuns            ImportRun[]
   regulations           ChampionshipRegulation[]
   resultPointComponents ResultPointComponent[]
+  recordClassifications RecordClassification[]
 
   @@index([dataSourceId])
   @@index([contentHash])
@@ -758,6 +759,7 @@ model SourceLink {
   createdAt    DateTime @default(now())
 
   dataSource DataSource @relation(fields: [dataSourceId], references: [id])
+  recordClassifications RecordClassification[]
 
   @@index([entityType, entityId])
   @@index([dataSourceId])
@@ -779,6 +781,35 @@ model ImportRun {
 
   sourceSnapshot SourceSnapshot? @relation(fields: [sourceSnapshotId], references: [id])
   changes        DataVersion[]
+}
+
+model RecordClassification {
+  id                    String                 @id @default(cuid())
+  entityType            ClassifiableEntityType
+  entityId              String
+  originStatus          DataOriginStatus
+  reason                String
+  evidence              Json?
+  sourceLinkId          String?
+  sourceSnapshotId      String?
+  connectorReviewItemId String?
+  classifiedByUserId    String?
+  classifiedByUserEmail String?
+  supersededAt          DateTime?
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+
+  sourceLink          SourceLink?          @relation(fields: [sourceLinkId], references: [id], onDelete: SetNull)
+  sourceSnapshot      SourceSnapshot?      @relation(fields: [sourceSnapshotId], references: [id], onDelete: SetNull)
+  connectorReviewItem ConnectorReviewItem? @relation(fields: [connectorReviewItemId], references: [id], onDelete: SetNull)
+
+  @@index([entityType])
+  @@index([entityId])
+  @@index([originStatus])
+  @@index([supersededAt])
+  @@index([sourceLinkId])
+  @@index([sourceSnapshotId])
+  @@index([connectorReviewItemId])
 }
 
 model DataVersion {
@@ -887,6 +918,7 @@ model ConnectorReviewItem {
   resultPointComponents       ResultPointComponent[] @relation("ResultPointComponentReviewItem")
   currentResultPointComponent ResultPointComponent?  @relation("CurrentResultPointComponentReviewItems", fields: [currentResultPointComponentId], references: [id])
   appliedResultPointComponent ResultPointComponent?  @relation("AppliedResultPointComponentReviewItems", fields: [appliedResultPointComponentId], references: [id])
+  recordClassifications       RecordClassification[]
 
   @@index([snapshotId])
   @@index([connectorKey, season])
@@ -975,6 +1007,35 @@ enum EventVisibility {
   PUBLIC
   DRAFT
   PRIVATE
+}
+
+enum DataOriginStatus {
+  VERIFIED_OFFICIAL
+  SOURCE_MANAGED_UNVERIFIED
+  AUDITED_MANUAL
+  MANUAL_PLACEHOLDER
+  DEMO
+  SEED
+  VALIDATION
+  UNKNOWN
+  CONFLICTING
+  ARCHIVED_HISTORY
+}
+
+enum ClassifiableEntityType {
+  SEASON
+  EVENT
+  RACE_STAGE
+  RIDER
+  TEAM
+  MANUFACTURER
+  MOTORCYCLE
+  RESULT
+  STAGE_RESULT
+  RESULT_POINT_COMPONENT
+  CHAMPIONSHIP_REGULATION
+  STANDING
+  STANDING_PUBLICATION
 }
 
 enum TeamStatus {
