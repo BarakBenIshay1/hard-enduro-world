@@ -35,6 +35,7 @@ model Season {
 
   events                  Event[]
   standings               Standing[]
+  standingPublications    StandingPublication[]
   championshipRegulations ChampionshipRegulation[]
   riderCareerSeasons      RiderCareerSeason[]
   motorcycleSeasonStats   MotorcycleSeasonStat[]
@@ -507,12 +508,56 @@ model ChampionshipRegulation {
   season                Season                 @relation(fields: [seasonId], references: [id])
   sourceSnapshot        SourceSnapshot?        @relation(fields: [sourceSnapshotId], references: [id])
   resultPointComponents ResultPointComponent[]
+  standingPublications  StandingPublication[]
 
   @@index([seasonId])
   @@index([seasonId, classificationScope, className])
   @@index([status])
   @@index([regulationYear])
   @@index([sourceSnapshotId])
+}
+
+model StandingPublication {
+  id                     String    @id @default(cuid())
+  seasonId               String
+  classificationScope    String    @default("OVERALL")
+  className              String?
+  calculationSetId       String
+  calculationSetGroupKey String
+  regulationId           String?
+  regulationVersion      Int?
+  regulationChecksum     String?
+  snapshotId             String
+  snapshotChecksum       String
+  status                 String    @default("DRAFT")
+  activeKey              String?   @unique
+  publicationVersion     Int
+  versionKey             String    @unique
+  rows                   Json
+  publishedAt            DateTime?
+  publishedByUserId      String?
+  publishedByUserEmail   String?
+  supersededAt           DateTime?
+  supersededById         String?
+  rollbackOfId           String?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  season           Season                  @relation(fields: [seasonId], references: [id])
+  snapshot         ConnectorSnapshot       @relation(fields: [snapshotId], references: [id])
+  regulation       ChampionshipRegulation? @relation(fields: [regulationId], references: [id])
+  supersededBy     StandingPublication?    @relation("StandingPublicationSupersession", fields: [supersededById], references: [id])
+  supersededItems  StandingPublication[]   @relation("StandingPublicationSupersession")
+  rollbackOf       StandingPublication?    @relation("StandingPublicationRollback", fields: [rollbackOfId], references: [id])
+  rollbackVersions StandingPublication[]   @relation("StandingPublicationRollback")
+
+  @@index([seasonId])
+  @@index([seasonId, classificationScope, className])
+  @@index([status])
+  @@index([snapshotId])
+  @@index([regulationId])
+  @@index([calculationSetId])
+  @@index([versionKey])
 }
 
 model ResultPointComponent {
@@ -783,7 +828,8 @@ model ConnectorSnapshot {
   payloadChecksum     String
   createdAt           DateTime @default(now())
 
-  reviewItems ConnectorReviewItem[]
+  reviewItems           ConnectorReviewItem[]
+  standingPublications  StandingPublication[]
 
   @@unique([connectorKey, season, payloadChecksum])
   @@index([connectorKey, season, createdAt])

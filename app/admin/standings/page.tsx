@@ -14,10 +14,12 @@ import {
 } from "@/components/admin/admin-table-styles";
 import { EventAlert } from "@/components/admin/events/event-alert";
 import { EventSubmitButton } from "@/components/admin/events/event-submit-button";
+import { StandingRollbackForm } from "@/components/admin/standing-publication-form";
 import { Card } from "@/components/ui/card";
 import { createStandingCalculationReview } from "@/app/admin/standings/actions";
 import { getAdminStandings, type AdminStandingListFilters } from "@/db/admin-standings";
 import { pointsSystems } from "@/jobs/calculations/points-system";
+import { getAdminAccessContext, canAccessAdmin } from "@/lib/admin/access";
 import { parseAdminPage } from "@/lib/admin/platform";
 import { formatDate } from "@/lib/format";
 
@@ -35,7 +37,11 @@ type PageProps = {
 export default async function AdminStandingsPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const filters = parseFilters(params);
-  const data = await getAdminStandings(filters);
+  const [data, access] = await Promise.all([
+    getAdminStandings(filters),
+    getAdminAccessContext(),
+  ]);
+  const canPublish = canAccessAdmin(access, "standings:publish");
 
   return (
     <div className="grid min-w-0 gap-6">
@@ -46,11 +52,16 @@ export default async function AdminStandingsPage({ searchParams }: PageProps) {
         <h1 className="mt-2 text-3xl font-black lg:text-5xl">Standings CMS</h1>
         <p className="mt-4 max-w-3xl text-sm leading-6 text-foreground/[0.62]">
           Calculate rider standings from active persisted Results, create review
-          proposals, approve them in Import Review, then explicitly apply them to persist.
+          proposals, approve them in Import Review, explicitly apply them to persist, and
+          publish a controlled public version.
         </p>
       </section>
 
-      <StandingMessage code={value(params, "error") ?? value(params, "saved")} />
+      <StandingMessage
+        code={
+          value(params, "error") ?? value(params, "saved") ?? value(params, "publication")
+        }
+      />
 
       <Card className="p-5">
         <form
@@ -142,9 +153,75 @@ export default async function AdminStandingsPage({ searchParams }: PageProps) {
 
       <Card className={adminTableCardClass}>
         <div className="border-b border-border p-5">
-          <h2 className="text-xl font-black">Published standings</h2>
+          <h2 className="text-xl font-black">Publication history</h2>
           <p className="mt-2 text-sm text-foreground/[0.62]">
-            {data.total} standings found. Page {data.page} of {data.totalPages}.
+            Public standings read only the active published version. Applied rows remain
+            internal until published.
+          </p>
+        </div>
+        <div className={adminTableScrollClass}>
+          <table className={adminCompactTableClass}>
+            <thead className={adminTableHeadClass}>
+              <tr>
+                <th className={adminTablePrimaryCellClass}>Publication</th>
+                <th className={adminTableHeaderCellClass}>Season</th>
+                <th className={adminTableHeaderCellClass}>Status</th>
+                <th className={adminTableHeaderCellClass}>Regulation</th>
+                <th className={adminTableHeaderCellClass}>Published</th>
+                <th className={adminTableHeaderCellClass}>Snapshot</th>
+                <th className={adminTableActionCellClass}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.publications.map((publication) => (
+                <tr key={publication.id} className="border-t border-border">
+                  <td className={adminTablePrimaryCellClass}>
+                    <div className="font-semibold">
+                      {publication.className ?? "Overall"} standings
+                    </div>
+                    <div className="mt-1 text-xs text-foreground/[0.48]">
+                      {publication.id}
+                    </div>
+                  </td>
+                  <td className={adminTableCellClass}>{publication.season.name}</td>
+                  <td className={adminTableCellClass}>{publication.status}</td>
+                  <td className={adminTableMutedCellClass}>
+                    {publication.regulation?.title ?? "None"} v
+                    {publication.regulationVersion ??
+                      publication.regulation?.version ??
+                      "-"}
+                  </td>
+                  <td className={adminTableCellClass}>
+                    {publication.publishedAt ? formatDate(publication.publishedAt) : "-"}
+                  </td>
+                  <td className={adminTableMutedCellClass}>
+                    {publication.snapshotChecksum.slice(0, 12)}
+                  </td>
+                  <td className={adminTableActionCellClass}>
+                    <StandingRollbackForm
+                      publicationId={publication.id}
+                      canRollback={canPublish && publication.status !== "PUBLISHED"}
+                    />
+                  </td>
+                </tr>
+              ))}
+              {data.publications.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className={adminTableMutedCellClass}>
+                    No Standing publications exist yet.
+                  </td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+
+      <Card className={adminTableCardClass}>
+        <div className="border-b border-border p-5">
+          <h2 className="text-xl font-black">Applied standings</h2>
+          <p className="mt-2 text-sm text-foreground/[0.62]">
+            {data.total} applied standings found. Page {data.page} of {data.totalPages}.
           </p>
         </div>
         <div className={adminTableScrollClass}>
@@ -315,11 +392,16 @@ function StandingMessage({ code }: { code?: string }) {
     unauthorized: "You do not have permission to calculate standings.",
     "calculation-confirmation": "Confirm the calculation review before submitting.",
     "calculation-failed": "The calculation could not be created.",
+    published: "Standing publication is now live.",
+    "rolled-back": "Standing publication was rolled back.",
+    invalid: "Standing publication failed validation.",
+    conflict: "Standing publication changed before the action could complete.",
+    "not-found": "Standing publication record was not found.",
   };
+  const success =
+    code === "calculation-created" || code === "published" || code === "rolled-back";
   return (
-    <EventAlert tone={code === "calculation-created" ? "success" : "error"}>
-      {messages[code] ?? code}
-    </EventAlert>
+    <EventAlert tone={success ? "success" : "error"}>{messages[code] ?? code}</EventAlert>
   );
 }
 

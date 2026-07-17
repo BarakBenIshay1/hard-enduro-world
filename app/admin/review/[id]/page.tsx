@@ -10,6 +10,7 @@ import {
 } from "@/components/admin/review-badges";
 import { ReviewApplyForm } from "@/components/admin/review-apply-form";
 import { ReviewDecisionForm } from "@/components/admin/review-decision-form";
+import { StandingPublicationForm } from "@/components/admin/standing-publication-form";
 import {
   getConnectorReviewDecisionAudit,
   getConnectorReviewItemDetail,
@@ -187,6 +188,26 @@ export default async function AdminReviewDetailPage({ params, searchParams }: Pa
           />
         </div>
       </Card>
+
+      {isStandingCalculationSet ? (
+        <Card className="p-5">
+          <h2 className="text-xl font-black">Publication</h2>
+          <p className="mt-2 text-sm text-foreground/[0.62]">
+            Publishing is separate from applying. The public standings page reads only a
+            published Standing version.
+          </p>
+          <div className="mt-5">
+            <StandingPublicationForm
+              reviewItemId={item.id}
+              canPublish={
+                canAccessAdmin(access, "standings:publish") &&
+                item.reviewStatus === "APPROVED" &&
+                item.applicationStatus === "APPLIED"
+              }
+            />
+          </div>
+        </Card>
+      ) : null}
 
       <Card className="p-5">
         <h2 className="text-xl font-black">Decision</h2>

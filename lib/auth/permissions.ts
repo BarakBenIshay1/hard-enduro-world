@@ -12,6 +12,7 @@ export const authPermissions = [
   "automation:manage",
   "calculations:view",
   "calculations:review",
+  "standings:publish",
   "settings:view",
   "settings:manage",
   "users:view",
@@ -33,6 +34,8 @@ export const permissionDescriptions: Record<AuthPermission, string> = {
   "calculations:view": "View calculation and recalculation previews.",
   "calculations:review":
     "Review calculated standings, statistics, and records in a future step.",
+  "standings:publish":
+    "Publish or roll back official standings after approved calculation apply.",
   "settings:view": "View system settings and deployment readiness.",
   "settings:manage": "Manage platform settings in a future step.",
   "users:view": "View admin users, roles, and access matrix.",
@@ -53,6 +56,7 @@ export const rolePermissions: Record<AuthRole, AuthPermission[]> = {
     "automation:manage",
     "calculations:view",
     "calculations:review",
+    "standings:publish",
     "settings:view",
     "users:view",
   ],

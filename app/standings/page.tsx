@@ -32,45 +32,32 @@ export const metadata: Metadata = {
 };
 
 export default async function StandingsPage() {
-  const { seasons } = await getStandingsPageData();
-  const seasonOptions = seasons.map((season) => ({
-    value: season.id,
-    label: season.name,
+  const { publications } = await getStandingsPageData();
+  const seasonOptions = publications.map((publication) => ({
+    value: publication.season.id,
+    label: publication.season.name,
   }));
-  const rows: StandingRowData[] = seasons.flatMap((season) =>
-    season.standings.map((standing) => {
-      const career =
-        standing.rider.careerSeasons.find((item) => item.seasonId === season.id) ??
-        standing.rider.careerSeasons[0];
-      const motorcycle = standing.rider.currentMotorcycle ?? career?.motorcycle ?? null;
-      const manufacturer = motorcycle?.manufacturer ?? career?.manufacturer ?? null;
-
-      return {
-        id: standing.id,
-        seasonId: season.id,
-        seasonLabel: season.name,
-        className: standing.className ?? "Pro",
-        position: standing.position,
-        riderName: `${standing.rider.firstName} ${standing.rider.lastName}`,
-        riderSlug: standing.rider.slug,
-        country: standing.rider.country?.name ?? "Unknown",
-        countryCode: standing.rider.country?.isoCode ?? "TBC",
-        team:
-          standing.rider.teamMemberships[0]?.team.name ??
-          career?.team?.name ??
-          "Independent",
-        manufacturer: manufacturer?.name ?? "TBC",
-        motorcycle: motorcycle
-          ? `${motorcycle.model}${motorcycle.year ? ` ${motorcycle.year}` : ""}`
-          : "TBC",
-        points: standing.points,
-        wins: standing.wins,
-        podiums: standing.podiums,
-        starts: standing.starts,
-        dnfs: standing.dnfs,
-        trend: "Trend pending",
-      };
-    }),
+  const rows: StandingRowData[] = publications.flatMap((publication) =>
+    publication.rows.map((standing) => ({
+      id: standing.standingId,
+      seasonId: publication.season.id,
+      seasonLabel: publication.season.name,
+      className: standing.className ?? "Pro",
+      position: standing.position,
+      riderName: standing.riderName,
+      riderSlug: standing.riderSlug,
+      country: standing.country,
+      countryCode: standing.countryCode,
+      team: standing.team,
+      manufacturer: standing.manufacturer,
+      motorcycle: standing.motorcycle,
+      points: standing.points,
+      wins: standing.wins,
+      podiums: standing.podiums,
+      starts: standing.starts,
+      dnfs: standing.dnfs,
+      trend: "Trend pending",
+    })),
   );
 
   return (
@@ -87,7 +74,7 @@ export default async function StandingsPage() {
           <SectionTitle
             eyebrow="Championship Core"
             title="Sortable standings"
-            description="A reusable standings surface prepared for live standings, official imports, statistics, and records."
+            description="Officially published standings versions only. Draft calculations and applied-but-unpublished rows stay internal."
           />
           <Card className="p-5">
             <p className="text-xs uppercase tracking-[0.18em] text-foreground/[0.48]">
@@ -96,7 +83,14 @@ export default async function StandingsPage() {
             <p className="mt-2 text-3xl font-black text-accent">{rows.length}</p>
           </Card>
         </div>
-        <StandingsTable rows={rows} seasons={seasonOptions} />
+        {rows.length ? (
+          <StandingsTable rows={rows} seasons={seasonOptions} />
+        ) : (
+          <Card className="p-6 text-sm text-foreground/[0.62]">
+            Official standings will appear here after a reviewed calculation set is
+            explicitly published.
+          </Card>
+        )}
       </Container>
     </main>
   );

@@ -36,7 +36,7 @@ export async function getAdminStandings(filters: AdminStandingListFilters) {
   const where = buildStandingWhere(filters);
   const orderBy = buildStandingOrder(filters.sort);
 
-  const [standings, total, options] = await Promise.all([
+  const [standings, total, options, publications] = await Promise.all([
     prisma.standing.findMany({
       where,
       orderBy,
@@ -49,6 +49,14 @@ export async function getAdminStandings(filters: AdminStandingListFilters) {
     }),
     prisma.standing.count({ where }),
     getAdminStandingOptions(),
+    prisma.standingPublication.findMany({
+      orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
+      take: 20,
+      include: {
+        season: { select: { name: true, year: true } },
+        regulation: { select: { title: true, version: true } },
+      },
+    }),
   ]);
 
   return {
@@ -58,6 +66,7 @@ export async function getAdminStandings(filters: AdminStandingListFilters) {
     pageSize: pagination.pageSize,
     totalPages: getAdminTotalPages(total, pagination.pageSize),
     options,
+    publications,
   };
 }
 
