@@ -129,7 +129,11 @@ function testClassificationReportingIsReadOnly() {
   const badgeSource = readFileSync("components/admin/classification-badge.tsx", "utf8");
   const panelSource = readFileSync("components/admin/classification-panel.tsx", "utf8");
   const helperSource = readFileSync("lib/data-quality/record-classification.ts", "utf8");
+  const dashboardSource = readFileSync("app/admin/classifications/page.tsx", "utf8");
+  const dashboardReadSource = readFileSync("db/admin-classifications.ts", "utf8");
+  const navSource = readFileSync("components/admin/admin-nav.ts", "utf8");
   const reportingPages = [
+    "app/admin/classifications/page.tsx",
     "app/admin/results/page.tsx",
     "app/admin/stage-results/page.tsx",
     "app/admin/result-point-components/page.tsx",
@@ -159,6 +163,25 @@ function testClassificationReportingIsReadOnly() {
   assert.match(panelSource, /Classification history/);
   assert.match(panelSource, /proposeRecordClassificationChange/);
   assert.doesNotMatch(panelSource, /recordClassification\.(create|update|delete|upsert)/);
+  assert.match(navSource, /href: "\/admin\/classifications"/);
+  assert.match(dashboardSource, /getAdminClassificationDashboard/);
+  assert.match(dashboardSource, /read-only operational visibility/i);
+  assert.match(dashboardSource, /No evidence attached/);
+  assert.doesNotMatch(
+    dashboardSource,
+    /proposeRecordClassificationChange|applyRecordClassificationReviewItem|createRecordClassificationReviewProposal/,
+    "classification dashboard must not expose proposal or apply actions",
+  );
+  assert.doesNotMatch(
+    dashboardReadSource,
+    /recordClassification\.(create|update|delete|upsert)/,
+    "classification dashboard data helper must remain read-only",
+  );
+  assert.doesNotMatch(
+    dashboardReadSource,
+    /connectorReviewItem\.(create|update|delete|upsert)|connectorSnapshot\.(create|update|delete|upsert)|sourceLink\.(create|update|delete|upsert)|dataVersion\.(create|update|delete|upsert)/,
+    "classification dashboard must not mutate workflow, lineage, or audit records",
+  );
 
   for (const file of reportingPages) {
     const source = readFileSync(file, "utf8");

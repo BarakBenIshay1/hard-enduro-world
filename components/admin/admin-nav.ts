@@ -118,6 +118,12 @@ export const adminNavGroups: AdminNavGroup[] = [
         icon: ClipboardCheck,
       },
       {
+        label: "Classifications",
+        href: "/admin/classifications",
+        description: "Data origin coverage",
+        icon: FileSearch,
+      },
+      {
         label: "Sources",
         href: "/admin/sources",
         description: "Official links",
