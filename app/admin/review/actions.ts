@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { ConnectorReviewApplicationStatus } from "@prisma/client";
 import { applyConnectorReviewItem } from "@/lib/admin/connector-review-application";
+import { applyStandingCalculationSet } from "@/lib/admin/standing-calculation-set-application";
 import { decideConnectorReviewItem } from "@/lib/admin/connector-review-decisions";
 import { getAuthSession, hasPermission } from "@/lib/auth";
 
@@ -16,6 +17,17 @@ export async function rejectConnectorReviewItem(formData: FormData) {
 }
 
 export async function applyApprovedConnectorReviewItem(formData: FormData) {
+  return applyApprovedReviewItemFromForm(formData, "single");
+}
+
+export async function applyApprovedStandingCalculationSet(formData: FormData) {
+  return applyApprovedReviewItemFromForm(formData, "standing-set");
+}
+
+async function applyApprovedReviewItemFromForm(
+  formData: FormData,
+  mode: "single" | "standing-set",
+) {
   const session = await getAuthSession();
 
   if (!hasPermission(session, "review:approve") || !session.user) {
@@ -39,14 +51,24 @@ export async function applyApprovedConnectorReviewItem(formData: FormData) {
     redirect(`/admin/review/${reviewItemId || ""}?application=invalid`);
   }
 
-  const result = await applyConnectorReviewItem({
-    reviewItemId,
-    expectedApplicationStatus:
-      expectedApplicationStatus as ConnectorReviewApplicationStatus,
-    expectedApplicationVersion,
-    actor: session.user,
-    note,
-  });
+  const result =
+    mode === "standing-set"
+      ? await applyStandingCalculationSet({
+          reviewItemId,
+          expectedApplicationStatus:
+            expectedApplicationStatus as ConnectorReviewApplicationStatus,
+          expectedApplicationVersion,
+          actor: session.user,
+          note,
+        })
+      : await applyConnectorReviewItem({
+          reviewItemId,
+          expectedApplicationStatus:
+            expectedApplicationStatus as ConnectorReviewApplicationStatus,
+          expectedApplicationVersion,
+          actor: session.user,
+          note,
+        });
 
   revalidatePath("/admin/review");
   revalidatePath(`/admin/review/${reviewItemId}`);

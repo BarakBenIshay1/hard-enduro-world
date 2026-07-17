@@ -7,9 +7,16 @@ import {
   type StandingsComparisonPreview,
 } from "@/jobs/calculations/standings-engine";
 import type { PointsSystemId } from "@/jobs/calculations/points-system";
-import type { CalculationResultInput } from "@/jobs/calculations/validation";
+import type {
+  CalculationResultInput,
+  CalculationValidationIssue,
+} from "@/jobs/calculations/validation";
 import {
+  parseStandingsAggregationConfig,
+  parseStandingsMetricScope,
   parseTieBreakRules,
+  type StandingsAggregationConfig,
+  type StandingsMetricScope,
   validateOfficialRegulation,
 } from "@/lib/regulations/championship-regulations";
 
@@ -20,7 +27,14 @@ export const standingsCalculationVersion = "standings-calculation-v1";
 export type StandingCalculationRunInput = {
   seasonId: string;
   pointsSystemId?: PointsSystemId;
+  cutoff?: StandingCalculationCutoff;
 };
+
+export type StandingCalculationCutoff =
+  | { type: "FULL_SEASON" }
+  | { type: "THROUGH_ROUND"; roundNumber: number }
+  | { type: "THROUGH_EVENT"; eventId: string }
+  | { type: "THROUGH_DATE"; date: string };
 
 export type StandingProposal = {
   action: ConnectorReviewAction;
@@ -33,9 +47,33 @@ export type StandingProposal = {
   applyEligible: boolean;
 };
 
+type EligibleEvent = {
+  id: string;
+  slug: string;
+  name: string;
+  status: string;
+  roundNumber: number | null;
+  startDate: string;
+};
+
+type RegulationConfig = {
+  id: string;
+  version: number;
+  checksum: string | null;
+  sourceUrl: string;
+  sourceSnapshotId: string | null;
+  classificationScope: string;
+  className: string | null;
+  aggregation: StandingsAggregationConfig | null;
+  metricScope: StandingsMetricScope;
+  tieBreakRules: ReturnType<typeof parseTieBreakRules>;
+  validationIssues: ReturnType<typeof validateOfficialRegulation>;
+};
+
 export async function createStandingCalculationReviewRun({
   seasonId,
   pointsSystemId = "source-result-points",
+  cutoff = { type: "FULL_SEASON" },
 }: StandingCalculationRunInput) {
   const season = await prisma.season.findUnique({
     where: { id: seasonId },
@@ -65,6 +103,22 @@ export async function createStandingCalculationReviewRun({
       .filter((result) => result.archivedAt === publicResultWhere.archivedAt)
       .map((result) => ({ event, result })),
   );
+  const eligibleEvents = resolveEligibleEvents(
+    season.events.map((event) => ({
+      id: event.id,
+      slug: event.slug,
+      name: event.name,
+      status: event.status,
+      roundNumber: event.roundNumber,
+      startDate: event.startDate.toISOString(),
+    })),
+    cutoff,
+  );
+  const eligibleEventIds = new Set(eligibleEvents.included.map((event) => event.id));
+  const orderedEligibleEventIds = eligibleEvents.included.map((event) => event.id);
+  const activeEventResultsInScope = activeEventResults.filter(({ event }) =>
+    eligibleEventIds.has(event.id),
+  );
   const excludedResults = season.events.flatMap((event) =>
     event.results
       .filter((result) => result.archivedAt !== null)
@@ -78,8 +132,8 @@ export async function createStandingCalculationReviewRun({
       })),
   );
 
-  const resultInputs: CalculationResultInput[] = activeEventResults.map(
-    ({ event, result }) => ({
+  const resultInputsBeforeAggregation: CalculationResultInput[] =
+    activeEventResultsInScope.map(({ event, result }) => ({
       id: result.id,
       seasonId: season.id,
       eventId: event.id,
@@ -91,22 +145,44 @@ export async function createStandingCalculationReviewRun({
       position: result.overallPosition,
       points: result.points,
       status: result.status,
-    }),
+    }));
+  const activeRegulations: RegulationConfig[] = season.championshipRegulations.map(
+    (regulation) => {
+      const validationIssues = validateOfficialRegulation(regulation);
+      const aggregation = parseStandingsAggregationConfig(regulation.pointsMapping);
+      if (!aggregation) {
+        validationIssues.push({
+          severity: "error",
+          code: "invalid-points-mapping",
+          message:
+            "Standings calculation requires an official aggregation configuration.",
+        });
+      }
+      return {
+        id: regulation.id,
+        version: regulation.version,
+        checksum: regulation.contentChecksum,
+        sourceUrl: regulation.sourceUrl,
+        sourceSnapshotId: regulation.sourceSnapshotId,
+        classificationScope: regulation.classificationScope,
+        className: regulation.className,
+        aggregation,
+        metricScope: parseStandingsMetricScope(regulation.pointsMapping),
+        tieBreakRules: parseTieBreakRules(regulation.tieBreakRules),
+        validationIssues,
+      };
+    },
   );
-  const activeRegulations = season.championshipRegulations.map((regulation) => {
-    const validationIssues = validateOfficialRegulation(regulation);
-    return {
-      id: regulation.id,
-      version: regulation.version,
-      checksum: regulation.contentChecksum,
-      sourceUrl: regulation.sourceUrl,
-      sourceSnapshotId: regulation.sourceSnapshotId,
-      classificationScope: regulation.classificationScope,
-      className: regulation.className,
-      tieBreakRules: parseTieBreakRules(regulation.tieBreakRules),
-      validationIssues,
-    };
+  const aggregationIssues = validateAggregationCoverage({
+    resultInputs: resultInputsBeforeAggregation,
+    regulations: activeRegulations,
   });
+  const scopedAggregation = selectResultsForAggregation({
+    resultInputs: resultInputsBeforeAggregation,
+    regulations: activeRegulations,
+    orderedEligibleEventIds,
+  });
+  const resultInputs = scopedAggregation.selectedResults;
   const tieBreakRulesByScope = Object.fromEntries(
     activeRegulations
       .filter((regulation) => regulation.validationIssues.length === 0)
@@ -130,6 +206,24 @@ export async function createStandingCalculationReviewRun({
     archivedAt: result.archivedAt?.toISOString() ?? null,
     updatedAt: result.updatedAt.toISOString(),
   }));
+  const immutableEligibleInputResults = activeEventResultsInScope.map(
+    ({ event, result }) => ({
+      id: result.id,
+      eventId: event.id,
+      eventSlug: event.slug,
+      eventStartDate: event.startDate.toISOString(),
+      eventRoundNumber: event.roundNumber,
+      riderId: result.riderId,
+      riderName: `${result.rider.firstName} ${result.rider.lastName}`,
+      className: result.className,
+      overallPosition: result.overallPosition,
+      classPosition: result.classPosition,
+      points: result.points,
+      status: result.status,
+      archivedAt: result.archivedAt?.toISOString() ?? null,
+      updatedAt: result.updatedAt.toISOString(),
+    }),
+  );
 
   const currentStandings = season.standings.map((standing) => ({
     seasonId: season.id,
@@ -153,7 +247,39 @@ export async function createStandingCalculationReviewRun({
       })),
     ),
   );
+  preview.validationIssues.push(...eligibleEvents.validationIssues);
+  preview.validationIssues.push(...aggregationIssues);
   const resolvedPointsSystemId = preview.pointsSystemId;
+  const hasValidationErrors = preview.validationIssues.some(
+    (issue) => issue.severity === "error",
+  );
+  const calculationSetGroupKey = stableHash({
+    connectorKey: standingsConnectorKey,
+    seasonId: season.id,
+    cutoff,
+    pointsSystemId: resolvedPointsSystemId,
+    classes: Array.from(
+      new Set([
+        ...resultInputsBeforeAggregation.map((result) => result.className ?? "__NULL__"),
+        ...season.standings.map((standing) => standing.className ?? "__NULL__"),
+      ]),
+    ).sort(),
+  });
+  const selectedInputResultIds = new Set(resultInputs.map((result) => result.id));
+  const calculationSetId = `standing-set:${calculationSetGroupKey}:${stableHash({
+    eventIds: eligibleEvents.included.map((event) => event.id),
+    inputResults: immutableEligibleInputResults
+      .filter((result) => selectedInputResultIds.has(result.id))
+      .sort((left, right) => left.id.localeCompare(right.id)),
+    regulations: activeRegulations.map((regulation) => ({
+      id: regulation.id,
+      version: regulation.version,
+      checksum: regulation.checksum,
+      className: regulation.className,
+      aggregation: regulation.aggregation,
+      metricScope: regulation.metricScope,
+    })),
+  }).slice(0, 24)}`;
   const currentByRider = new Map(
     season.standings.map((standing) => [
       `${standing.riderId}:${standing.className ?? "__NULL__"}`,
@@ -173,17 +299,76 @@ export async function createStandingCalculationReviewRun({
             result.riderId === row.riderId && result.className === row.className,
         )
         .map((result) => result.id),
-      hasValidationErrors: preview.validationIssues.some(
-        (issue) => issue.severity === "error",
-      ),
+      hasValidationErrors,
+      calculationSet: {
+        id: calculationSetId,
+        groupKey: calculationSetGroupKey,
+        expectedProposalCount: preview.standings.length,
+        cutoff,
+        orderedEventIds: orderedEligibleEventIds,
+        includedResultIds: resultInputs.map((result) => result.id).sort(),
+        selectedResultIdsByRider: scopedAggregation.selectedResultIdsByRider,
+        droppedResultIdsByRider: scopedAggregation.droppedResultIdsByRider,
+        regulationRefs: activeRegulations.map((regulation) => ({
+          id: regulation.id,
+          version: regulation.version,
+          checksum: regulation.checksum,
+          sourceUrl: regulation.sourceUrl,
+          sourceSnapshotId: regulation.sourceSnapshotId,
+          className: regulation.className,
+          aggregation: regulation.aggregation,
+          metricScope: regulation.metricScope,
+        })),
+      },
     }),
   );
+  proposals.push(
+    ...buildObsoleteStandingWarnings({
+      standings: season.standings,
+      previewRiderKeys: new Set(
+        preview.standings.map((row) => `${row.riderId}:${row.className ?? "__NULL__"}`),
+      ),
+      seasonName: season.name,
+      calculationSetId,
+      calculationSetGroupKey,
+      cutoff,
+      hasValidationErrors: true,
+    }),
+  );
+  for (const proposal of proposals) {
+    if (proposal.proposedValues.calculationSetId === calculationSetId) {
+      proposal.proposedValues.expectedProposalCount = proposals.length;
+      proposal.applyEligible =
+        proposal.applyEligible &&
+        !hasValidationErrors &&
+        proposal.action !== "STANDING_INVALID";
+      proposal.proposedValues.applyEligible = proposal.applyEligible;
+      proposal.deduplicationKey = `standing-set-row:${stableHash({
+        action: proposal.action,
+        currentStandingId: proposal.currentStandingId,
+        proposed: proposal.proposedValues,
+        changedFields: proposal.changedFields,
+      })}`;
+    }
+  }
 
   const normalizedPayload = {
     calculationVersion: standingsCalculationVersion,
     seasonId: season.id,
     seasonYear: season.year,
     pointsSystemId: resolvedPointsSystemId,
+    calculationSet: {
+      id: calculationSetId,
+      groupKey: calculationSetGroupKey,
+      expectedProposalCount: proposals.length,
+      cutoff,
+      aggregationByClass: activeRegulations.map((regulation) => ({
+        regulationId: regulation.id,
+        className: regulation.className,
+        aggregation: regulation.aggregation,
+        metricScope: regulation.metricScope,
+      })),
+    },
     pointsRule: {
       source: "Result.points",
       officialRegulationReference: activeRegulations.map((regulation) => ({
@@ -200,7 +385,10 @@ export async function createStandingCalculationReviewRun({
     },
     tieBreakRegulations: activeRegulations,
     eventOrdering: {
-      priority: ["roundNumber", "startDate", "id"],
+      priority: ["roundNumber", "startDate"],
+      cutoff,
+      eligibleEvents: eligibleEvents.included,
+      excludedEvents: eligibleEvents.excluded,
       events: season.events.map((event) => ({
         id: event.id,
         slug: event.slug,
@@ -209,7 +397,9 @@ export async function createStandingCalculationReviewRun({
       })),
     },
     inputResultIds: resultInputs.map((result) => result.id).sort(),
-    inputResults: immutableInputResults.sort((a, b) => a.id.localeCompare(b.id)),
+    inputResults: immutableEligibleInputResults.sort((a, b) => a.id.localeCompare(b.id)),
+    allActiveInputResults: immutableInputResults.sort((a, b) => a.id.localeCompare(b.id)),
+    aggregation: scopedAggregation,
     excludedResults,
     validationIssues: preview.validationIssues,
     standings: proposals.map((proposal) => proposal.proposedValues),
@@ -306,8 +496,8 @@ export async function createStandingCalculationReviewRun({
           proposedValues: proposal.proposedValues as Prisma.InputJsonValue,
           changedFields: proposal.changedFields,
           recommendation: proposal.applyEligible
-            ? "Review calculated standing before approval."
-            : "Calculation has validation errors and cannot be applied.",
+            ? "Review this calculated standing as part of the complete calculation set."
+            : "Calculation set has validation errors and cannot be applied.",
           deduplicationKey: proposal.deduplicationKey,
         },
       });
@@ -315,7 +505,8 @@ export async function createStandingCalculationReviewRun({
         where: {
           connectorKey: standingsConnectorKey,
           season: season.year,
-          reviewStatus: "PENDING",
+          reviewStatus: { in: ["PENDING", "APPROVED"] },
+          applicationStatus: { not: "APPLIED" },
           id: { not: createdItem.id },
         },
         select: {
@@ -332,7 +523,11 @@ export async function createStandingCalculationReviewRun({
         .map((item) => item.id);
       if (obsoleteIds.length) {
         await tx.connectorReviewItem.updateMany({
-          where: { id: { in: obsoleteIds }, reviewStatus: "PENDING" },
+          where: {
+            id: { in: obsoleteIds },
+            reviewStatus: { in: ["PENDING", "APPROVED"] },
+            applicationStatus: { not: "APPLIED" },
+          },
           data: {
             reviewStatus: "SUPERSEDED",
             supersededByReviewItemId: createdItem.id,
@@ -368,9 +563,8 @@ function isSameStandingProposalIdentity(
   const current = existing as Record<string, unknown>;
   return (
     current.entityType === "Standing" &&
-    current.seasonId === proposed.seasonId &&
-    current.riderId === proposed.riderId &&
-    (current.className ?? null) === (proposed.className ?? null)
+    current.calculationSetGroupKey === proposed.calculationSetGroupKey &&
+    current.calculationSetId !== proposed.calculationSetId
   );
 }
 
@@ -381,6 +575,7 @@ function buildStandingProposal({
   pointsSystemId,
   resultIds,
   hasValidationErrors,
+  calculationSet,
 }: {
   row: StandingsComparisonPreview;
   current: {
@@ -399,6 +594,17 @@ function buildStandingProposal({
   pointsSystemId: PointsSystemId;
   resultIds: string[];
   hasValidationErrors: boolean;
+  calculationSet: {
+    id: string;
+    groupKey: string;
+    expectedProposalCount: number;
+    cutoff: StandingCalculationCutoff;
+    orderedEventIds: string[];
+    includedResultIds: string[];
+    selectedResultIdsByRider: Record<string, string[]>;
+    droppedResultIdsByRider: Record<string, string[]>;
+    regulationRefs: Array<Record<string, unknown>>;
+  };
 }): StandingProposal {
   const proposed = {
     entityType: "Standing",
@@ -414,7 +620,22 @@ function buildStandingProposal({
     dnfs: row.dnfs,
     pointsSystemId,
     calculationVersion: standingsCalculationVersion,
+    calculationSetId: calculationSet.id,
+    calculationSetGroupKey: calculationSet.groupKey,
+    expectedProposalCount: calculationSet.expectedProposalCount,
+    cutoff: calculationSet.cutoff,
+    orderedEventIds: calculationSet.orderedEventIds,
     inputResultIds: resultIds,
+    calculationInputResultIds: calculationSet.includedResultIds,
+    selectedResultIds:
+      calculationSet.selectedResultIdsByRider[
+        `${row.riderId}:${row.className ?? "__NULL__"}`
+      ] ?? resultIds,
+    droppedResultIds:
+      calculationSet.droppedResultIdsByRider[
+        `${row.riderId}:${row.className ?? "__NULL__"}`
+      ] ?? [],
+    regulationReferences: calculationSet.regulationRefs,
     applyEligible: !hasValidationErrors,
   };
   const currentValues = current
@@ -469,6 +690,234 @@ function buildStandingProposal({
     applyEligible: !hasValidationErrors && action !== "UNCHANGED_STANDING",
     deduplicationKey: `standing:${stableHash(dedupePayload)}`,
   };
+}
+
+function resolveEligibleEvents(
+  events: EligibleEvent[],
+  cutoff: StandingCalculationCutoff,
+) {
+  const sorted = [...events].sort(compareEventsForStandings);
+  const validationIssues: CalculationValidationIssue[] = [];
+  const seenRounds = new Set<number>();
+  for (const event of sorted) {
+    if (event.roundNumber !== null) {
+      if (seenRounds.has(event.roundNumber)) {
+        validationIssues.push({
+          severity: "error",
+          code: "invalid-regulation",
+          message: `Round ${event.roundNumber} appears more than once in the season event order.`,
+        });
+      }
+      seenRounds.add(event.roundNumber);
+    }
+  }
+  const included = sorted.filter(
+    (event) => event.status === "COMPLETED" && isEventWithinCutoff(event, cutoff, sorted),
+  );
+  return {
+    included,
+    excluded: sorted
+      .filter((event) => !included.some((candidate) => candidate.id === event.id))
+      .map((event) => ({
+        ...event,
+        reason:
+          event.status !== "COMPLETED"
+            ? "event-not-completed"
+            : "outside-calculation-cutoff",
+      })),
+    validationIssues,
+  };
+}
+
+function compareEventsForStandings(left: EligibleEvent, right: EligibleEvent) {
+  if (left.roundNumber !== null && right.roundNumber !== null) {
+    return left.roundNumber - right.roundNumber;
+  }
+  if (left.roundNumber !== null) return -1;
+  if (right.roundNumber !== null) return 1;
+  const dateCompare = left.startDate.localeCompare(right.startDate);
+  return dateCompare || left.name.localeCompare(right.name);
+}
+
+function isEventWithinCutoff(
+  event: EligibleEvent,
+  cutoff: StandingCalculationCutoff,
+  orderedEvents: EligibleEvent[],
+) {
+  if (cutoff.type === "FULL_SEASON") return true;
+  if (cutoff.type === "THROUGH_ROUND") {
+    return event.roundNumber !== null && event.roundNumber <= cutoff.roundNumber;
+  }
+  if (cutoff.type === "THROUGH_EVENT") {
+    const eventIndex = orderedEvents.findIndex((candidate) => candidate.id === event.id);
+    const cutoffIndex = orderedEvents.findIndex(
+      (candidate) => candidate.id === cutoff.eventId,
+    );
+    return cutoffIndex >= 0 && eventIndex >= 0 && eventIndex <= cutoffIndex;
+  }
+  return event.startDate.slice(0, 10) <= cutoff.date.slice(0, 10);
+}
+
+function validateAggregationCoverage({
+  resultInputs,
+  regulations,
+}: {
+  resultInputs: CalculationResultInput[];
+  regulations: RegulationConfig[];
+}) {
+  const issues: CalculationValidationIssue[] = [];
+  const classNames = new Set(
+    resultInputs.map((result) => result.className ?? "__NULL__"),
+  );
+  for (const className of classNames) {
+    const regulation = regulationForClass(
+      regulations,
+      className === "__NULL__" ? null : className,
+    );
+    if (!regulation) {
+      issues.push({
+        severity: "error",
+        code: "invalid-regulation",
+        message: `No active official regulation is configured for class ${className}.`,
+      });
+    }
+  }
+  return issues;
+}
+
+function selectResultsForAggregation({
+  resultInputs,
+  regulations,
+  orderedEligibleEventIds,
+}: {
+  resultInputs: CalculationResultInput[];
+  regulations: RegulationConfig[];
+  orderedEligibleEventIds: string[];
+}) {
+  const selectedResults: CalculationResultInput[] = [];
+  const selectedResultIdsByRider: Record<string, string[]> = {};
+  const droppedResultIdsByRider: Record<string, string[]> = {};
+  const eventOrder = new Map(
+    orderedEligibleEventIds.map((eventId, index) => [eventId, index]),
+  );
+  const byRider = new Map<string, CalculationResultInput[]>();
+  for (const result of resultInputs) {
+    const key = `${result.riderId ?? "__MISSING__"}:${result.className ?? "__NULL__"}`;
+    const current = byRider.get(key) ?? [];
+    current.push(result);
+    byRider.set(key, current);
+  }
+
+  for (const [key, rows] of byRider) {
+    const className = rows[0]?.className ?? null;
+    const regulation = regulationForClass(regulations, className);
+    const aggregation = regulation?.aggregation ?? {
+      type: "ALL_ROUNDS" as const,
+      duringSeasonBehavior: "USE_AVAILABLE_ROUNDS" as const,
+    };
+    const orderedRows = [...rows].sort((left, right) => {
+      const pointsCompare = (right.points ?? -1) - (left.points ?? -1);
+      if (pointsCompare !== 0) return pointsCompare;
+      return (eventOrder.get(left.eventId) ?? 0) - (eventOrder.get(right.eventId) ?? 0);
+    });
+    const selected =
+      aggregation.type === "BEST_N_ROUNDS"
+        ? orderedRows.slice(0, aggregation.count)
+        : orderedRows;
+    const selectedIds = new Set(selected.map((result) => result.id));
+    selectedResults.push(...selected);
+    selectedResultIdsByRider[key] = selected.map((result) => result.id).sort();
+    droppedResultIdsByRider[key] = rows
+      .filter((result) => !selectedIds.has(result.id))
+      .map((result) => result.id)
+      .sort();
+  }
+
+  return {
+    selectedResults,
+    selectedResultIdsByRider,
+    droppedResultIdsByRider,
+  };
+}
+
+function regulationForClass(regulations: RegulationConfig[], className: string | null) {
+  return (
+    regulations.find((regulation) => regulation.className === className) ??
+    regulations.find((regulation) => regulation.className === null)
+  );
+}
+
+function buildObsoleteStandingWarnings({
+  standings,
+  previewRiderKeys,
+  seasonName,
+  calculationSetId,
+  calculationSetGroupKey,
+  cutoff,
+}: {
+  standings: Array<{
+    id: string;
+    seasonId: string;
+    riderId: string;
+    className: string | null;
+    position: number | null;
+    points: number;
+    wins: number;
+    podiums: number;
+    starts: number;
+    dnfs: number;
+    rider: { firstName: string; lastName: string };
+  }>;
+  previewRiderKeys: Set<string>;
+  seasonName: string;
+  calculationSetId: string;
+  calculationSetGroupKey: string;
+  cutoff: StandingCalculationCutoff;
+  hasValidationErrors: boolean;
+}): StandingProposal[] {
+  return standings
+    .filter(
+      (standing) =>
+        !previewRiderKeys.has(`${standing.riderId}:${standing.className ?? "__NULL__"}`),
+    )
+    .map((standing) => {
+      const currentValues = {
+        entityType: "Standing",
+        standingId: standing.id,
+        seasonId: standing.seasonId,
+        riderId: standing.riderId,
+        className: standing.className,
+        position: standing.position,
+        points: standing.points,
+        wins: standing.wins,
+        podiums: standing.podiums,
+        starts: standing.starts,
+        dnfs: standing.dnfs,
+      };
+      const proposedValues = {
+        entityType: "Standing",
+        standingId: standing.id,
+        seasonId: standing.seasonId,
+        riderId: standing.riderId,
+        riderName: `${standing.rider.firstName} ${standing.rider.lastName}`,
+        className: standing.className,
+        calculationSetId,
+        calculationSetGroupKey,
+        cutoff,
+        applyEligible: false,
+        warning: "Existing Standing is absent from the latest calculation scope.",
+      };
+      return {
+        action: "STANDING_INVALID" as ConnectorReviewAction,
+        currentStandingId: standing.id,
+        eventName: `${seasonName} standings · ${standing.rider.firstName} ${standing.rider.lastName}`,
+        currentValues,
+        proposedValues,
+        changedFields: [],
+        applyEligible: false,
+        deduplicationKey: `standing-obsolete:${stableHash(proposedValues)}`,
+      };
+    });
 }
 
 function diffStandingFields(

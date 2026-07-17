@@ -56,6 +56,9 @@ export default async function AdminReviewDetailPage({ params, searchParams }: Pa
       : item.suggestedAction.includes("RESULT")
         ? "Result"
         : "Event";
+  const isStandingCalculationSet =
+    item.suggestedAction.includes("STANDING") &&
+    hasStringField(item.proposedValues, "calculationSetId");
 
   return (
     <div className="grid gap-8">
@@ -205,8 +208,11 @@ export default async function AdminReviewDetailPage({ params, searchParams }: Pa
       <Card className="p-5">
         <h2 className="text-xl font-black">Application</h2>
         <p className="mt-2 text-sm text-foreground/[0.62]">
-          Approved does not mean applied. This action writes one controlled change to the
-          {entityLabel} database after validation and stale-state checks.
+          Approved does not mean applied. This action writes{" "}
+          {isStandingCalculationSet
+            ? "one complete Standing calculation set"
+            : `one controlled change to the ${entityLabel} database`}{" "}
+          after validation and stale-state checks.
         </p>
         <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <Meta label="Application status" value={item.applicationStatus} />
@@ -241,6 +247,7 @@ export default async function AdminReviewDetailPage({ params, searchParams }: Pa
             applicationVersion={item.applicationVersion}
             suggestedAction={item.suggestedAction}
             changedFields={item.changedFields}
+            isStandingCalculationSet={isStandingCalculationSet}
             canApply={
               canAccessAdmin(access, "review:approve") &&
               item.reviewStatus === "APPROVED" &&
@@ -381,6 +388,15 @@ function ValuePane({
         </p>
       )}
     </div>
+  );
+}
+
+function hasStringField(value: unknown, key: string) {
+  return (
+    Boolean(value) &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    typeof (value as Record<string, unknown>)[key] === "string"
   );
 }
 

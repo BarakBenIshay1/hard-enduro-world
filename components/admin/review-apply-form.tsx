@@ -2,7 +2,10 @@
 
 import { useFormStatus } from "react-dom";
 import { UploadCloud } from "lucide-react";
-import { applyApprovedConnectorReviewItem } from "@/app/admin/review/actions";
+import {
+  applyApprovedConnectorReviewItem,
+  applyApprovedStandingCalculationSet,
+} from "@/app/admin/review/actions";
 import { cn } from "@/lib/cn";
 
 type ReviewApplyFormProps = {
@@ -13,6 +16,7 @@ type ReviewApplyFormProps = {
   suggestedAction: string;
   changedFields: string[];
   canApply: boolean;
+  isStandingCalculationSet?: boolean;
 };
 
 export function ReviewApplyForm({
@@ -23,6 +27,7 @@ export function ReviewApplyForm({
   suggestedAction,
   changedFields,
   canApply,
+  isStandingCalculationSet = false,
 }: ReviewApplyFormProps) {
   if (!canApply) {
     return (
@@ -52,12 +57,12 @@ export function ReviewApplyForm({
       : suggestedAction.includes("RESULT")
         ? "Result"
         : "Event";
+  const applyAction = isStandingCalculationSet
+    ? applyApprovedStandingCalculationSet
+    : applyApprovedConnectorReviewItem;
 
   return (
-    <form
-      action={applyApprovedConnectorReviewItem}
-      className="rounded-md border border-accent/25 bg-card p-5"
-    >
+    <form action={applyAction} className="rounded-md border border-accent/25 bg-card p-5">
       <input type="hidden" name="reviewItemId" value={reviewItemId} />
       <input type="hidden" name="expectedApplicationStatus" value={applicationStatus} />
       <input type="hidden" name="expectedApplicationVersion" value={applicationVersion} />
@@ -69,8 +74,10 @@ export function ReviewApplyForm({
         <div>
           <h3 className="font-black">Apply approved change</h3>
           <p className="mt-1 text-xs leading-5 text-foreground/[0.62]">
-            This is separate from approval. It will modify exactly one {target} record if
-            validation passes.
+            This is separate from approval.{" "}
+            {isStandingCalculationSet
+              ? "It will apply the complete approved Standing calculation set in one transaction if validation passes."
+              : `It will modify exactly one ${target} record if validation passes.`}
           </p>
         </div>
       </div>
@@ -104,8 +111,12 @@ export function ReviewApplyForm({
           required
           className="mt-1 accent-orange-500"
         />
-        I understand this will write one approved {target} change but will not run cron,
-        publish automatically, calculate standings, or refresh the website automatically.
+        I understand this will write{" "}
+        {isStandingCalculationSet
+          ? "the complete approved Standing calculation set"
+          : `one approved ${target} change`}{" "}
+        but will not run cron, publish automatically, calculate standings, or refresh the
+        website automatically.
       </label>
 
       <ApplySubmitButton disabled={unsupported} />

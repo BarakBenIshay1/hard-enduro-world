@@ -147,12 +147,46 @@ function compareByOfficialTieBreaks(
     if (rule.type === "second-places" && left.seconds !== right.seconds) {
       return { result: right.seconds - left.seconds, resolved: true };
     }
+    if (rule.type === "majority-placing-vector") {
+      const result = comparePlacingVector(left, right);
+      if (result !== 0) return { result, resolved: true };
+    }
     if (rule.type === "best-recent-finish") {
+      const result = compareBestRecentFinish(left, right);
+      if (result !== 0) return { result, resolved: true };
+    }
+    if (rule.type === "last-race") {
       const result = compareBestRecentFinish(left, right);
       if (result !== 0) return { result, resolved: true };
     }
   }
   return { result: 0, resolved: false };
+}
+
+function comparePlacingVector(
+  left: InternalStandingPreview,
+  right: InternalStandingPreview,
+) {
+  const maxPosition = Math.max(
+    ...[...left.resultHistory, ...right.resultHistory]
+      .map((result) =>
+        result.status === "FINISHED" && result.position !== null ? result.position : 0,
+      )
+      .filter((position) => position > 0),
+    0,
+  );
+  for (let position = 1; position <= maxPosition; position += 1) {
+    const leftCount = countFinishedPosition(left, position);
+    const rightCount = countFinishedPosition(right, position);
+    if (leftCount !== rightCount) return rightCount - leftCount;
+  }
+  return 0;
+}
+
+function countFinishedPosition(row: InternalStandingPreview, position: number) {
+  return row.resultHistory.filter(
+    (result) => result.status === "FINISHED" && result.position === position,
+  ).length;
 }
 
 function compareBestRecentFinish(
@@ -170,15 +204,14 @@ function compareBestRecentFinish(
     });
   }
   const orderedEvents = Array.from(events.entries()).sort((a, b) => {
-    const [eventA, metaA] = a;
-    const [eventB, metaB] = b;
+    const [, metaA] = a;
+    const [, metaB] = b;
     if (metaA.roundNumber !== null && metaB.roundNumber !== null) {
       return metaB.roundNumber - metaA.roundNumber;
     }
     if (metaA.roundNumber !== null) return -1;
     if (metaB.roundNumber !== null) return 1;
-    const dateCompare = (metaB.startDate ?? "").localeCompare(metaA.startDate ?? "");
-    return dateCompare || eventA.localeCompare(eventB);
+    return (metaB.startDate ?? "").localeCompare(metaA.startDate ?? "");
   });
   for (const [eventId] of orderedEvents) {
     const leftRank = resultRankForEvent(left, eventId);

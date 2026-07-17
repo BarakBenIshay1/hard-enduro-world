@@ -51,8 +51,26 @@ export type ComponentEventFormat = {
   maximumPoints: number | null;
 };
 
+export type StandingsAggregationConfig =
+  | {
+      type: "ALL_ROUNDS";
+      duringSeasonBehavior: "USE_AVAILABLE_ROUNDS";
+    }
+  | {
+      type: "BEST_N_ROUNDS";
+      count: number;
+      duringSeasonBehavior: "USE_AVAILABLE_ROUNDS" | "BLOCK_UNTIL_N_ROUNDS";
+    };
+
+export type StandingsMetricScope = "ALL_ELIGIBLE_RESULTS" | "SELECTED_RESULTS";
+
 export type TieBreakRule = {
-  type: "wins" | "second-places" | "best-recent-finish";
+  type:
+    | "wins"
+    | "second-places"
+    | "best-recent-finish"
+    | "majority-placing-vector"
+    | "last-race";
   order: number;
   description: string;
   section: string;
@@ -180,6 +198,46 @@ export function parseComponentEventFormats(
   const parsed = validateComponentEventFormats(value, getRawComponentTables(value) ?? []);
   if (parsed.issues.some((issue) => issue.severity === "error")) return [];
   return parsed.formats;
+}
+
+export function parseStandingsAggregationConfig(
+  value: Prisma.JsonValue,
+): StandingsAggregationConfig | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const raw = value as Record<string, unknown>;
+  const aggregation =
+    raw.aggregation &&
+    typeof raw.aggregation === "object" &&
+    !Array.isArray(raw.aggregation)
+      ? (raw.aggregation as Record<string, unknown>)
+      : null;
+  if (!aggregation) return null;
+
+  const type = String(aggregation.type ?? "");
+  const duringSeasonBehavior = parseDuringSeasonBehavior(
+    aggregation.duringSeasonBehavior,
+  );
+  if (type === "ALL_ROUNDS") {
+    return {
+      type,
+      duringSeasonBehavior: "USE_AVAILABLE_ROUNDS",
+    };
+  }
+  if (type === "BEST_N_ROUNDS") {
+    const count = Number(aggregation.count);
+    if (!Number.isInteger(count) || count < 1) return null;
+    return { type, count, duringSeasonBehavior };
+  }
+  return null;
+}
+
+export function parseStandingsMetricScope(value: Prisma.JsonValue): StandingsMetricScope {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return "ALL_ELIGIBLE_RESULTS";
+  }
+  const raw = value as Record<string, unknown>;
+  const metricScope = String(raw.standingsMetricScope ?? raw.metricScope ?? "");
+  return metricScope === "SELECTED_RESULTS" ? "SELECTED_RESULTS" : "ALL_ELIGIBLE_RESULTS";
 }
 
 export function parseTieBreakRules(value: Prisma.JsonValue | null): TieBreakRule[] {
@@ -614,7 +672,19 @@ function validateTieBreakRules(value: Prisma.JsonValue | null) {
 }
 
 function isSupportedTieBreakType(value: string): value is TieBreakRule["type"] {
-  return value === "wins" || value === "second-places" || value === "best-recent-finish";
+  return (
+    value === "wins" ||
+    value === "second-places" ||
+    value === "best-recent-finish" ||
+    value === "majority-placing-vector" ||
+    value === "last-race"
+  );
+}
+
+function parseDuringSeasonBehavior(value: unknown) {
+  return value === "BLOCK_UNTIL_N_ROUNDS"
+    ? "BLOCK_UNTIL_N_ROUNDS"
+    : "USE_AVAILABLE_ROUNDS";
 }
 
 function isSafeOfficialUrl(value: string) {

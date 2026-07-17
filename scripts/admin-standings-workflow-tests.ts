@@ -6,6 +6,10 @@ import {
   standingsCalculationVersion,
   standingsConnectorKey,
 } from "@/lib/admin/standings-calculation";
+import {
+  parseStandingsAggregationConfig,
+  parseStandingsMetricScope,
+} from "@/lib/regulations/championship-regulations";
 import { validateConnectorReviewApplicationPolicy } from "@/lib/admin/connector-review-application";
 import type { CalculationResultInput } from "@/jobs/calculations/validation";
 
@@ -16,11 +20,16 @@ testClassIsolation();
 testUnresolvedTieBlocksApply();
 testTieBreakWins();
 testTieBreakSecondPlaces();
+testTieBreakMajorityPlacingVector();
 testTieBreakBestRecentFinish();
+testTieBreakLastRace();
 testTieBreakClassIsolation();
 testTieBreakCompleteTieFailsClosed();
 testMissingSourcePointsBlocksApply();
+testAggregationConfigParsing();
 testStandingApplyPolicy();
+testStandingSetApplyPolicy();
+testWholeTableApplyArchitecture();
 testReviewSchemaLinkage();
 
 console.log("Admin standings workflow tests passed.");
@@ -209,6 +218,51 @@ function testTieBreakSecondPlaces() {
   assert.equal(preview.standings[0].riderId, "a");
 }
 
+function testTieBreakMajorityPlacingVector() {
+  const preview = previewStandingsCalculation({
+    results: [
+      input({
+        id: "a-1",
+        eventId: "e1",
+        riderId: "a",
+        riderName: "A",
+        points: 20,
+        position: 1,
+      }),
+      input({
+        id: "a-2",
+        eventId: "e2",
+        riderId: "a",
+        riderName: "A",
+        points: 20,
+        position: 3,
+      }),
+      input({
+        id: "b-1",
+        eventId: "e1",
+        riderId: "b",
+        riderName: "B",
+        points: 20,
+        position: 2,
+      }),
+      input({
+        id: "b-2",
+        eventId: "e2",
+        riderId: "b",
+        riderName: "B",
+        points: 20,
+        position: 2,
+      }),
+    ],
+    currentStandings: [],
+    tieBreakRulesByScope: {
+      "season-2026:__NULL__": [tieRule("majority-placing-vector", 1)],
+    },
+  });
+  assert.equal(preview.validationIssues.length, 0);
+  assert.equal(preview.standings[0].riderId, "a");
+}
+
 function testTieBreakBestRecentFinish() {
   const preview = previewStandingsCalculation({
     results: [
@@ -252,6 +306,55 @@ function testTieBreakBestRecentFinish() {
     currentStandings: [],
     tieBreakRulesByScope: {
       "season-2026:__NULL__": [tieRule("best-recent-finish", 1)],
+    },
+  });
+  assert.equal(preview.validationIssues.length, 0);
+  assert.equal(preview.standings[0].riderId, "b");
+}
+
+function testTieBreakLastRace() {
+  const preview = previewStandingsCalculation({
+    results: [
+      input({
+        id: "a-r1",
+        eventId: "event-1",
+        eventRoundNumber: 1,
+        riderId: "a",
+        riderName: "A",
+        points: 20,
+        position: 1,
+      }),
+      input({
+        id: "b-r1",
+        eventId: "event-1",
+        eventRoundNumber: 1,
+        riderId: "b",
+        riderName: "B",
+        points: 20,
+        position: 2,
+      }),
+      input({
+        id: "a-r2",
+        eventId: "event-2",
+        eventRoundNumber: 2,
+        riderId: "a",
+        riderName: "A",
+        points: 20,
+        position: 4,
+      }),
+      input({
+        id: "b-r2",
+        eventId: "event-2",
+        eventRoundNumber: 2,
+        riderId: "b",
+        riderName: "B",
+        points: 20,
+        position: 1,
+      }),
+    ],
+    currentStandings: [],
+    tieBreakRulesByScope: {
+      "season-2026:__NULL__": [tieRule("last-race", 1)],
     },
   });
   assert.equal(preview.validationIssues.length, 0);
@@ -318,6 +421,34 @@ function testMissingSourcePointsBlocksApply() {
       (issue) => issue.code === "missing-points" && issue.severity === "error",
     ),
     true,
+  );
+}
+
+function testAggregationConfigParsing() {
+  assert.deepEqual(
+    parseStandingsAggregationConfig({
+      aggregation: { type: "ALL_ROUNDS" },
+      standingsMetricScope: "ALL_ELIGIBLE_RESULTS",
+    }),
+    { type: "ALL_ROUNDS", duringSeasonBehavior: "USE_AVAILABLE_ROUNDS" },
+  );
+  assert.deepEqual(
+    parseStandingsAggregationConfig({
+      aggregation: {
+        type: "BEST_N_ROUNDS",
+        count: 5,
+        duringSeasonBehavior: "BLOCK_UNTIL_N_ROUNDS",
+      },
+    }),
+    { type: "BEST_N_ROUNDS", count: 5, duringSeasonBehavior: "BLOCK_UNTIL_N_ROUNDS" },
+  );
+  assert.equal(
+    parseStandingsMetricScope({ standingsMetricScope: "SELECTED_RESULTS" }),
+    "SELECTED_RESULTS",
+  );
+  assert.equal(
+    parseStandingsAggregationConfig({ aggregation: { type: "BEST_N_ROUNDS" } }),
+    null,
   );
 }
 
@@ -389,6 +520,53 @@ function testStandingApplyPolicy() {
   assert.equal(unsupported.ok, false);
 }
 
+function testStandingSetApplyPolicy() {
+  const blocked = validateConnectorReviewApplicationPolicy({
+    reviewStatus: "APPROVED",
+    applicationStatus: "NOT_APPLIED",
+    suggestedAction: "NEW_STANDING",
+    changedFields: ["standing"],
+    proposedValues: {
+      entityType: "Standing",
+      seasonId: "season-2026",
+      riderId: "rider-a",
+      className: null,
+      position: 1,
+      points: 20,
+      wins: 1,
+      podiums: 1,
+      starts: 1,
+      dnfs: 0,
+      pointsSystemId: "source-result-points",
+      calculationSetId: "standing-set:test",
+      applyEligible: true,
+    },
+  });
+  assert.equal(blocked.ok, false);
+  if (!blocked.ok) {
+    assert.match(blocked.reason, /whole-table apply/);
+  }
+}
+
+function testWholeTableApplyArchitecture() {
+  const calculation = readFileSync("lib/admin/standings-calculation.ts", "utf8");
+  const application = readFileSync(
+    "lib/admin/standing-calculation-set-application.ts",
+    "utf8",
+  );
+  const reviewForm = readFileSync("components/admin/review-apply-form.tsx", "utf8");
+
+  assert.match(calculation, /calculationSetId/);
+  assert.match(calculation, /expectedProposalCount/);
+  assert.match(calculation, /resolveEligibleEvents/);
+  assert.match(calculation, /selectResultsForAggregation/);
+  assert.match(application, /applyStandingCalculationSet/);
+  assert.match(application, /prisma\.\$transaction/);
+  assert.match(application, /Every proposal in the calculation set must be approved/);
+  assert.match(application, /A newer unapplied calculation set exists/);
+  assert.match(reviewForm, /applyApprovedStandingCalculationSet/);
+}
+
 function testReviewSchemaLinkage() {
   const schema = readFileSync("prisma/schema.prisma", "utf8");
   assert.match(schema, /NEW_STANDING/);
@@ -415,7 +593,15 @@ function input(overrides: Partial<CalculationResultInput> = {}): CalculationResu
   };
 }
 
-function tieRule(type: "wins" | "second-places" | "best-recent-finish", order: number) {
+function tieRule(
+  type:
+    | "wins"
+    | "second-places"
+    | "best-recent-finish"
+    | "majority-placing-vector"
+    | "last-race",
+  order: number,
+) {
   return {
     type,
     order,

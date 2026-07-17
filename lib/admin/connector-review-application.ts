@@ -1976,6 +1976,13 @@ function validateStandingApplicationPolicy(
   if (!input.proposedValues) {
     return { ok: false, reason: "Proposal payload is missing." };
   }
+  if (input.proposedValues.calculationSetId) {
+    return {
+      ok: false,
+      reason:
+        "Standing calculation set proposals must be applied through the whole-table apply action.",
+    };
+  }
   for (const field of Object.keys(input.proposedValues)) {
     if (!allowedStandingProposalFields.has(field)) {
       return { ok: false, reason: `Unsupported Standing proposal field: ${field}` };
