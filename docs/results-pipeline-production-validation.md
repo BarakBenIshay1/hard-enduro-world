@@ -281,6 +281,20 @@ The pipeline can identify:
 - who approved/applied the change
 - when the change was applied
 
+### SourceLink Canonicalization Incident Note
+
+On 2026-07-18, two existing Erzbergrodeo `SourceLink` rows were canonicalized:
+
+- `cmrm9q7so0005u9clqaic6ggt`: `Result` -> `RESULT`
+- `cmrm9q9or000bu9cle03ey72u`: `StageResult` -> `STAGE_RESULT`
+
+The values were retained by explicit owner decision after audit. The change is
+recorded by `DataVersion` rows `cmrqh7qfj0000u99tu6yu0l78` and
+`cmrqh7qtl0001u99tgeuxjkv4`. No retrospective Review approval or Apply history
+was created. The audit identified the direct production repair as an
+authorization-path violation because it bypassed Review/permission controls.
+Future production data repair scripts must not bypass those controls.
+
 ## Final Persisted State
 
 For `erzbergrodeo-2026`:

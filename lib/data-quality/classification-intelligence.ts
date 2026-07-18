@@ -22,6 +22,12 @@ import {
 } from "@/lib/data-quality/record-classification-candidates";
 import { classifiableEntityTypes } from "@/lib/data-quality/record-classification";
 import { prisma } from "@/lib/prisma";
+import {
+  canonicalSourceLinkEntityTypeForClassifiable,
+  classifiableEntityTypeFromSourceLink,
+  dedupeSourceLinksByLogicalEvidence,
+  sourceLinkEntityTypeAliasesFor,
+} from "@/lib/sources/source-link-entity-types";
 
 export const classificationIntelligenceVersion = "classification-intelligence-v1";
 
@@ -378,11 +384,16 @@ async function loadBatchEvidence(identities: EntityIdentitySummary[]) {
   for (const [legacyType, ids] of legacyGroups.entries()) {
     sourceLinkGroups.push({
       legacyType,
-      rows: await prisma.sourceLink.findMany({
-        where: { entityType: legacyType, entityId: { in: ids } },
-        include: { dataSource: true },
-        orderBy: { createdAt: "desc" },
-      }),
+      rows: dedupeSourceLinksByLogicalEvidence(
+        await prisma.sourceLink.findMany({
+          where: {
+            entityType: { in: sourceLinkEntityTypeAliasesFor(legacyType) },
+            entityId: { in: ids },
+          },
+          include: { dataSource: true },
+          orderBy: { createdAt: "desc" },
+        }),
+      ),
     });
     auditGroups.push({
       legacyType,
@@ -1349,9 +1360,9 @@ function legacyEntityType(entityType: ClassifiableEntityType) {
     case ClassifiableEntityType.MOTORCYCLE:
       return "Motorcycle";
     case ClassifiableEntityType.RESULT:
-      return "Result";
+      return canonicalSourceLinkEntityTypeForClassifiable(entityType);
     case ClassifiableEntityType.STAGE_RESULT:
-      return "StageResult";
+      return canonicalSourceLinkEntityTypeForClassifiable(entityType);
     case ClassifiableEntityType.RESULT_POINT_COMPONENT:
       return "ResultPointComponent";
     case ClassifiableEntityType.CHAMPIONSHIP_REGULATION:
@@ -1366,6 +1377,8 @@ function legacyEntityType(entityType: ClassifiableEntityType) {
 }
 
 function classifiableEntityTypeFromLegacy(value: string) {
+  const sourceLinkType = classifiableEntityTypeFromSourceLink(value);
+  if (sourceLinkType) return sourceLinkType;
   for (const entityType of classifiableEntityTypes) {
     if (legacyEntityType(entityType) === value) return entityType;
   }

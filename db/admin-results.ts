@@ -12,6 +12,10 @@ import {
   summarizeClassificationResolutions,
   type ClassificationFilter,
 } from "@/lib/data-quality/record-classification";
+import {
+  dedupeSourceLinksByLogicalEvidence,
+  sourceLinkEntityTypeAliasesFor,
+} from "@/lib/sources/source-link-entity-types";
 
 export type ResultLifecycleFilter = "active" | "archived" | "all";
 export type SourceModeFilter = "all" | "source-managed" | "manual";
@@ -395,7 +399,7 @@ async function getSourceFilter(
 async function getSourceFilter(entityType: string, mode: SourceModeFilter) {
   if (mode === "all") return {};
   const rows = await prisma.sourceLink.findMany({
-    where: { entityType },
+    where: { entityType: { in: sourceLinkEntityTypeAliasesFor(entityType) } },
     distinct: ["entityId"],
     select: { entityId: true },
   });
@@ -405,14 +409,16 @@ async function getSourceFilter(entityType: string, mode: SourceModeFilter) {
 }
 
 async function getSourceLinksFor(entityType: string, entityIds: string[]) {
-  const links = await prisma.sourceLink.findMany({
-    where: {
-      entityType,
-      entityId: { in: entityIds },
-    },
-    include: { dataSource: true },
-    orderBy: { createdAt: "desc" },
-  });
+  const links = dedupeSourceLinksByLogicalEvidence(
+    await prisma.sourceLink.findMany({
+      where: {
+        entityType: { in: sourceLinkEntityTypeAliasesFor(entityType) },
+        entityId: { in: entityIds },
+      },
+      include: { dataSource: true },
+      orderBy: { createdAt: "desc" },
+    }),
+  );
   const map = new Map<string, typeof links>();
   for (const link of links) {
     map.set(link.entityId, [...(map.get(link.entityId) ?? []), link]);
@@ -421,11 +427,13 @@ async function getSourceLinksFor(entityType: string, entityIds: string[]) {
 }
 
 async function getSourceLinks(entityType: string, entityId: string) {
-  return prisma.sourceLink.findMany({
-    where: { entityType, entityId },
-    include: { dataSource: true },
-    orderBy: { createdAt: "desc" },
-  });
+  return dedupeSourceLinksByLogicalEvidence(
+    await prisma.sourceLink.findMany({
+      where: { entityType: { in: sourceLinkEntityTypeAliasesFor(entityType) }, entityId },
+      include: { dataSource: true },
+      orderBy: { createdAt: "desc" },
+    }),
+  );
 }
 
 async function getVersions(entityType: string, entityId: string) {

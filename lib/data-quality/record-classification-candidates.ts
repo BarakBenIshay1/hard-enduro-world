@@ -16,6 +16,11 @@ import {
   getClassificationTransitionType,
   recordClassificationConnectorKey,
 } from "@/lib/data-quality/record-classification-workflow";
+import {
+  canonicalSourceLinkEntityTypeForClassifiable,
+  dedupeSourceLinksByLogicalEvidence,
+  sourceLinkEntityTypeAliasesFor,
+} from "@/lib/sources/source-link-entity-types";
 
 type RuleState = "matched" | "missing" | "blocked" | "info";
 
@@ -516,11 +521,13 @@ async function loadSourceLineage(entityType: ClassifiableEntityType, entityId: s
   const legacyType = legacyEntityType(entityType);
   if (!legacyType) return { sourceLinks: [], sourceSnapshots: [] };
 
-  const sourceLinks = await prisma.sourceLink.findMany({
-    where: { entityType: legacyType, entityId },
-    include: { dataSource: true },
-    orderBy: { createdAt: "desc" },
-  });
+  const sourceLinks = dedupeSourceLinksByLogicalEvidence(
+    await prisma.sourceLink.findMany({
+      where: { entityType: { in: sourceLinkEntityTypeAliasesFor(legacyType) }, entityId },
+      include: { dataSource: true },
+      orderBy: { createdAt: "desc" },
+    }),
+  );
   const dataSourceIds = Array.from(new Set(sourceLinks.map((link) => link.dataSourceId)));
 
   const directSnapshots =
@@ -755,9 +762,9 @@ function legacyEntityType(entityType: ClassifiableEntityType) {
     case ClassifiableEntityType.MOTORCYCLE:
       return "Motorcycle";
     case ClassifiableEntityType.RESULT:
-      return "Result";
+      return canonicalSourceLinkEntityTypeForClassifiable(entityType);
     case ClassifiableEntityType.STAGE_RESULT:
-      return "StageResult";
+      return canonicalSourceLinkEntityTypeForClassifiable(entityType);
     case ClassifiableEntityType.RESULT_POINT_COMPONENT:
       return "ResultPointComponent";
     case ClassifiableEntityType.CHAMPIONSHIP_REGULATION:

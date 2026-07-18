@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import {
+  ClassifiableEntityType,
   Prisma,
   type ConnectorReviewApplicationStatus,
   type EventStatus,
@@ -22,6 +23,7 @@ import {
   recordClassificationReviewActions,
   validateRecordClassificationApplicationPolicy,
 } from "@/lib/data-quality/record-classification-workflow";
+import { requiredCanonicalSourceLinkEntityTypeForClassifiable } from "@/lib/sources/source-link-entity-types";
 
 type PrismaTransaction = Omit<
   typeof prisma,
@@ -1949,13 +1951,16 @@ async function createResultSourceLink({
     ? await tx.sourceSnapshot.findUnique({ where: { id: sourceSnapshotId } })
     : null;
   if (!snapshot) return;
+  const entityType = requiredCanonicalSourceLinkEntityTypeForClassifiable(
+    ClassifiableEntityType.RESULT,
+  );
   const note =
     context.review.connectorKey === componentPointsRollupConnectorKey
       ? `Component points rollup scoring derivation from review item ${context.review.id}`
       : `Applied from review item ${context.review.id}`;
   const existing = await tx.sourceLink.findFirst({
     where: {
-      entityType: "Result",
+      entityType,
       entityId: resultId,
       dataSourceId: snapshot.dataSourceId,
       url: sourceUrl ?? snapshot.url,
@@ -1968,7 +1973,7 @@ async function createResultSourceLink({
     data: {
       dataSourceId: snapshot.dataSourceId,
       url: sourceUrl ?? snapshot.url,
-      entityType: "Result",
+      entityType,
       entityId: resultId,
       note,
     },
@@ -2491,11 +2496,14 @@ async function createStageResultSourceLink({
     ? await tx.sourceSnapshot.findUnique({ where: { id: sourceSnapshotId } })
     : null;
   if (!snapshot) return;
+  const entityType = requiredCanonicalSourceLinkEntityTypeForClassifiable(
+    ClassifiableEntityType.STAGE_RESULT,
+  );
   await tx.sourceLink.create({
     data: {
       dataSourceId: snapshot.dataSourceId,
       url: sourceUrl ?? snapshot.url,
-      entityType: "StageResult",
+      entityType,
       entityId: stageResultId,
       note: `Applied from review item ${context.review.id}`,
     },
