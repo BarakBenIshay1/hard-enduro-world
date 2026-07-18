@@ -166,7 +166,11 @@ function testClassificationReportingIsReadOnly() {
   assert.match(navSource, /href: "\/admin\/classifications"/);
   assert.match(dashboardSource, /getAdminClassificationDashboard/);
   assert.match(dashboardSource, /read-only operational visibility/i);
-  assert.match(dashboardSource, /No evidence attached/);
+  assert.match(dashboardSource, /Action Needed/);
+  assert.match(dashboardSource, /All Records/);
+  assert.match(dashboardSource, /More filters/);
+  assert.match(dashboardSource, /Advanced diagnostics/);
+  assert.doesNotMatch(dashboardSource, /Erzbergrodeo 2026 Audit/);
   assert.doesNotMatch(
     dashboardSource,
     /proposeRecordClassificationChange|applyRecordClassificationReviewItem|createRecordClassificationReviewProposal/,

@@ -24,6 +24,10 @@ const workflowSource = readFileSync(
   "lib/data-quality/record-classification-workflow.ts",
   "utf8",
 );
+const candidateSource = readFileSync(
+  "lib/data-quality/record-classification-candidates.ts",
+  "utf8",
+);
 const applySource = readFileSync("lib/admin/connector-review-application.ts", "utf8");
 const panelSource = readFileSync("components/admin/classification-panel.tsx", "utf8");
 const packageJson = JSON.parse(readFileSync("package.json", "utf8")) as {
@@ -41,6 +45,7 @@ function main() {
   testTransitionTypes();
   testChecksumStability();
   testProposalGenerationIsReviewOnly();
+  testCandidateGenerationIsReadOnly();
   testAdminIntegration();
   testPackageScripts();
 
@@ -264,6 +269,19 @@ function testProposalGenerationIsReviewOnly() {
   assert.match(proposalFunction, /connectorReviewItem\.create/);
   assert.doesNotMatch(
     proposalFunction,
+    /new Date\(\)\.toISOString\(\)/,
+    "proposal payload checksums must not include volatile proposal timestamps",
+  );
+  assert.match(proposalFunction, /buildDeterministicReviewMetadata/);
+  assert.match(workflowSource, /method: "deterministic-rule-evaluation"/);
+  assert.match(workflowSource, /mandatoryRulesSatisfied/);
+  assert.doesNotMatch(
+    proposalFunction,
+    /dataVersion\.create/,
+    "classification proposal generation follows the existing proposal generators: it creates Review infrastructure only and leaves DataVersion history to explicit decisions/apply",
+  );
+  assert.doesNotMatch(
+    proposalFunction,
     /recordClassification\.(create|update|delete|upsert)/,
   );
 
@@ -279,12 +297,53 @@ function testProposalGenerationIsReviewOnly() {
   assert.match(workflowSource, /Proposed classification is materially identical/);
 }
 
+function testCandidateGenerationIsReadOnly() {
+  assert.match(candidateSource, /generateRecordClassificationCandidate/);
+  assert.match(candidateSource, /supportedEntityTypes/);
+  assert.match(candidateSource, /DataOriginStatus\.VERIFIED_OFFICIAL/);
+  assert.match(candidateSource, /sourceUrlMatchesEvidence/);
+  assert.match(
+    candidateSource,
+    /normalizeSourceUrl\(snapshotUrl\) !== normalizeSourceUrl\(sourceLinkUrl\)/,
+  );
+  assert.match(candidateSource, /DataOriginStatus\.SOURCE_MANAGED_UNVERIFIED/);
+  assert.match(candidateSource, /DataOriginStatus\.AUDITED_MANUAL/);
+  assert.match(candidateSource, /blockingIssues/);
+  assert.match(candidateSource, /missingEvidence/);
+  assert.match(candidateSource, /candidateState/);
+  assert.match(candidateSource, /candidateChecksum/);
+  assert.match(candidateSource, /suggestedStatus: DataOriginStatus \| null/);
+  assert.match(candidateSource, /suggestedStatus = null/);
+  assert.match(candidateSource, /if \(!suggestedStatus\) return "NO_CANDIDATE"/);
+  assert.match(candidateSource, /duplicateProposalId/);
+  assert.match(candidateSource, /staleProposalIds/);
+  assert.match(candidateSource, /positiveReviewActions/);
+  assert.match(candidateSource, /recordClassificationConnectorKey/);
+  assert.doesNotMatch(
+    candidateSource,
+    /\b(?:recordClassification|dataVersion|sourceLink|sourceSnapshot|connectorSnapshot|connectorReviewItem|event|rider|result|stageResult|championshipRegulation)\.(?:create|createMany|update|updateMany|delete|deleteMany|upsert)\(/,
+    "candidate generation must not mutate data",
+  );
+  assert.doesNotMatch(
+    candidateSource,
+    /\$transaction|\$executeRaw|\$executeRawUnsafe/,
+    "candidate generation must not open transactions or run raw SQL",
+  );
+}
+
 function testAdminIntegration() {
   assert.match(applySource, /recordClassificationReviewActions/);
   assert.match(applySource, /applyRecordClassificationReviewItem/);
   assert.match(panelSource, /proposeRecordClassificationChange/);
+  assert.match(panelSource, /generateRecordClassificationCandidate/);
+  assert.match(panelSource, /Rule-based suggestion from existing lineage only/);
+  assert.match(panelSource, /Candidate state/);
+  assert.match(panelSource, /Suggested classification/);
+  assert.match(panelSource, /Proposal eligibility/);
+  assert.match(panelSource, /Generate Review Proposal/);
+  assert.match(panelSource, /Advanced: create a deliberate manual proposal/);
+  assert.match(panelSource, /Generate Manual Review Proposal/);
   assert.doesNotMatch(panelSource, /ARCHIVED_HISTORY[\s\S]*<option/);
-  assert.match(panelSource, /Creates an internal review item only/);
 }
 
 function testPackageScripts() {

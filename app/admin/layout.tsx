@@ -8,6 +8,8 @@ import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import { canAccessAdmin, getAdminAccessContext } from "@/lib/admin/access";
 import { buildLoginRedirect, sanitizeAdminRedirect } from "@/lib/auth/redirects";
 
+const horizontalScrollStyle = { overflowX: "auto" } as const;
+
 export const metadata: Metadata = {
   title: {
     default: "Admin",
@@ -48,6 +50,7 @@ export default async function AdminLayout({
         <nav
           aria-label="Admin mobile navigation"
           className="flex gap-2 overflow-x-auto border-b border-border bg-surface-muted px-5 py-3 lg:hidden"
+          style={horizontalScrollStyle}
         >
           {adminNavItems.map((item) => (
             <Link

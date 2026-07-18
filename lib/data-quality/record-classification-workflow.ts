@@ -121,7 +121,7 @@ type ClassificationProposalPayload = {
   evidenceStateChecksum: string;
   entityLifecycleState: EntityLifecycleState;
   entityLifecycleStateChecksum: string;
-  proposedAt: string;
+  proposedAt?: string | null;
   applyEligible: boolean;
   validationIssues: string[];
 };
@@ -359,10 +359,11 @@ export async function createRecordClassificationReviewProposal(
             season,
             eventName: `Classification: ${identity.label ?? input.entityId}`,
             suggestedAction: action,
-            confidence: {
-              score: action === "RECORD_CLASSIFICATION_MISSING_EVIDENCE" ? 0.4 : 1,
-              method: "explicit-admin-proposal",
-            },
+            confidence: buildDeterministicReviewMetadata({
+              action,
+              validationIssues,
+              evidence: input.evidence,
+            }),
             matchingStrategy: "classifiable-entity-id",
             ambiguityReason:
               action === "RECORD_CLASSIFICATION_CONFLICT"
@@ -399,23 +400,6 @@ export async function createRecordClassificationReviewProposal(
           newReviewItemId: review.id,
           newDeduplicationKey: deduplicationKey,
           tx,
-        });
-
-        await tx.dataVersion.create({
-          data: {
-            entityType: "ConnectorReviewItem",
-            entityId: review.id,
-            action: "CREATE",
-            previous: Prisma.JsonNull,
-            next: {
-              connectorKey: recordClassificationConnectorKey,
-              suggestedAction: action,
-              entityType: input.entityType,
-              entityId: input.entityId,
-              payloadChecksum,
-            },
-            createdBy: input.actor.id,
-          },
         });
 
         return {
@@ -689,7 +673,7 @@ export function parseClassificationProposalPayload(
     transitionType: parseTransitionType(record.transitionType),
     evidenceState: parseEvidenceState(record.evidenceState),
     evidenceStateChecksum: requiredString(record, "evidenceStateChecksum"),
-    proposedAt: requiredString(record, "proposedAt"),
+    proposedAt: getString(record, "proposedAt"),
     entityLifecycleState: parseEntityLifecycleState(record.entityLifecycleState),
     entityLifecycleStateChecksum: requiredString(record, "entityLifecycleStateChecksum"),
     applyEligible: record.applyEligible === true,
@@ -1179,7 +1163,6 @@ function buildProposalPayload({
     evidenceStateChecksum: createStableChecksum(evidenceState),
     entityLifecycleState,
     entityLifecycleStateChecksum: createStableChecksum(entityLifecycleState),
-    proposedAt: new Date().toISOString(),
     applyEligible,
     validationIssues,
   };
@@ -1615,6 +1598,53 @@ function recommendationForAction(
     return "Invalid classification proposals are retained for review and cannot be applied.";
   }
   return "Review the proposed classification and approve only if the evidence is correct.";
+}
+
+function buildDeterministicReviewMetadata({
+  action,
+  validationIssues,
+  evidence,
+}: {
+  action: ConnectorReviewAction;
+  validationIssues: string[];
+  evidence: unknown;
+}) {
+  const rules = getCandidateRuleEvidence(evidence);
+  const mandatoryRules = rules.filter((rule) => rule.mandatoryFor.length > 0);
+
+  return {
+    method: "deterministic-rule-evaluation",
+    action,
+    validationIssueCount: validationIssues.length,
+    mandatoryRulesSatisfied: mandatoryRules.filter((rule) => rule.outcome === "MATCH")
+      .length,
+    mandatoryRulesRequired: mandatoryRules.length,
+    blockingRules: rules.filter((rule) => rule.severity === "BLOCKING").length,
+    warningRules: rules.filter((rule) => rule.severity === "WARNING").length,
+  };
+}
+
+function getCandidateRuleEvidence(evidence: unknown) {
+  if (!evidence || typeof evidence !== "object" || Array.isArray(evidence)) return [];
+  const ruleMatch = (evidence as { ruleMatch?: unknown }).ruleMatch;
+  if (!Array.isArray(ruleMatch)) return [];
+
+  return ruleMatch
+    .map((rule) => {
+      if (!rule || typeof rule !== "object" || Array.isArray(rule)) return null;
+      const record = rule as Record<string, unknown>;
+
+      return {
+        outcome: typeof record.outcome === "string" ? record.outcome : "NOT_APPLICABLE",
+        severity: typeof record.severity === "string" ? record.severity : "INFO",
+        mandatoryFor: Array.isArray(record.mandatoryFor) ? record.mandatoryFor : [],
+      };
+    })
+    .filter(Boolean) as Array<{
+    outcome: string;
+    severity: string;
+    mandatoryFor: unknown[];
+  }>;
 }
 
 function parseEntityType(value: unknown): ClassifiableEntityType {

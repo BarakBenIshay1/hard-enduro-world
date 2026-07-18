@@ -81,6 +81,7 @@ type EntityIdentity = {
   detail: string | null;
   href: string | null;
   archived: boolean;
+  seasonYear?: number | null;
 };
 
 type ActiveClassification = {
@@ -388,7 +389,7 @@ export function entityTypeLabel(entityType: ClassifiableEntityType) {
     .join(" ");
 }
 
-function existingDetailHref(entityType: ClassifiableEntityType, id: string) {
+export function existingDetailHref(entityType: ClassifiableEntityType, id: string) {
   switch (entityType) {
     case ClassifiableEntityType.EVENT:
       return `/admin/events/${id}`;
@@ -421,7 +422,7 @@ function existingDetailHref(entityType: ClassifiableEntityType, id: string) {
   }
 }
 
-async function getEntityIdentities(
+export async function getEntityIdentities(
   entityType: ClassifiableEntityType,
   lifecycle: ClassificationEntityLifecycleFilter,
 ): Promise<EntityIdentity[]> {
@@ -462,6 +463,7 @@ async function getEntityIdentities(
         detail: `${row.season.year} · ${row.status} · ${row.slug}`,
         href: existingDetailHref(entityType, row.id),
         archived: Boolean(row.archivedAt),
+        seasonYear: row.season.year,
       }));
     }
     case ClassifiableEntityType.RACE_STAGE: {

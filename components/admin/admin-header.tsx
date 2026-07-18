@@ -16,6 +16,8 @@ const quickLinks = [
   { label: "Audit", href: "/admin/audit" },
 ];
 
+const horizontalScrollStyle = { overflowX: "auto" } as const;
+
 export function AdminHeader({ access }: AdminHeaderProps) {
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-surface/[0.92] backdrop-blur-xl">
@@ -56,7 +58,10 @@ export function AdminHeader({ access }: AdminHeaderProps) {
           <ThemeToggle />
         </div>
       </div>
-      <nav className="flex gap-2 overflow-x-auto border-t border-border px-5 py-2 lg:px-8">
+      <nav
+        className="flex gap-2 overflow-x-auto border-t border-border px-5 py-2 lg:px-8"
+        style={horizontalScrollStyle}
+      >
         {quickLinks.map((item) => (
           <Link
             key={item.href}

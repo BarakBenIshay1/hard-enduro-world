@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ClassifiableEntityType } from "@prisma/client";
+import { ClassificationPanel } from "@/components/admin/classification-panel";
 import { VersionTimeline } from "@/components/admin/version-timeline";
 import { Card } from "@/components/ui/card";
 import {
@@ -16,6 +18,10 @@ import {
   getRegulationFormOptions,
 } from "@/db/admin-regulations";
 import { getAdminAccessContext, canAccessAdmin } from "@/lib/admin/access";
+import {
+  getRecordClassificationHistoryWithEvidence,
+  resolveRecordClassification,
+} from "@/lib/data-quality/record-classification";
 import { formatDate } from "@/lib/format";
 import {
   parsePointsMapping,
@@ -41,10 +47,18 @@ export default async function AdminRegulationDetailPage({ params }: PageProps) {
   const access = await getAdminAccessContext();
   if (!canAccessAdmin(access, "calculations:view")) notFound();
   const { id } = await params;
-  const regulation = await getAdminRegulationDetail(id);
+  const [regulation, classification, classificationHistory] = await Promise.all([
+    getAdminRegulationDetail(id),
+    resolveRecordClassification(ClassifiableEntityType.CHAMPIONSHIP_REGULATION, id),
+    getRecordClassificationHistoryWithEvidence(
+      ClassifiableEntityType.CHAMPIONSHIP_REGULATION,
+      id,
+    ),
+  ]);
   if (!regulation) notFound();
   const options = await getRegulationFormOptions();
   const canManage = canAccessAdmin(access, "calculations:review");
+  const canProposeClassification = canAccessAdmin(access, "sources:manage");
 
   const points = parsePointsMapping(regulation.pointsMapping);
   const tieBreaks = parseTieBreakRules(regulation.tieBreakRules);
@@ -110,6 +124,15 @@ export default async function AdminRegulationDetailPage({ params }: PageProps) {
           </div>
         </Card>
       </div>
+
+      <ClassificationPanel
+        resolution={classification}
+        history={classificationHistory}
+        entityType={ClassifiableEntityType.CHAMPIONSHIP_REGULATION}
+        entityId={regulation.id}
+        returnPath={`/admin/regulations/${regulation.id}`}
+        canPropose={canProposeClassification}
+      />
 
       <Card className="p-5">
         <h2 className="text-xl font-black">Lifecycle</h2>

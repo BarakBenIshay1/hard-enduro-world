@@ -1,6 +1,6 @@
 export const adminTableCardClass = "min-w-0 overflow-hidden";
 
-export const adminTableScrollClass = "max-w-full overflow-x-auto";
+export const adminTableScrollClass = "w-full min-w-0 max-w-full overflow-x-auto";
 
 export const adminCompactTableClass =
   "w-full table-fixed text-left text-[13px] sm:text-sm";
