@@ -9,6 +9,7 @@ import { EventAlert } from "@/components/admin/events/event-alert";
 import { EventEditorForm } from "@/components/admin/events/event-editor-form";
 import { EventSubmitButton } from "@/components/admin/events/event-submit-button";
 import { PermanentDeleteForm } from "@/components/admin/events/permanent-delete-form";
+import { ImageUploadField } from "@/components/admin/media/image-upload-field";
 import { Card } from "@/components/ui/card";
 import { getAdminAccessContext } from "@/lib/admin/access";
 import { formatDate } from "@/lib/format";
@@ -17,6 +18,7 @@ import {
   getAdminEventDeleteEligibility,
   getAdminEventDetail,
   getAdminEventOptions,
+  getAdminEventReadiness,
 } from "@/db/admin-events";
 import {
   archiveAdminEvent,
@@ -57,14 +59,21 @@ export default async function AdminEventDetailPage({ params, searchParams }: Pag
     getAdminAccessContext(),
     getAdminEventOptions(),
   ]);
-  const [event, audit, deleteEligibility, classification, classificationHistory] =
-    await Promise.all([
-      getAdminEventDetail(id),
-      getAdminEventAudit(id),
-      getAdminEventDeleteEligibility(id),
-      resolveRecordClassification(ClassifiableEntityType.EVENT, id),
-      getRecordClassificationHistoryWithEvidence(ClassifiableEntityType.EVENT, id),
-    ]);
+  const [
+    event,
+    audit,
+    deleteEligibility,
+    readiness,
+    classification,
+    classificationHistory,
+  ] = await Promise.all([
+    getAdminEventDetail(id),
+    getAdminEventAudit(id),
+    getAdminEventDeleteEligibility(id),
+    getAdminEventReadiness(id),
+    resolveRecordClassification(ClassifiableEntityType.EVENT, id),
+    getRecordClassificationHistoryWithEvidence(ClassifiableEntityType.EVENT, id),
+  ]);
 
   if (!event) notFound();
 
@@ -193,12 +202,6 @@ export default async function AdminEventDetailPage({ params, searchParams }: Pag
                 defaultValue={event.organizer ?? ""}
                 disabled={!canManage}
               />
-              <TextField
-                label="Hero Image"
-                name="heroImage"
-                defaultValue={event.heroImage ?? ""}
-                disabled={!canManage}
-              />
               <SelectField
                 label="Status"
                 name="status"
@@ -230,6 +233,18 @@ export default async function AdminEventDetailPage({ params, searchParams }: Pag
               name="description"
               defaultValue={event.description ?? ""}
               disabled={!canManage}
+            />
+            <ImageUploadField
+              name="heroImage"
+              label="Hero Image"
+              defaultValue={event.heroImage}
+              disabled={!canManage}
+              entityId={event.id}
+              entityIdFieldName="eventId"
+              entityLabel="event"
+              assetDescription="hero image"
+              uploadEndpoint="/admin/events/media"
+              help="Upload an approved event hero image, or use Advanced URL for externally hosted approved media."
             />
             <TextAreaField
               label="Gallery Images"
@@ -284,6 +299,50 @@ export default async function AdminEventDetailPage({ params, searchParams }: Pag
             returnPath={`/admin/events/${event.id}`}
             canPropose={canManage}
           />
+
+          {readiness ? (
+            <Card className="min-w-0 p-4">
+              <h2 className="text-xl font-black">Content readiness</h2>
+              <p className="mt-2 text-sm leading-6 text-foreground/[0.62]">
+                Operational checks for production content completeness. These checks are
+                read-only and do not publish the event.
+              </p>
+              <div className="mt-5 grid gap-3">
+                {readiness.dimensions.map((item) => (
+                  <div
+                    key={item.dimension}
+                    className="rounded-md border border-border bg-surface-muted p-3"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-sm font-black">{item.label}</p>
+                      <span
+                        className={`rounded-sm border px-2 py-1 text-[10px] font-black uppercase tracking-[0.12em] ${
+                          item.status === "complete"
+                            ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-200"
+                            : item.status === "warning"
+                              ? "border-accent/40 bg-accent/10 text-accent"
+                              : "border-red-400/40 bg-red-400/10 text-red-200"
+                        }`}
+                      >
+                        {item.status}
+                      </span>
+                    </div>
+                    {item.missing.length || item.warnings.length ? (
+                      <ul className="mt-3 grid gap-1 text-xs leading-5 text-foreground/[0.62]">
+                        {[...item.missing, ...item.warnings].slice(0, 3).map((detail) => (
+                          <li key={detail}>- {detail}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="mt-3 text-xs text-foreground/[0.58]">
+                        No blockers detected.
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </Card>
+          ) : null}
 
           <Card className="min-w-0 p-4">
             <h2 className="text-xl font-black">Archive</h2>

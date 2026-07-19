@@ -1,13 +1,14 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { publicResultWhere, publicStageResultWhere } from "@/lib/results/public-filters";
+import {
+  publicMotorcycleWhere,
+  publicResultWhere,
+  publicStageResultWhere,
+} from "@/lib/results/public-filters";
 
 export async function getMotorcyclesList() {
   return prisma.motorcycle.findMany({
-    where: {
-      visibility: "PUBLIC",
-      archivedAt: null,
-    },
+    where: publicMotorcycleWhere,
     orderBy: [{ manufacturer: { name: "asc" } }, { model: "asc" }],
     include: {
       manufacturer: {
@@ -38,8 +39,11 @@ export async function getMotorcyclesList() {
 }
 
 export async function getMotorcycleDetail(slug: string) {
-  const motorcycle = await prisma.motorcycle.findUnique({
-    where: { slug },
+  const motorcycle = await prisma.motorcycle.findFirst({
+    where: {
+      slug,
+      ...publicMotorcycleWhere,
+    },
     include: {
       manufacturer: {
         include: {
@@ -130,9 +134,6 @@ export async function getMotorcycleDetail(slug: string) {
   });
 
   if (!motorcycle) {
-    notFound();
-  }
-  if (motorcycle.visibility !== "PUBLIC" || motorcycle.archivedAt) {
     notFound();
   }
 

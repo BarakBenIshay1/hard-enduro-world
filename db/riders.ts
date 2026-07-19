@@ -1,9 +1,14 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { publicResultWhere, publicStageResultWhere } from "@/lib/results/public-filters";
+import {
+  publicResultWhere,
+  publicRiderWhere,
+  publicStageResultWhere,
+} from "@/lib/results/public-filters";
 
 export async function getRidersList() {
   return prisma.rider.findMany({
+    where: publicRiderWhere,
     orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
     include: {
       country: true,
@@ -54,8 +59,11 @@ export async function getRidersList() {
 }
 
 export async function getRiderDetail(slug: string) {
-  const rider = await prisma.rider.findUnique({
-    where: { slug },
+  const rider = await prisma.rider.findFirst({
+    where: {
+      slug,
+      ...publicRiderWhere,
+    },
     include: {
       country: true,
       currentMotorcycle: {

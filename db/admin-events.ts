@@ -1,5 +1,6 @@
 import type { EventStatus, EventVisibility, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { getEventContentReadiness } from "@/lib/content/readiness";
 
 export type AdminEventListFilters = {
   search?: string;
@@ -138,6 +139,55 @@ export async function getAdminEventAudit(id: string) {
     ...item,
     actor: item.createdBy ? (userMap.get(item.createdBy) ?? null) : null,
   }));
+}
+
+export async function getAdminEventReadiness(id: string) {
+  const [event, sourceLinkCount] = await Promise.all([
+    prisma.event.findUnique({
+      where: { id },
+      include: {
+        mediaItems: {
+          select: {
+            type: true,
+            title: true,
+            url: true,
+            copyrightOwner: true,
+            license: true,
+            source: true,
+          },
+        },
+      },
+    }),
+    prisma.sourceLink.count({
+      where: {
+        entityId: id,
+        entityType: { in: ["EVENT", "Event"] },
+      },
+    }),
+  ]);
+
+  if (!event) return null;
+
+  return getEventContentReadiness({
+    name: event.name,
+    slug: event.slug,
+    seasonId: event.seasonId,
+    countryId: event.countryId,
+    roundNumber: event.roundNumber,
+    city: event.city,
+    venue: event.venue,
+    startDate: event.startDate,
+    endDate: event.endDate,
+    officialUrl: event.officialUrl,
+    organizer: event.organizer,
+    description: event.description,
+    heroImage: event.heroImage,
+    galleryImages: event.galleryImages,
+    visibility: event.visibility,
+    archivedAt: event.archivedAt,
+    sourceLinkCount,
+    mediaItems: event.mediaItems,
+  });
 }
 
 export async function getAdminEventBySlug(slug: string) {

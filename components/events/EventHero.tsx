@@ -75,7 +75,19 @@ export function EventHero({
 
         <div className="grid gap-4">
           <Card className="overflow-hidden border-white/14 bg-white/[0.06] text-white shadow-2xl shadow-black/30">
-            <RaceImagePlaceholder eventName={event.name} />
+            {event.heroImage ? (
+              <div className="relative aspect-[4/3] overflow-hidden bg-black">
+                {/* eslint-disable-next-line @next/next/no-img-element -- Event CMS images can be approved external or storage URLs. */}
+                <img
+                  src={event.heroImage}
+                  alt={`${event.name} hero image`}
+                  className="h-full w-full object-cover"
+                />
+                <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/80 to-transparent" />
+              </div>
+            ) : (
+              <RaceImagePlaceholder eventName={event.name} />
+            )}
           </Card>
           {raceStatus.phase === "race-completed" ? (
             <HeroPodiumBlock podium={podium} />
@@ -162,7 +174,7 @@ function RaceImagePlaceholder({ eventName }: { eventName: string }) {
           {eventName.replace(/\s+\d{4}$/, "")}
         </h2>
         <p className="mt-2 max-w-sm text-sm leading-6 text-white/[0.62]">
-          Official media placeholder ready for approved race photography.
+          Approved race photography has not been attached yet.
         </p>
       </div>
     </div>

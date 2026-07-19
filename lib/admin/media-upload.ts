@@ -38,6 +38,7 @@ export function isAdminMediaUploadRequest(method: string, pathname: string) {
   return (
     method.toUpperCase() === "POST" &&
     [
+      "/admin/events/media",
       "/admin/riders/media",
       "/admin/teams/media",
       "/admin/manufacturers/media",

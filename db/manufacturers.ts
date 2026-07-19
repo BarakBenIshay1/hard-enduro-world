@@ -1,10 +1,10 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { publicResultWhere } from "@/lib/results/public-filters";
+import { publicManufacturerWhere, publicResultWhere } from "@/lib/results/public-filters";
 
 export async function getManufacturersList() {
   return prisma.manufacturer.findMany({
-    where: { visibility: "PUBLIC", archivedAt: null },
+    where: publicManufacturerWhere,
     orderBy: {
       name: "asc",
     },
@@ -39,8 +39,11 @@ export async function getManufacturersList() {
 }
 
 export async function getManufacturerDetail(slug: string) {
-  const manufacturer = await prisma.manufacturer.findUnique({
-    where: { slug },
+  const manufacturer = await prisma.manufacturer.findFirst({
+    where: {
+      slug,
+      ...publicManufacturerWhere,
+    },
     include: {
       country: true,
       motorcycles: {
@@ -113,7 +116,7 @@ export async function getManufacturerDetail(slug: string) {
     },
   });
 
-  if (!manufacturer || manufacturer.visibility !== "PUBLIC" || manufacturer.archivedAt) {
+  if (!manufacturer) {
     notFound();
   }
 

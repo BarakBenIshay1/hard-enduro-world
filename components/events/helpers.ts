@@ -27,8 +27,7 @@ export function buildEventDashboardPlaceholderFact(
     previousWinner: null,
     verifiedWinner: null,
     verifiedFinisherCount: null,
-    factsNote:
-      "Public dashboard placeholder only. Verified event facts have not been attached yet.",
+    factsNote: "Verified event facts have not been attached yet.",
     sourceIds: [],
     eventDescription: {
       value: event.description,
@@ -292,28 +291,28 @@ export function buildDocuments(event: EventDetail) {
     {
       icon: ClipboardList,
       title: "Regulations",
-      description: "Demo regulations PDF placeholder prepared for source tracking.",
-      status: "Preview PDF",
+      description: "Regulations document link pending approved source tracking.",
+      status: "Pending",
     },
     {
       icon: Users,
       title: "Entry list",
-      description: `${event.results.length} seeded rider entries available in preview.`,
-      status: "Seeded",
+      description: `${event.results.length} rider entries available from published results.`,
+      status: event.results.length ? "Available" : "Pending",
     },
     {
       icon: Trophy,
       title: "Final results",
       description: event.results.length
-        ? "Final classification demo table is available."
+        ? "Final classification table is available."
         : "Final classification pending.",
       status: event.results.length ? "Available" : "Pending",
     },
     {
       icon: Download,
       title: "Download pack",
-      description: "Future approved document bundle placeholder.",
-      status: "Placeholder",
+      description: "Approved document bundle pending.",
+      status: "Pending",
     },
   ];
 }
@@ -405,7 +404,7 @@ export function winnerName(
 }
 
 export function buildOverview(event: EventDetail, terrain: string, elevation: string) {
-  return `${event.country?.name ?? "Demo country"} hosts ${event.name}, a seeded championship event profile covering ${terrain || "hard enduro terrain"} with ${elevation || "event elevation"} and complete demo timing context.`;
+  return `${event.country?.name ?? "The host country"} hosts ${event.name}, a championship event profile covering ${terrain || "hard enduro terrain"} with ${elevation || "event elevation"} and published timing context.`;
 }
 
 export function extractDescriptionField(description: string | null, label: string) {
@@ -434,5 +433,5 @@ export function getTotalDistance(stages: EventStage[]) {
 
 export function getPodiumSweep(rows: Array<{ name: string; podiums: number }>) {
   const row = rows.find((item) => item.podiums >= 3);
-  return row ? `${row.name} demo sweep` : "No seeded sweep";
+  return row ? `${row.name} podium sweep` : "No podium sweep";
 }

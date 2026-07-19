@@ -1,15 +1,20 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { publicResultWhere, publicStageResultWhere } from "@/lib/results/public-filters";
+import {
+  publicEventWhere,
+  publicResultWhere,
+  publicStageResultWhere,
+} from "@/lib/results/public-filters";
 
 export async function getHomeSummary() {
   const [eventCount, riderCount, motorcycleCount, stageResultCount, latestEvents] =
     await prisma.$transaction([
-      prisma.event.count(),
+      prisma.event.count({ where: publicEventWhere }),
       prisma.rider.count(),
       prisma.motorcycle.count(),
       prisma.stageResult.count({ where: publicStageResultWhere }),
       prisma.event.findMany({
+        where: publicEventWhere,
         orderBy: [{ startDate: "asc" }],
         take: 3,
         include: {
@@ -44,6 +49,7 @@ export async function getHomeSummary() {
 
 export async function getEventsList() {
   return prisma.event.findMany({
+    where: publicEventWhere,
     orderBy: [{ startDate: "asc" }],
     include: {
       country: true,
@@ -72,8 +78,11 @@ export async function getEventsList() {
 }
 
 export async function getEventDetail(slug: string) {
-  const event = await prisma.event.findUnique({
-    where: { slug },
+  const event = await prisma.event.findFirst({
+    where: {
+      slug,
+      ...publicEventWhere,
+    },
     include: {
       country: true,
       season: true,
@@ -148,6 +157,7 @@ export async function getEventDetail(slug: string) {
   const baseName = event.name.replace(/\s+\d{4}$/, "");
   const previousEditions = await prisma.event.findMany({
     where: {
+      ...publicEventWhere,
       name: {
         startsWith: baseName,
       },

@@ -1,9 +1,10 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { publicResultWhere } from "@/lib/results/public-filters";
+import { publicResultWhere, publicTeamWhere } from "@/lib/results/public-filters";
 
 export async function getTeamsList() {
   return prisma.team.findMany({
+    where: publicTeamWhere,
     orderBy: {
       name: "asc",
     },
@@ -39,8 +40,11 @@ export async function getTeamsList() {
 }
 
 export async function getTeamDetail(slug: string) {
-  const team = await prisma.team.findUnique({
-    where: { slug },
+  const team = await prisma.team.findFirst({
+    where: {
+      slug,
+      ...publicTeamWhere,
+    },
     include: {
       country: true,
       manufacturer: true,

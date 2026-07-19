@@ -8,6 +8,15 @@ import {
   normalizeEventSlug,
   validateCmsEventInput,
 } from "@/lib/admin/event-cms";
+import {
+  publicEventWhere,
+  publicResultWhere,
+  publicStageResultWhere,
+} from "@/lib/results/public-filters";
+import {
+  buildAdminMediaObjectPath,
+  isAdminMediaUploadRequest,
+} from "@/lib/admin/media-upload";
 
 testPermissions();
 testSlugGeneration();
@@ -18,6 +27,9 @@ testDeletePermissionPolicy();
 testDeleteEligibilityPolicyModel();
 testAuditChangedFields();
 testAuditDiffNormalization();
+testPublicEventVisibilityPolicy();
+testEventMediaUploadPolicy();
+testPublicEventPageCopyPolicy();
 testNoServerComponentFunctionsPassedToEventClientComponents();
 
 console.log("Admin events CMS tests passed.");
@@ -181,6 +193,70 @@ function testAuditDiffNormalization() {
       newValue: "Official race overview\nQA Test",
     },
   ]);
+}
+
+function testPublicEventVisibilityPolicy() {
+  assert.deepEqual(publicEventWhere, {
+    visibility: "PUBLIC",
+    archivedAt: null,
+  });
+  assert.deepEqual(publicResultWhere, {
+    archivedAt: null,
+    event: {
+      is: publicEventWhere,
+    },
+  });
+  assert.deepEqual(publicStageResultWhere, {
+    archivedAt: null,
+    stage: {
+      is: {
+        event: {
+          is: publicEventWhere,
+        },
+      },
+    },
+  });
+}
+
+function testEventMediaUploadPolicy() {
+  assert.equal(isAdminMediaUploadRequest("POST", "/admin/events/media"), true);
+  assert.equal(isAdminMediaUploadRequest("GET", "/admin/events/media"), false);
+
+  assert.equal(
+    buildAdminMediaObjectPath({
+      entityType: "events",
+      entityId: "clxmanualevent123",
+      slot: "hero",
+      fileName: "Erzberg Hero.JPG",
+      extension: "jpg",
+      uniqueId: "abc-123",
+    }),
+    "events/clxmanualevent123/hero/erzberg-hero-abc-123.jpg",
+  );
+}
+
+function testPublicEventPageCopyPolicy() {
+  const source = readFileSync("app/events/[slug]/page.tsx", "utf8");
+  const forbiddenPublicPhrases = [
+    "timeline demo data",
+    "Demo winner pending",
+    "demo entry flow",
+    "Demo media",
+    "demo table",
+    "seeded rider entries",
+    "Demo country",
+    "demo timing context",
+    "demo overview text",
+    "demo sweep",
+  ];
+
+  for (const phrase of forbiddenPublicPhrases) {
+    assert.equal(
+      source.includes(phrase),
+      false,
+      `Public Event detail page should not expose "${phrase}".`,
+    );
+  }
 }
 
 function isPolicyEligible(input: {

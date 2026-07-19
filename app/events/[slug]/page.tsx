@@ -164,8 +164,8 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
               title="Race week command center"
               description={
                 verifiedFact
-                  ? "Verified event information, official-source placeholders, and source-tracked result context for Erzbergrodeo 2026."
-                  : "A complete event hub built from existing event, stage, result, media, source, and timeline demo data."
+                  ? "Verified event information, official-source context, and source-tracked result context for Erzbergrodeo 2026."
+                  : "A complete event hub built from published event, stage, result, media, source, and timeline data."
               }
             />
             <div className="mt-8 grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
@@ -189,7 +189,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                   <DetailRow label="Elevation" value={elevation || "Elevation TBC"} />
                   <DetailRow
                     label="Previous winner"
-                    value={previousWinner || "Demo winner pending"}
+                    value={previousWinner || "Winner pending"}
                   />
                   <DetailRow label="Defending champion" value={winnerName(finalWinner)} />
                 </div>
@@ -410,7 +410,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                 <SectionTitle
                   eyebrow="Statistics"
                   title="Race statistics"
-                  description="Only verified statistics are populated. Unknown race metrics remain visible as review-ready placeholders."
+                  description="Only verified statistics are populated. Unknown race metrics remain clearly marked as pending."
                 />
                 <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                   <VerifiedInfoCard
@@ -496,7 +496,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                     ?.occurredAt
                 }
                 status="Ready"
-                summary="Rider check-in, documents, technical control, and demo entry flow."
+                summary="Rider check-in, documents, technical control, and entry flow."
               />
               {event.stages.map((stage) => (
                 <ScheduleRow
@@ -554,8 +554,8 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                   </summary>
                   <Card className="mt-2 p-5">
                     <p className="text-sm leading-6 text-foreground/[0.66]">
-                      Stage detail placeholder prepared for official maps, checkpoint
-                      notes, sector splits, and source-tracked route documents.
+                      Stage detail prepared for official maps, checkpoint notes, sector
+                      splits, and source-tracked route documents when verified.
                     </p>
                   </Card>
                 </details>
@@ -704,7 +704,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
               <SectionTitle
                 eyebrow="Teams"
                 title="Team representation"
-                description="Seeded team summary derived from participating riders."
+                description="Team summary derived from participating riders."
               />
               {verifiedFact?.teamContext ? (
                 <div className="mt-8 grid gap-4">
@@ -754,7 +754,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
               <SectionTitle
                 eyebrow="Motorcycles"
                 title="Motorcycle participation"
-                description="Model, engine, and manufacturer facts remain placeholders until verified source material confirms them."
+                description="Model, engine, and manufacturer facts remain pending until verified source material confirms them."
               />
               <div className="mt-8 grid gap-4 md:grid-cols-3">
                 <VerifiedInfoCard
@@ -793,7 +793,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
             <SectionTitle
               eyebrow="History"
               title="Previous editions and records"
-              description="Timeline of seeded previous editions, winners, highlights, and event records."
+              description="Timeline of previous editions, winners, highlights, and event records."
             />
             <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_0.8fr]">
               <div className="grid gap-3">
@@ -822,7 +822,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                   <EmptyState
                     icon={Clock}
                     title="No previous editions yet"
-                    description="This event is ready for historical editions as seeded or imported data grows."
+                    description="This event is ready for historical editions as imported or reviewed data grows."
                   />
                 )}
               </div>
@@ -900,7 +900,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                 <SectionTitle
                   eyebrow="Official"
                   title="Official links"
-                  description="Official and trusted links only. Missing links stay as verified placeholders."
+                  description="Official and trusted links only. Missing links stay pending until verified."
                 />
                 <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                   {verifiedOfficialLinks.map((link) => (
@@ -916,7 +916,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
             <SectionTitle
               eyebrow="Media"
               title="Gallery, video, and social lanes"
-              description="Demo media placeholders are source-aware and ready for future approval workflows."
+              description="Media slots remain pending until approved sources and rights are attached."
             />
             <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_360px]">
               <div className="grid gap-3 sm:grid-cols-3">
@@ -935,7 +935,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                       <p className="text-xs uppercase tracking-[0.16em] text-accent">
                         {item.type}
                       </p>
-                      <h3 className="mt-2 font-semibold">{item.title ?? "Demo media"}</h3>
+                      <h3 className="mt-2 font-semibold">{item.title ?? "Media item"}</h3>
                     </div>
                   </Card>
                 ))}
@@ -946,7 +946,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                   <DetailRow label="Gallery items" value={String(mediaStats.images)} />
                   <DetailRow label="Videos" value={String(mediaStats.videos)} />
                   <DetailRow label="Documents" value={String(mediaStats.documents)} />
-                  <DetailRow label="Social lane" value="Placeholder ready" />
+                  <DetailRow label="Social lane" value="Pending verified links" />
                 </div>
               </Card>
             </div>
@@ -957,7 +957,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
             <SectionTitle
               eyebrow="Documents"
               title="Official document center"
-              description="Regulations, entry lists, final results, and PDF placeholders remain demo-only until approved sources are connected."
+              description="Regulations, entry lists, final results, and documents remain pending until approved sources are connected."
             />
             <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               {verifiedFact?.officialPdfPlaceholders?.map((item) => (
@@ -1409,7 +1409,7 @@ function buildStageCard(stage: Stage, terrain: string, elevation: string) {
     type: stage.stageType,
     name: stage.name,
     distance: stage.distanceKm ? `${stage.distanceKm.toString()} km` : "Distance TBC",
-    terrain: terrain || "Demo technical hard enduro terrain",
+    terrain: terrain || "Technical hard enduro terrain",
     elevation: elevation || "Elevation TBC",
     winner: winner ? winnerName(winner.rider) : "Pending",
     bestTime: bestTime?.totalTimeText ?? "Pending",
@@ -1560,28 +1560,28 @@ function buildDocuments(event: EventDetail) {
     {
       icon: ClipboardList,
       title: "Regulations",
-      description: "Demo regulations PDF placeholder prepared for source tracking.",
-      status: "Preview PDF",
+      description: "Regulations document link pending approved source tracking.",
+      status: "Pending",
     },
     {
       icon: Users,
       title: "Entry list",
-      description: `${event.results.length} seeded rider entries available in preview.`,
-      status: "Seeded",
+      description: `${event.results.length} rider entries available from published results.`,
+      status: event.results.length ? "Available" : "Pending",
     },
     {
       icon: Trophy,
       title: "Final results",
       description: event.results.length
-        ? "Final classification demo table is available."
+        ? "Final classification table is available."
         : "Final classification pending.",
       status: event.results.length ? "Available" : "Pending",
     },
     {
       icon: Download,
       title: "Download pack",
-      description: "Future approved document bundle placeholder.",
-      status: "Placeholder",
+      description: "Approved document bundle pending.",
+      status: "Pending",
     },
   ];
 }
@@ -1634,7 +1634,7 @@ function getDashboardTabId(tab: string) {
 }
 
 function buildOverview(event: EventDetail, terrain: string, elevation: string) {
-  return `${event.country?.name ?? "Demo country"} hosts ${event.name}, a seeded championship event profile covering ${terrain || "hard enduro terrain"} with ${elevation || "event elevation"} and complete demo timing context.`;
+  return `${event.country?.name ?? "The host country"} hosts ${event.name}, a championship event profile covering ${terrain || "hard enduro terrain"} with ${elevation || "event elevation"} and published timing context.`;
 }
 
 function extractDescriptionField(description: string | null, label: string) {
@@ -1672,20 +1672,20 @@ function buildFacts(
     return [
       `${event.results.length} verified first-pass overall result rows are connected to rider, team, manufacturer, and motorcycle records.`,
       `${verifiedFact.verifiedFinisherCount ?? UNKNOWN_VERIFIED_VALUE} finishers are verified; complete timing and full finisher details remain pending.`,
-      `Official-source placeholders are attached for documents, media, and event-format verification.`,
+      `Official-source slots are reserved for documents, media, and event-format verification.`,
       `${terrain || "Terrain"} and ${elevation || "elevation"} remain database metadata unless confirmed by official source material.`,
     ];
   }
 
   return [
-    `${event.results.length} seeded entries are connected to rider, team, manufacturer, and motorcycle records.`,
+    `${event.results.length} published entries are connected to rider, team, manufacturer, and motorcycle records.`,
     `${event.stages.length} stages are prepared for timing, live-status, and future source-tracked updates.`,
-    `${manufacturerCount} manufacturers are represented in the current seeded event classification.`,
-    `${terrain || "Terrain"} and ${elevation || "elevation"} metadata are preserved in the demo overview text.`,
+    `${manufacturerCount} manufacturers are represented in the current event classification.`,
+    `${terrain || "Terrain"} and ${elevation || "elevation"} metadata are preserved in the overview text.`,
   ];
 }
 
 function getPodiumSweep(rows: Array<{ name: string; podiums: number }>) {
   const row = rows.find((item) => item.podiums >= 3);
-  return row ? `${row.name} demo sweep` : "No seeded sweep";
+  return row ? `${row.name} podium sweep` : "No podium sweep";
 }

@@ -8,6 +8,7 @@ import {
   validateResultCmsInput,
 } from "@/lib/admin/result-cms";
 import {
+  publicEventWhere,
   publicResultWhere as publicResultReadWhere,
   publicStageResultWhere as publicStageResultReadWhere,
 } from "@/lib/results/public-filters";
@@ -103,8 +104,22 @@ function testArchiveSchema() {
 }
 
 function testPublicArchivedFilters() {
-  assert.deepEqual(publicResultReadWhere, { archivedAt: null });
-  assert.deepEqual(publicStageResultReadWhere, { archivedAt: null });
+  assert.deepEqual(publicResultReadWhere, {
+    archivedAt: null,
+    event: {
+      is: publicEventWhere,
+    },
+  });
+  assert.deepEqual(publicStageResultReadWhere, {
+    archivedAt: null,
+    stage: {
+      is: {
+        event: {
+          is: publicEventWhere,
+        },
+      },
+    },
+  });
   const publicFiles = [
     "db/results.ts",
     "db/events.ts",
